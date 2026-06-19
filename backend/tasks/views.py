@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
@@ -7,6 +10,7 @@ from rest_framework.views import APIView
 
 from .models import Task, TaskCompletion
 from .serializers import TaskCompletionSerializer, TaskSerializer
+from streaks.models import Streak
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -38,11 +42,28 @@ class CompleteTaskView(APIView):
 
         task.status = "completed"
         task.save(update_fields=["status"])
+
         completion = TaskCompletion.objects.create(
             task=task,
             user=request.user,
             skill=task.skill,
         )
+
+        today = timezone.now().date()
+        streak, _ = Streak.objects.get_or_create(user=request.user)
+
+        if streak.last_active_date == today:
+            pass
+        elif streak.last_active_date == today - timedelta(days=1):
+            streak.current_streak += 1
+        else:
+            streak.current_streak = 1
+
+        if streak.current_streak > streak.longest_streak:
+            streak.longest_streak = streak.current_streak
+
+        streak.last_active_date = today
+        streak.save(update_fields=["current_streak", "longest_streak", "last_active_date"])
 
         serializer = TaskCompletionSerializer(completion)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

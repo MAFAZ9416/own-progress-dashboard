@@ -19,6 +19,12 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+    def validate_skill(self, value):
+        request = self.context.get("request")
+        if request and request.user != value.user:
+            raise serializers.ValidationError("You may only assign tasks to your own skills.")
+        return value
+
 
 class TaskCompletionSerializer(serializers.ModelSerializer):
     """Serialize TaskCompletion objects for tracking task completions."""
