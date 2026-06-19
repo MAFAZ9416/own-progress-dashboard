@@ -179,7 +179,7 @@ export default function Dashboard() {
       <div className="dash-greeting">
         <div>
           <h2 className="dash-greeting__title">
-            { getGreeting()}{user?.username ? `, ${user.username}` : ''} 👋
+            {getGreeting()}{user?.username ? `, ${user.username}` : ''} 👋
           </h2>
           <p className="dash-greeting__sub">
             Here's what's happening with your progress today.
