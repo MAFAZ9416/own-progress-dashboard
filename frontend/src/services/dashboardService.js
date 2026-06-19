@@ -1,0 +1,102 @@
+import { apiClient } from '../api'
+
+/**
+ * dashboardService
+ *
+ * All endpoints consumed by the Dashboard page.
+ *
+ * Base URL: /api  (set in apiClient)
+ * JWT token is injected automatically by the apiClient request interceptor.
+ *
+ * Endpoints:
+ *   GET /api/dashboard/summary/   → KPI totals (skills, tasks, streaks)
+ *   GET /api/dashboard/weekly/    → week-level activity counts
+ *   GET /api/dashboard/monthly/   → month-level activity counts
+ *   GET /api/dashboard/recent/    → recent activity feed items
+ *   GET /api/dashboard/heatmap/   → 12-week grid of activity levels
+ */
+const dashboardService = {
+  /**
+   * GET /api/dashboard/summary/
+   *
+   * Expected response shape:
+   * {
+   *   total_skills:    number,
+   *   total_tasks:     number,
+   *   current_streak:  number,
+   *   longest_streak:  number,
+   *   tasks_done:      number,   // completed task count
+   *   skills_change:   number,   // delta vs last period (e.g. +3)
+   *   tasks_change:    number,
+   * }
+   */
+  getSummary: async () => {
+    const { data } = await apiClient.get('/dashboard/summary/')
+    return data
+  },
+
+  /**
+   * GET /api/dashboard/weekly/
+   *
+   * Expected response shape:
+   * [
+   *   { day: "Mon", count: 3 },
+   *   ...7 items
+   * ]
+   */
+  getWeekly: async () => {
+    const { data } = await apiClient.get('/dashboard/weekly/')
+    return data
+  },
+
+  /**
+   * GET /api/dashboard/monthly/
+   *
+   * Expected response shape:
+   * [
+   *   { month: "Jan", count: 12 },
+   *   ...12 items
+   * ]
+   */
+  getMonthly: async () => {
+    const { data } = await apiClient.get('/dashboard/monthly/')
+    return data
+  },
+
+  /**
+   * GET /api/dashboard/recent/
+   *
+   * Expected response shape:
+   * [
+   *   {
+   *     id:   number,
+   *     type: "skill" | "task" | "streak",
+   *     text: string,
+   *     time: string,   // e.g. "2h ago" or ISO timestamp
+   *   },
+   *   ...
+   * ]
+   */
+  getRecent: async () => {
+    const { data } = await apiClient.get('/dashboard/recent/')
+    return data
+  },
+
+  /**
+   * GET /api/dashboard/heatmap/
+   *
+   * Expected response shape:
+   * [
+   *   [0, 1, 2, 3, 0, 1, 4],   // week 0 — 7 day values (0-4)
+   *   ...12 items (12 weeks)
+   * ]
+   *
+   * Each value is an activity level: 0 = none, 4 = max
+   */
+  getHeatmap: async () => {
+    const { data } = await apiClient.get('/dashboard/heatmap/')
+    return data
+  },
+}
+
+export default dashboardService
