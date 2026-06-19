@@ -59,3 +59,38 @@ class TaskCompletion(models.Model):
 
     def __str__(self):
         return f"{self.task.title} completed"
+
+
+class TaskActivity(models.Model):
+    ACTION_CHOICES = (
+        ('created', 'Created'),
+        ('updated', 'Updated'),
+        ('completed', 'Completed'),
+        ('reopened', 'Reopened'),
+        ('deleted', 'Deleted'),
+        ('restored', 'Restored'),
+    )
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='activities'
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.task.title} - {self.action}"

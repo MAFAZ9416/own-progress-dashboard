@@ -4,16 +4,16 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 /**
  * DeleteConfirmModal
  *
- * Glassmorphic custom confirmation dialog for deleting a skill.
+ * Custom confirmation dialog for deleting a task.
  *
  * Props:
  *   - isOpen: boolean control
  *   - onClose: function to close the modal
  *   - onConfirm: function triggered when confirmation is clicked
- *   - skillName: the name of the skill to delete
- *   - isDeleting: boolean representing active API request status
+ *   - taskTitle: the title of the task to delete
+ *   - isDeleting: API deletion status
  */
-export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, skillName, isDeleting }) {
+export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, taskTitle, isDeleting }) {
   if (!isOpen) return null
 
   return (
@@ -30,15 +30,15 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, skillNa
             <AlertTriangle size={24} />
           </div>
           <div>
-            <h2 className="text-slate-100 text-lg font-bold">Delete Skill</h2>
+            <h2 className="text-slate-100 text-lg font-bold">Delete Task</h2>
             <p className="text-xs text-slate-400 mt-0.5">This action cannot be undone.</p>
           </div>
         </div>
 
         {/* Content */}
         <p className="text-slate-350 text-sm leading-relaxed mb-6">
-          Are you sure you want to delete the skill <span className="text-slate-100 font-bold">"{skillName}"</span>?
-          This will also detach any tasks associated with it.
+          Are you sure you want to delete the task <span className="text-slate-100 font-bold">"{taskTitle}"</span>?
+          This will permanently remove it from your dashboard history.
         </p>
 
         {/* Footer Actions */}
@@ -63,7 +63,7 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, skillNa
                 <span>Deleting...</span>
               </>
             ) : (
-              'Delete Skill'
+              'Delete Task'
             )}
           </button>
         </div>

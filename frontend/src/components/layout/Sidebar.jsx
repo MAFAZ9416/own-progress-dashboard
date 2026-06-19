@@ -1,40 +1,26 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { LayoutDashboard, Brain, ClipboardList, LogOut } from 'lucide-react'
 
 const NAV_ITEMS = [
   {
     label: 'Dashboard',
     to: '/dashboard',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="14" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    ),
+    icon: <LayoutDashboard size={18} strokeWidth={1.8} />,
   },
   {
     label: 'Skills',
     to: '/skills',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-      </svg>
-    ),
+    icon: <Brain size={18} strokeWidth={1.8} />,
   },
   {
     label: 'Tasks',
     to: '/tasks',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-      </svg>
-    ),
+    icon: <ClipboardList size={18} strokeWidth={1.8} />,
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth()
   const navigate         = useNavigate()
 
@@ -48,7 +34,7 @@ export default function Sidebar() {
     ?? 'U'
 
   return (
-    <aside id="sidebar" className="sidebar">
+    <aside id="sidebar" className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
       {/* ── Brand ── */}
       <div className="sidebar__brand">
         <div className="sidebar__logo">
@@ -74,6 +60,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             id={`sidebar-nav-${label.toLowerCase()}`}
+            onClick={onClose}
             className={({ isActive }) =>
               `sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}`
             }
@@ -105,9 +92,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="sidebar__logout"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
+          <LogOut size={16} strokeWidth={1.8} />
           Sign out
         </button>
       </div>

@@ -20,12 +20,37 @@ import dashboardService from '../services/dashboardService'
  *     refetch:   () => void,       ← call to re-run all requests
  *   }
  */
+// Helper to format relative time timezone-safely
+function getRelativeTime(isoString) {
+  try {
+    const date = new Date(isoString)
+    const now = new Date()
+    const diffMs = now - date
+    if (isNaN(diffMs)) return 'Recently'
+
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    return `${diffDays}d ago`
+  } catch (e) {
+    return 'Recently'
+  }
+}
+
 export function useDashboard() {
   const [summary,   setSummary]   = useState(null)
   const [weekly,    setWeekly]    = useState(null)
   const [monthly,   setMonthly]   = useState(null)
   const [recent,    setRecent]    = useState(null)
   const [heatmap,   setHeatmap]   = useState(null)
+  const [tasks,     setTasks]     = useState([])
+  const [pendingTasks, setPendingTasks] = useState([])
+  const [skills,    setSkills]    = useState([])
+  const [topSkills, setTopSkills] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error,     setError]     = useState(null)
 
@@ -35,20 +60,127 @@ export function useDashboard() {
 
     try {
       // Run all requests concurrently — fail-fast on any rejection
-      const [summaryData, weeklyData, monthlyData, recentData, heatmapData] =
+      const [summaryData, weeklyData, monthlyData, recentData, heatmapData, tasksData, skillsData] =
         await Promise.all([
           dashboardService.getSummary(),
           dashboardService.getWeekly(),
           dashboardService.getMonthly(),
           dashboardService.getRecent(),
           dashboardService.getHeatmap(),
+          dashboardService.getTasks(),
+          dashboardService.getSkills(),
         ])
 
+      const pendingTasksData = (tasksData || []).filter(task => task?.status?.toLowerCase() === 'pending' || task?.status === 'pending')
+
+      // 1. Transform Weekly Data (ensure all 7 days of the current week exist)
+      const daysOfWeekShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const transformedWeekly = Array.from({ length: 7 }).map((_, i) => {
+        const cellDate = new Date(today)
+        cellDate.setDate(today.getDate() - (6 - i))
+
+        const year = cellDate.getFullYear()
+        const month = String(cellDate.getMonth() + 1).padStart(2, '0')
+        const day = String(cellDate.getDate()).padStart(2, '0')
+        const dateStr = `${year}-${month}-${day}`
+
+        const match = (weeklyData || []).find(item => item.date === dateStr)
+        const dayName = daysOfWeekShort[cellDate.getDay()]
+        return {
+          day: dayName,
+          count: match ? (match.completed_tasks ?? 0) : 0,
+          tasksDone: match ? (match.completed_tasks ?? 0) : 0
+        }
+      })
+
+      // 2. Transform Monthly Data (convert date key format to month name)
+      const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const sortedMonthly = [...(monthlyData || [])].sort((a, b) => a.date.localeCompare(b.date))
+      const transformedMonthly = sortedMonthly.map(item => {
+        const parts = item.date.split('-')
+        const dateObj = new Date(parts[0], parts[1] - 1, parts[2])
+        const monthName = monthsShort[dateObj.getMonth()]
+        return {
+          month: monthName,
+          count: item.completed_tasks ?? 0
+        }
+      })
+
+      // 3. Transform Heatmap Data (convert daily list to 12 weeks × 7 days matrix)
+      const dayOfWeek = today.getDay()
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+      const currentMonday = new Date(today)
+      currentMonday.setDate(today.getDate() - daysToMonday)
+      currentMonday.setHours(0, 0, 0, 0)
+
+      const transformedHeatmap = Array.from({ length: 12 }).map((_, weekIndex) => {
+        const weekStart = new Date(currentMonday)
+        weekStart.setDate(currentMonday.getDate() - (11 - weekIndex) * 7)
+
+        return Array.from({ length: 7 }).map((_, dayIndex) => {
+          const cellDate = new Date(weekStart)
+          cellDate.setDate(weekStart.getDate() + dayIndex)
+
+          const year = cellDate.getFullYear()
+          const month = String(cellDate.getMonth() + 1).padStart(2, '0')
+          const day = String(cellDate.getDate()).padStart(2, '0')
+          const dateStr = `${year}-${month}-${day}`
+
+          const match = (heatmapData || []).find(item => item.date === dateStr)
+          if (match) {
+            const count = match.count || 0
+            if (count === 0) return 0
+            if (count <= 2) return 1
+            if (count <= 4) return 2
+            if (count <= 6) return 3
+            return 4
+          }
+          return 0
+        })
+      })
+
+      // 4. Transform Recent Activity Feed
+      const transformedRecent = (recentData || []).map((item, index) => ({
+        id: index,
+        type: 'task',
+        text: `Completed "${item.task}" in ${item.skill}`,
+        time: getRelativeTime(item.completed_at)
+      }))
+
+      // 5. Sort Skills for Top Skills Widget (Progress descending, limit to top 5)
+      // Calculate progress if backend doesn't provide it (progress, completion_percentage, etc.)
+      const transformedSkills = (skillsData || []).map(skill => {
+        let progressVal = skill.progress ?? skill.completion_percentage
+        if (progressVal === undefined || progressVal === null) {
+          const completedCount = (tasksData || []).filter(
+            t => t.skill === skill.id && t.status === 'completed'
+          ).length
+          progressVal = skill.target_tasks > 0
+            ? Math.round((completedCount / skill.target_tasks) * 100)
+            : 0
+        }
+        return {
+          ...skill,
+          progress: Math.min(progressVal, 100)
+        }
+      })
+
+      const sortedSkills = [...transformedSkills]
+        .sort((a, b) => b.progress - a.progress)
+        .slice(0, 5)
+
       setSummary(summaryData)
-      setWeekly(weeklyData)
-      setMonthly(monthlyData)
-      setRecent(recentData)
-      setHeatmap(heatmapData)
+      setWeekly(transformedWeekly)
+      setMonthly(transformedMonthly)
+      setRecent(transformedRecent)
+      setHeatmap(transformedHeatmap)
+      setTasks(tasksData || [])
+      setPendingTasks(pendingTasksData || [])
+      setSkills(transformedSkills)
+      setTopSkills(sortedSkills)
     } catch (err) {
       // Extract the most useful error message available
       const msg =
@@ -67,5 +199,18 @@ export function useDashboard() {
     fetchAll()
   }, [fetchAll])
 
-  return { summary, weekly, monthly, recent, heatmap, isLoading, error, refetch: fetchAll }
+  return {
+    summary,
+    weekly,
+    monthly,
+    recent,
+    heatmap,
+    tasks,
+    pendingTasks,
+    skills,
+    topSkills,
+    isLoading,
+    error,
+    refetch: fetchAll
+  }
 }

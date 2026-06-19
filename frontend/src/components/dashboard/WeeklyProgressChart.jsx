@@ -43,10 +43,10 @@ function WeeklyTooltip({ active, payload, label }) {
 export default function WeeklyProgressChart({ data = [], isLoading = false }) {
   /* Normalise: ensure both `count` and `tasks_done` keys exist */
   const chartData = data.map(d => ({
-    day:       d.day ?? d.date ?? '—',
-    count:     d.count ?? d.activities ?? 0,
-    tasksDone: d.tasks_done ?? d.tasksDone ?? 0,
-  }))
+  day: d.day ?? d.date ?? '—',
+  count: d.completed_tasks ?? d.count ?? d.activities ?? 0,
+  tasksDone: d.completed_tasks ?? d.tasks_done ?? d.tasksDone ?? 0,
+}))
 
   const maxVal = Math.max(...chartData.map(d => d.count), 1)
 

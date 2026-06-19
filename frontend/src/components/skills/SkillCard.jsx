@@ -1,4 +1,5 @@
 import React from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 
 /**
  * SkillCard
@@ -42,26 +43,22 @@ export default function SkillCard({ skill, onEdit, onDelete }) {
           </div>
 
           {/* Action buttons - on desktop visible on hover, on mobile always visible */}
-          <div className="flex items-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex items-center gap-1.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
             <button
               onClick={() => onEdit(skill)}
-              className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 border border-slate-700/40 hover:border-slate-600 transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 border border-slate-700/40 hover:border-slate-600 transition-all cursor-pointer skill-card-action"
               title="Edit Skill"
               aria-label={`Edit ${skill.name}`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+              <Pencil size={14} strokeWidth={2} />
             </button>
             <button
               onClick={() => onDelete(skill)}
-              className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-850 text-slate-400 hover:text-red-400 border border-slate-700/40 hover:border-slate-600 transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-850 text-slate-400 hover:text-red-400 border border-slate-700/40 hover:border-slate-600 transition-all cursor-pointer skill-card-action"
               title="Delete Skill"
               aria-label={`Delete ${skill.name}`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <Trash2 size={14} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -69,19 +66,19 @@ export default function SkillCard({ skill, onEdit, onDelete }) {
 
       {/* Progress Section */}
       <div className="mt-6 space-y-2">
-        <div className="flex justify-between items-end text-xs font-semibold">
-          <span className="text-slate-400">Progress</span>
-          <span className="text-slate-200" style={{ color: skill.color }}>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-450 font-medium">Progress</span>
+          <span className="font-bold" style={{ color: skill.color }}>
             {skill.progress}%
           </span>
         </div>
-        <div className="h-2 bg-slate-800/80 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-slate-800/80 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-1000 ease-out"
             style={{ width: `${skill.progress}%`, backgroundColor: skill.color }}
           />
         </div>
-        <div className="flex justify-between text-[11px] text-slate-500 pt-0.5">
+        <div className="flex justify-between text-[11px] text-slate-500 pt-0.5 font-medium">
           <span>{completedTasks} completed</span>
           <span>{remainingTasks} left</span>
         </div>

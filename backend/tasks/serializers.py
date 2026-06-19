@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Task, TaskCompletion
+from .models import Task, TaskCompletion, TaskActivity
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -39,3 +39,16 @@ class TaskCompletionSerializer(serializers.ModelSerializer):
             "completed_date",
         ]
         read_only_fields = ["id", "completed_at", "completed_date"]
+
+
+class TaskActivitySerializer(serializers.ModelSerializer):
+    """Serialize TaskActivity objects for audit logs."""
+
+    class Meta:
+        model = TaskActivity
+        fields = [
+            "id",
+            "action",
+            "created_at",
+        ]
+        read_only_fields = ["id", "action", "created_at"]

@@ -89,6 +89,7 @@ class DashboardSummaryView(APIView):
             "pending_tasks": pending_tasks,
             "current_streak": current_streak,
             "longest_streak": longest_streak,
+            "tasks_done": completed_tasks,
         }
         
         return Response(data, status=status.HTTP_200_OK)

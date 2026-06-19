@@ -40,8 +40,7 @@ const dashboardService = {
    *
    * Expected response shape:
    * [
-   *   { day: "Mon", count: 3 },
-   *   ...7 items
+   *   { date: "2026-06-19", completed_tasks: 5 }
    * ]
    */
   getWeekly: async () => {
@@ -54,8 +53,7 @@ const dashboardService = {
    *
    * Expected response shape:
    * [
-   *   { month: "Jan", count: 12 },
-   *   ...12 items
+   *   { date: "2026-06-19", completed_tasks: 5 }
    * ]
    */
   getMonthly: async () => {
@@ -87,15 +85,36 @@ const dashboardService = {
    *
    * Expected response shape:
    * [
-   *   [0, 1, 2, 3, 0, 1, 4],   // week 0 — 7 day values (0-4)
-   *   ...12 items (12 weeks)
+   *   { date: "2026-06-19", count: 5 }
    * ]
-   *
-   * Each value is an activity level: 0 = none, 4 = max
    */
   getHeatmap: async () => {
     const { data } = await apiClient.get('/dashboard/heatmap/')
     return data
+  },
+
+  /**
+   * GET /api/tasks/ — fetched for all tasks
+   */
+  getTasks: async () => {
+    const { data } = await apiClient.get('/tasks/')
+    return data || []
+  },
+
+  /**
+   * GET /api/tasks/ — fetched for pending tasks widget
+   */
+  getPendingTasks: async () => {
+    const { data } = await apiClient.get('/tasks/')
+    return (data || []).filter(task => task.status === 'pending')
+  },
+
+  /**
+   * GET /api/skills/ — fetched for top skills widget
+   */
+  getSkills: async () => {
+    const { data } = await apiClient.get('/skills/')
+    return data || []
   },
 }
 

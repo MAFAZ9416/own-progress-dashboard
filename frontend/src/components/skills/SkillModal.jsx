@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import skillsService from '../../services/skillsService'
+import { X, AlertCircle, Check, Plus, Loader2 } from 'lucide-react'
 
 const PRESET_COLORS = [
   '#7c3aed', // Purple/Violet
@@ -115,7 +116,7 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-all duration-300">
       {/* Modal Container */}
       <div
-        className="bg-[#131b2e]/95 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl overflow-hidden animate-fade-in"
+        className="bg-[#131b2e]/95 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in scrollbar-thin scrollbar-thumb-slate-800"
         role="dialog"
         aria-modal="true"
       >
@@ -135,18 +136,14 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
             className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X size={18} />
           </button>
         </div>
 
         {/* Error Alert */}
         {apiError && (
           <div className="mb-5 p-3 rounded-xl bg-red-950/40 border border-red-900/50 text-red-300 text-xs flex items-start gap-2.5">
-            <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+            <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
             <span>{apiError}</span>
           </div>
         )}
@@ -210,9 +207,7 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
                       <span className="absolute inset-0 rounded-full border-2 border-white/60 animate-ping opacity-70" />
                     )}
                     {isSelected && (
-                      <svg className="w-3.5 h-3.5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <Check size={14} className="text-white drop-shadow font-bold" />
                     )}
                   </button>
                 )
@@ -235,9 +230,7 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
                   }`}
                   title="Custom color..."
                 >
-                  <svg className="w-3.5 h-3.5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
+                  <Plus size={14} className="text-white/90" />
                 </button>
               </div>
             </div>
@@ -261,10 +254,7 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
+                  <Loader2 className="animate-spin h-4 w-4 text-white" />
                   <span>Saving...</span>
                 </>
               ) : isEditMode ? (

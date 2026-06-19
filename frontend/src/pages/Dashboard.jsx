@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
 import StatCard from '../components/dashboard/StatCard'
@@ -5,6 +6,7 @@ import WeeklyProgressChart  from '../components/dashboard/WeeklyProgressChart'
 import MonthlyProgressChart from '../components/dashboard/MonthlyProgressChart'
 import LearningHeatmap      from '../components/dashboard/LearningHeatmap'
 import SkeletonCard, { SkeletonText, SkeletonBlock } from '../components/common/SkeletonCard'
+import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus } from 'lucide-react'
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -43,11 +45,7 @@ function buildStats(summary) {
       trend: summary?.skills_change != null
         ? { value: `${summary.skills_change > 0 ? '+' : ''}${summary.skills_change}`, positive: summary.skills_change >= 0 }
         : undefined,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-      ),
+      icon: <Brain size={20} strokeWidth={1.8} />,
     },
     {
       id: 'stat-total-tasks',
@@ -57,11 +55,7 @@ function buildStats(summary) {
       trend: summary?.tasks_change != null
         ? { value: `${summary.tasks_change > 0 ? '+' : ''}${summary.tasks_change}`, positive: summary.tasks_change >= 0 }
         : undefined,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      ),
+      icon: <ClipboardList size={20} strokeWidth={1.8} />,
     },
     {
       id: 'stat-current-streak',
@@ -70,12 +64,7 @@ function buildStats(summary) {
       suffix: 'days',
       gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
       trend: { value: 'active', positive: true },
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-          <path d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
-        </svg>
-      ),
+      icon: <Flame size={20} strokeWidth={1.8} />,
     },
     {
       id: 'stat-longest-streak',
@@ -84,11 +73,7 @@ function buildStats(summary) {
       suffix: 'days',
       gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
       trend: { value: 'best', positive: true },
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 3l14 9-14 9V3z" />
-        </svg>
-      ),
+      icon: <Trophy size={20} strokeWidth={1.8} />,
     },
   ]
 }
@@ -98,9 +83,7 @@ function ErrorBanner({ message, onRetry }) {
   return (
     <div className="dash-error" role="alert">
       <div className="dash-error__inner">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="dash-error__icon">
-          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-        </svg>
+        <AlertCircle size={20} className="dash-error__icon text-red-400" />
         <div>
           <p className="dash-error__title">Failed to load dashboard</p>
           <p className="dash-error__msg">{message}</p>
@@ -153,11 +136,22 @@ function TaskSkeleton() {
 
 /* ─── Main component ────────────────────────────────────────────────────── */
 export default function Dashboard() {
-  const { user }                                          = useAuth()
-  const { summary, recent, heatmap, isLoading, error, refetch } = useDashboard()
-
-  /* Derive quick-tasks list from summary (top N incomplete + done tasks) */
-  const quickTasks = summary?.recent_tasks ?? []
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const {
+    summary,
+    weekly,
+    monthly,
+    recent,
+    heatmap,
+    tasks,
+    pendingTasks,
+    skills,
+    topSkills,
+    isLoading,
+    error,
+    refetch,
+  } = useDashboard()
 
   /* Build stat card configs from live data */
   const stats = buildStats(summary)
@@ -165,9 +159,6 @@ export default function Dashboard() {
   /* Streak week dots — mark active days based on current_streak */
   const streakDays   = summary?.current_streak ?? 0
   const longestStreak = summary?.longest_streak ?? 0
-
-  /* Top skills from summary (backend provides sorted list) */
-  const topSkills = summary?.top_skills ?? []
 
   /* Heatmap grid: use API data or empty grid while loading */
   const heatGrid = heatmap ?? []
@@ -186,9 +177,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="dash-date-badge">
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-          </svg>
+          <CalendarDays size={14} className="mr-1.5" />
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </div>
       </div>
@@ -210,10 +199,10 @@ export default function Dashboard() {
       {/* ── Charts row ────────────────────────────────────────────── */}
       <div className="dash-charts-grid">
         <section className="dash-card dash-card--chart" id="section-chart-weekly">
-          <WeeklyProgressChart data={[]} isLoading={isLoading} />
+          <WeeklyProgressChart data={weekly || []} isLoading={isLoading} />
         </section>
         <section className="dash-card dash-card--chart" id="section-chart-monthly">
-          <MonthlyProgressChart data={[]} isLoading={isLoading} />
+          <MonthlyProgressChart data={monthly || []} isLoading={isLoading} />
         </section>
       </div>
 
@@ -225,7 +214,7 @@ export default function Dashboard() {
 
           {/* Learning Heatmap (chart component) */}
           <section className="dash-card" id="section-heatmap">
-            <LearningHeatmap data={[]} isLoading={isLoading} />
+            <LearningHeatmap data={heatmap || []} isLoading={isLoading} />
           </section>
 
           {/* Recent Activity Feed */}
@@ -235,11 +224,9 @@ export default function Dashboard() {
                 <h3 className="dash-card__title">Recent Activity</h3>
                 <span className="dash-card__subtitle">Your latest actions</span>
               </div>
-              <button className="dash-card__action-btn" id="btn-view-all-activity">
+              <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => navigate('/tasks')}>
                 View all
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
+                <ChevronRight size={14} className="ml-0.5" />
               </button>
             </div>
 
@@ -280,59 +267,89 @@ export default function Dashboard() {
                 <h3 className="dash-card__title">Quick Tasks</h3>
                 <span className="dash-card__subtitle">Pending items</span>
               </div>
-              <button className="dash-card__action-btn" id="btn-add-quick-task">
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
+              <button className="dash-card__action-btn" id="btn-add-quick-task" onClick={() => navigate('/tasks')}>
+                <Plus size={14} className="mr-0.5" />
                 Add
               </button>
             </div>
 
             {isLoading ? (
               <TaskSkeleton />
-            ) : quickTasks.length > 0 ? (
+            ) : pendingTasks.length > 0 ? (
               <>
                 <ul className="quick-tasks">
-                  {quickTasks.map(task => {
-                    const priority = task.done ? 'done' : (task.priority ?? 'medium')
+                  {pendingTasks.slice(0, 5).map(task => {
+                    const skillObj = skills.find(s => s.id === task.skill)
+                    const skillName = skillObj?.name ?? 'Unknown Skill'
+                    const skillColor = skillObj?.color ?? '#6366f1'
                     return (
-                      <li key={task.id} className={`qtask ${task.done ? 'qtask--done' : ''}`}>
-                        <span className="qtask__check">
-                          {task.done && (
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </span>
-                        <span className="qtask__label">{task.title ?? task.label}</span>
-                        <span
-                          className="qtask__priority"
-                          style={{
-                            background: (PRIORITY_DOT[priority] ?? '#94a3b8') + '26',
-                            color: PRIORITY_DOT[priority] ?? '#94a3b8',
-                          }}
-                        >
-                          {priority}
-                        </span>
+                      <li
+                        key={task.id}
+                        className="qtask"
+                        onClick={() => navigate('/tasks')}
+                      >
+                        <div className="qtask__left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                          <span className="qtask__check" style={{ borderColor: `${skillColor}80` }} />
+                          <span className="qtask__label" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {task.title}
+                          </span>
+                        </div>
+                        <div className="qtask__right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-slate-900/40"
+                            style={{
+                              color: skillColor,
+                              borderColor: `${skillColor}35`,
+                            }}
+                          >
+                            {skillName}
+                          </span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Pending
+                          </span>
+                        </div>
                       </li>
                     )
                   })}
                 </ul>
 
+                {pendingTasks.length > 5 && (
+                  <div
+                    className="qtask-more"
+                    onClick={() => navigate('/tasks')}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '0.8rem',
+                      color: '#6366f1',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      marginTop: '-0.5rem',
+                      marginBottom: '1.25rem',
+                      padding: '0.5rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(99, 102, 241, 0.05)',
+                      border: '1px dashed rgba(99, 102, 241, 0.2)',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    + {pendingTasks.length - 5} more tasks
+                  </div>
+                )}
+
                 {/* Progress bar */}
                 <div className="qtask-progress">
                   <div className="qtask-progress__labels">
-                    <span>Progress</span>
+                    <span>Task Progress</span>
                     <span>
-                      {quickTasks.filter(t => t.done).length} / {quickTasks.length}
+                      {summary?.tasks_done ?? 0} / {summary?.total_tasks ?? 0}
                     </span>
                   </div>
                   <div className="qtask-progress__track">
                     <div
                       className="qtask-progress__fill"
                       style={{
-                        width: `${quickTasks.length > 0
-                          ? (quickTasks.filter(t => t.done).length / quickTasks.length) * 100
+                        width: `${(summary?.total_tasks ?? 0) > 0
+                          ? ((summary?.tasks_done ?? 0) / summary.total_tasks) * 100
                           : 0}%`,
                       }}
                     />
@@ -340,13 +357,15 @@ export default function Dashboard() {
                 </div>
               </>
             ) : (
-              <p className="dash-empty">No tasks yet. Add your first task!</p>
+              <p className="dash-empty">No pending tasks 🎉</p>
             )}
           </section>
 
           {/* Streak card */}
           <section className="dash-card dash-card--streak" id="section-streak">
-            <div className="streak-fire">🔥</div>
+            <div className="streak-fire text-amber-500">
+              <Flame size={40} strokeWidth={1.8} className="animate-pulse" />
+            </div>
             <p className="streak-label">Current Streak</p>
             <div className="streak-value">
               {isLoading ? <span className="skeleton-shimmer" style={{ display: 'inline-block', width: '3rem', height: '3rem', borderRadius: '0.5rem' }} /> : streakDays}
@@ -363,12 +382,10 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <p className="streak-record">
-              🏆 Personal best:{' '}
-              <strong>
-                {isLoading ? '—' : `${longestStreak} days`}
-              </strong>
-            </p>
+            <div className="streak-record flex items-center justify-center text-xs text-slate-400 mt-2 font-medium">
+              <Trophy size={13} className="text-amber-400 mr-1.5" />
+              <span>Personal best: <strong>{isLoading ? '—' : `${longestStreak} days`}</strong></span>
+            </div>
           </section>
 
           {/* Skills overview mini */}
@@ -378,11 +395,9 @@ export default function Dashboard() {
                 <h3 className="dash-card__title">Top Skills</h3>
                 <span className="dash-card__subtitle">By progress</span>
               </div>
-              <button className="dash-card__action-btn" id="btn-view-all-skills">
+              <button className="dash-card__action-btn" id="btn-view-all-skills" onClick={() => navigate('/skills')}>
                 View all
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
+                <ChevronRight size={14} className="ml-0.5" />
               </button>
             </div>
 
@@ -397,26 +412,34 @@ export default function Dashboard() {
               </div>
             ) : topSkills.length > 0 ? (
               <ul className="skills-mini">
-                {topSkills.map(s => (
-                  <li key={s.id ?? s.name} className="skill-mini-item">
-                    <div className="skill-mini-item__top">
-                      <span className="skill-mini-item__name">{s.name}</span>
-                      <span className="skill-mini-item__pct">{s.progress ?? s.pct ?? 0}%</span>
-                    </div>
-                    <div className="skill-mini-item__track">
-                      <div
-                        className="skill-mini-item__fill"
-                        style={{
-                          width: `${s.progress ?? s.pct ?? 0}%`,
-                          background: s.color ?? '#6366f1',
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
+                {topSkills.map(s => {
+                  const completedTasksCount = Math.round((s.progress / 100) * s.target_tasks)
+                  return (
+                    <li key={s.id ?? s.name} className="skill-mini-item">
+                      <div className="skill-mini-item__top">
+                        <span className="skill-mini-item__name">{s.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(148,163,184,0.5)', fontWeight: '500' }}>
+                            ({completedTasksCount} / {s.target_tasks} tasks)
+                          </span>
+                          <span className="skill-mini-item__pct">{s.progress}%</span>
+                        </div>
+                      </div>
+                      <div className="skill-mini-item__track">
+                        <div
+                          className="skill-mini-item__fill"
+                          style={{
+                            width: `${s.progress}%`,
+                            background: s.color ?? '#6366f1',
+                          }}
+                        />
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
-              <p className="dash-empty">No skills tracked yet.</p>
+              <p className="dash-empty">Create your first skill to start tracking progress</p>
             )}
           </section>
 

@@ -32,7 +32,31 @@ const tasksService = {
 
   /** DELETE /tasks/:id */
   remove: async (id) => {
-    await apiClient.delete(`/tasks/${id}`)
+    await apiClient.delete(`/tasks/${id}/`)
+  },
+
+  /** POST /tasks/:id/complete/ */
+  complete: async (id) => {
+    const { data } = await apiClient.post(`/tasks/${id}/complete/`)
+    return data
+  },
+
+  /** POST /tasks/:id/reopen/ */
+  reopen: async (id) => {
+    const { data } = await apiClient.post(`/tasks/${id}/reopen/`)
+    return data
+  },
+
+  /** GET /tasks/:id/history/ */
+  getHistory: async (id) => {
+    const { data } = await apiClient.get(`/tasks/${id}/history/`)
+    return data
+  },
+
+  /** GET /tasks/:id/activity/ */
+  getActivity: async (id) => {
+    const { data } = await apiClient.get(`/tasks/${id}/activity/`)
+    return data
   },
 }
 
