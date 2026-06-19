@@ -8,7 +8,7 @@ import { apiClient } from '../api'
 const skillsService = {
   /** GET /skills — fetch all skills for the authenticated user */
   getAll: async () => {
-    const { data } = await apiClient.get('/skills')
+    const { data } = await apiClient.get('/skills/')
     return data
   },
 
@@ -20,19 +20,19 @@ const skillsService = {
 
   /** POST /skills */
   create: async (payload) => {
-    const { data } = await apiClient.post('/skills', payload)
+    const { data } = await apiClient.post('/skills/', payload)
     return data
   },
 
   /** PATCH /skills/:id */
   update: async (id, payload) => {
-    const { data } = await apiClient.patch(`/skills/${id}`, payload)
+    const { data } = await apiClient.patch(`/skills/${id}/`, payload)
     return data
   },
 
   /** DELETE /skills/:id */
   remove: async (id) => {
-    await apiClient.delete(`/skills/${id}`)
+    await apiClient.delete(`/skills/${id}/`)
   },
 }
 
