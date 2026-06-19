@@ -205,7 +205,7 @@ class MonthlyAnalyticsView(APIView):
         user = request.user
         
         # Calculate date range: last 30 days from today
-        today = datetime.now().date()
+        today = timezone.now().date()
         thirty_days_ago = today - timedelta(days=29)
         
         # Query TaskCompletion records for the user within last 30 days
@@ -332,7 +332,7 @@ class HeatmapAnalyticsView(APIView):
         """
         user = request.user
 
-        today = datetime.now().date()
+        today = timezone.now().date()
         one_year_ago = today - timedelta(days=364)
 
         heatmap_data = TaskCompletion.objects.filter(
