@@ -179,7 +179,7 @@ export default function Dashboard() {
       <div className="dash-greeting">
         <div>
           <h2 className="dash-greeting__title">
-            {getGreeting()}{user?.username ? `, ${user.username}` : ''} 👋
+            { getGreeting()}{user?.username ? `, ${user.username}` : ''} 👋
           </h2>
           <p className="dash-greeting__sub">
             Here's what's happening with your progress today.
@@ -210,10 +210,10 @@ export default function Dashboard() {
       {/* ── Charts row ────────────────────────────────────────────── */}
       <div className="dash-charts-grid">
         <section className="dash-card dash-card--chart" id="section-chart-weekly">
-          <WeeklyProgressChart data={weekly ?? []} isLoading={isLoading} />
+          <WeeklyProgressChart data={[]} isLoading={isLoading} />
         </section>
         <section className="dash-card dash-card--chart" id="section-chart-monthly">
-          <MonthlyProgressChart data={monthly ?? []} isLoading={isLoading} />
+          <MonthlyProgressChart data={[]} isLoading={isLoading} />
         </section>
       </div>
 
@@ -225,7 +225,7 @@ export default function Dashboard() {
 
           {/* Learning Heatmap (chart component) */}
           <section className="dash-card" id="section-heatmap">
-            <LearningHeatmap data={heatGrid} isLoading={isLoading} />
+            <LearningHeatmap data={[]} isLoading={isLoading} />
           </section>
 
           {/* Recent Activity Feed */}
