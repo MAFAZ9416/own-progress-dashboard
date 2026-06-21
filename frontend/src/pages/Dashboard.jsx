@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import StatCard from '../components/dashboard/StatCard'
 import WeeklyProgressChart  from '../components/dashboard/WeeklyProgressChart'
 import MonthlyProgressChart from '../components/dashboard/MonthlyProgressChart'
@@ -158,6 +159,9 @@ export default function Dashboard() {
     refetch,
   } = useDashboard()
 
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const activityLimit = isMobile ? 5 : 8
+
   /* Build stat card configs from live data */
   const stats = buildStats(summary)
 
@@ -238,7 +242,7 @@ export default function Dashboard() {
             <div className="dash-card__header">
               <div className="dash-card__title-group">
                 <h3 className="dash-card__title">Recent Activity</h3>
-                <span className="dash-card__subtitle">Last 5 activities</span>
+                <span className="dash-card__subtitle">{`Last ${activityLimit} activities`}</span>
               </div>
               <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => setShowActivityModal(true)}>
                 View all
@@ -250,7 +254,7 @@ export default function Dashboard() {
               <ActivitySkeleton />
             ) : recent && recent.length > 0 ? (
               <ul className="activity-feed">
-                {recent.slice(0, 5).map((item, i) => (
+                {recent.slice(0, activityLimit).map((item, i) => (
                   <li
                     key={item.id ?? i}
                     className="activity-item"

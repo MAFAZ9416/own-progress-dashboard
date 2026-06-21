@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import authService from '../services/authService'
 
 export default function Login() {
-  const [form, setForm]           = useState({ email: '', password: '' })
+  const [form, setForm]           = useState({ identifier: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [focused, setFocused]     = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -20,7 +20,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.email || !form.password) {
+    if (!form.identifier || !form.password) {
       setError('Please fill in all fields.')
       return
     }
@@ -30,7 +30,7 @@ export default function Login() {
 
     try {
       const { access, refresh, user } = await authService.login({
-        email:    form.email,
+        email:    form.identifier,
         password: form.password,
       })
 
@@ -43,7 +43,7 @@ export default function Login() {
       const msg =
         err?.response?.data?.detail ??
         err?.response?.data?.non_field_errors?.[0] ??
-        'Invalid email or password. Please try again.'
+        'Invalid username/email or password.'
       setError(msg)
     } finally {
       setIsLoading(false)
@@ -90,26 +90,25 @@ export default function Login() {
         )}
 
         <form id="login-form" onSubmit={handleSubmit} className="auth-form" noValidate>
-          {/* Email */}
-          <div className={`field-group ${focused === 'email' ? 'field-focused' : ''}`}>
-            <label htmlFor="login-email" className="field-label">Email address</label>
+          {/* Username or Email */}
+          <div className={`field-group ${focused === 'identifier' ? 'field-focused' : ''}`}>
+            <label htmlFor="login-identifier" className="field-label">Username or Email</label>
             <div className="field-wrapper">
               <span className="field-icon">
                 <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
                 </svg>
               </span>
               <input
-                id="login-email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="login-identifier"
+                name="identifier"
+                type="text"
+                autoComplete="username"
                 required
-                placeholder="you@example.com"
-                value={form.email}
+                placeholder="Enter username or email"
+                value={form.identifier}
                 onChange={handleChange}
-                onFocus={() => setFocused('email')}
+                onFocus={() => setFocused('identifier')}
                 onBlur={() => setFocused('')}
                 className="field-input"
               />
