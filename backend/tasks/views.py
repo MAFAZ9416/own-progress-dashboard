@@ -56,6 +56,20 @@ class TaskViewSet(viewsets.ModelViewSet):
                     skill=task.skill
                 )
                 TaskActivity.objects.create(task=task, user=self.request.user, action="completed")
+
+                # Update streak
+                today = timezone.now().date()
+                streak_obj, _ = Streak.objects.get_or_create(user=self.request.user)
+                if streak_obj.last_active_date == today:
+                    pass
+                elif streak_obj.last_active_date == today - timedelta(days=1):
+                    streak_obj.current_streak += 1
+                else:
+                    streak_obj.current_streak = 1
+                if streak_obj.current_streak > streak_obj.longest_streak:
+                    streak_obj.longest_streak = streak_obj.current_streak
+                streak_obj.last_active_date = today
+                streak_obj.save(update_fields=["current_streak", "longest_streak", "last_active_date"])
             elif new_status == 'pending':
                 # Clean up TaskCompletion to keep dashboard analytics consistent
                 TaskCompletion.objects.filter(task=task).delete()

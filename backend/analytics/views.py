@@ -14,85 +14,143 @@ from streaks.models import Streak
 class DashboardSummaryView(APIView):
     """
     API View for retrieving dashboard summary data.
-    
+
     Returns aggregated metrics for the authenticated user:
-    - Total skills count
-    - Total tasks count
-    - Completed tasks count
-    - Pending tasks count
-    - Current streak value
-    - Longest streak value
-    
+    - Total skills / tasks / completed / pending counts
+    - **Dynamically computed** current and longest streaks
+    - Active days in the current week (for the streak widget)
+
+    Streaks are derived from distinct ``TaskCompletion.completed_date``
+    values — **not** from the cached ``Streak`` model — so they are
+    always accurate even if a day is missed.
+
     Authentication: Required (IsAuthenticated)
     HTTP Methods: GET
     """
     permission_classes = [IsAuthenticated]
 
+    # ── helpers ────────────────────────────────────────────────────
+    @staticmethod
+    def _compute_streaks(active_dates):
+        """
+        Given a **sorted ascending** list of ``datetime.date`` objects,
+        return ``(current_streak, longest_streak)``.
+
+        Rules:
+        - Consecutive active days form a streak.
+        - Missing one day resets the streak.
+        - ``current_streak`` counts only if the chain reaches today
+          (or yesterday, so you don't lose the streak mid-day).
+        """
+        from django.utils import timezone as tz
+
+        if not active_dates:
+            return 0, 0
+
+        today = tz.now().date()
+
+        # Walk backwards to compute current streak
+        current = 0
+        check = today
+        for d in reversed(active_dates):
+            if d == check:
+                current += 1
+                check -= timedelta(days=1)
+            elif d < check:
+                # Allow "yesterday counts" — the user hasn't had a chance
+                # to be active today yet, so look one day earlier on first
+                # iteration only.
+                if current == 0 and d == today - timedelta(days=1):
+                    current = 1
+                    check = d - timedelta(days=1)
+                else:
+                    break
+
+        # Walk forward once to compute longest streak
+        longest = 1
+        run = 1
+        for i in range(1, len(active_dates)):
+            if active_dates[i] == active_dates[i - 1] + timedelta(days=1):
+                run += 1
+                longest = max(longest, run)
+            elif active_dates[i] != active_dates[i - 1]:
+                run = 1
+
+        return current, longest
+
+    # ── GET ────────────────────────────────────────────────────────
     def get(self, request):
-        """
-        Retrieve dashboard summary for the authenticated user.
-        
-        Returns a JSON response with aggregated metrics filtered
-        only for the logged-in user's data.
-        
-        Response Example:
-        {
-            "total_skills": 5,
-            "total_tasks": 20,
-            "completed_tasks": 12,
-            "pending_tasks": 8,
-            "current_streak": 7,
-            "longest_streak": 15
-        }
-        
-        Args:
-            request: HTTP request object containing authenticated user
-            
-        Returns:
-            Response: JSON object with dashboard summary metrics
-        """
         user = request.user
-        
-        # Query total skills for the user
+
+        # Basic counts
         total_skills = Skill.objects.filter(user=user).count()
-        
-        # Query total tasks for the user
-        total_tasks = Task.objects.filter(user=user).count()
-        
-        # Query completed tasks for the user
-        completed_tasks = Task.objects.filter(
-            user=user,
-            status='completed'
-        ).count()
-        
-        # Query pending tasks for the user
-        pending_tasks = Task.objects.filter(
-            user=user,
-            status='pending'
-        ).count()
-        
-        # Get streak data from Streak model
-        try:
-            streak = Streak.objects.get(user=user)
-            current_streak = streak.current_streak
-            longest_streak = streak.longest_streak
-        except Streak.DoesNotExist:
-            # Default values if no streak record exists
-            current_streak = 0
-            longest_streak = 0
-        
-        # Build response data dictionary
+        total_tasks  = Task.objects.filter(user=user).count()
+        completed_tasks = Task.objects.filter(user=user, status='completed').count()
+        pending_tasks   = Task.objects.filter(user=user, status='pending').count()
+
+        # ── Dynamic streak calculation ────────────────────────────
+        active_dates = list(
+            TaskCompletion.objects.filter(user=user)
+            .values_list('completed_date', flat=True)
+            .distinct()
+            .order_by('completed_date')
+        )
+        current_streak, longest_streak = self._compute_streaks(active_dates)
+
+        # Persist back to Streak model so other views stay in sync
+        streak_obj, _ = Streak.objects.get_or_create(user=user)
+        streak_obj.current_streak = current_streak
+        streak_obj.longest_streak = max(longest_streak, streak_obj.longest_streak)
+        if active_dates:
+            streak_obj.last_active_date = active_dates[-1]
+        streak_obj.save(update_fields=['current_streak', 'longest_streak', 'last_active_date'])
+
+        # ── Active days in the current week (Mon–Sun) ─────────────
+        today = timezone.now().date()
+        # Monday of this week
+        monday = today - timedelta(days=today.weekday())
+        sunday = monday + timedelta(days=6)
+        week_active = set(
+            TaskCompletion.objects.filter(
+                user=user,
+                completed_date__gte=monday,
+                completed_date__lte=sunday,
+            )
+            .values_list('completed_date', flat=True)
+            .distinct()
+        )
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        streak_active_days = [
+            day_names[i]
+            for i in range(7)
+            if (monday + timedelta(days=i)) in week_active
+        ]
+
+        # ── Changes in the last 30 days ───────────────────────────
+        thirty_days_ago = today - timedelta(days=30)
+        skills_change = Skill.objects.filter(user=user, created_at__gte=thirty_days_ago).count()
+        tasks_change = Task.objects.filter(user=user, created_at__gte=thirty_days_ago).count()
+
+        current_streak_trend = "active" if current_streak > 0 else "inactive"
+        longest_streak_trend = "best"
+
         data = {
-            "total_skills": total_skills,
-            "total_tasks": total_tasks,
-            "completed_tasks": completed_tasks,
-            "pending_tasks": pending_tasks,
-            "current_streak": current_streak,
-            "longest_streak": longest_streak,
-            "tasks_done": completed_tasks,
+            "total_skills":       total_skills,
+            "total_tasks":        total_tasks,
+            "completed_tasks":    completed_tasks,
+            "pending_tasks":      pending_tasks,
+            "current_streak":     current_streak,
+            "longest_streak":     max(longest_streak, streak_obj.longest_streak),
+            "tasks_done":         completed_tasks,
+            "streak_active_days": streak_active_days,
+            "skills_change":      skills_change,
+            "tasks_change":       tasks_change,
+            "current_streak_trend": current_streak_trend,
+            "longest_streak_trend": longest_streak_trend,
         }
-        
+
         return Response(data, status=status.HTTP_200_OK)
+
 
 
 class WeeklyAnalyticsView(APIView):
@@ -166,13 +224,14 @@ class WeeklyAnalyticsView(APIView):
 class MonthlyAnalyticsView(APIView):
     """
     API View for retrieving monthly task completion analytics.
-    
-    Returns task completion counts aggregated by date for the last 30 days.
-    Data is filtered only for the authenticated user.
-    
-    Uses Django ORM aggregation to group TaskCompletion records by date
-    and count completed tasks per day.
-    
+
+    Returns task completion counts aggregated **by calendar month** for a
+    given year.  Accepts an optional ``?year=`` query parameter (defaults
+    to the current year).
+
+    The response also includes an ``available_years`` list so the
+    frontend can render a year-selector dropdown.
+
     Authentication: Required (IsAuthenticated)
     HTTP Methods: GET
     """
@@ -181,54 +240,79 @@ class MonthlyAnalyticsView(APIView):
     def get(self, request):
         """
         Retrieve monthly completion analytics for the authenticated user.
-        
-        Aggregates TaskCompletion records for the last 30 days, grouped by date,
-        returning completion counts per day in chronological order.
-        
+
+        Query params:
+            year (int, optional) – calendar year to report on.
+                                   Defaults to the current year.
+
         Response Example:
-        [
-            {
-                "date": "2026-05-20",
-                "completed_tasks": 3
-            },
-            {
-                "date": "2026-05-21",
-                "completed_tasks": 7
-            }
-        ]
-        
+        {
+            "year": 2026,
+            "available_years": [2025, 2026],
+            "months": [
+                { "month": 1, "completed_tasks": 12 },
+                { "month": 6, "completed_tasks": 6 }
+            ]
+        }
+
         Args:
             request: HTTP request object containing authenticated user
-            
+
         Returns:
-            Response: List of objects with date and completed_tasks count
+            Response: Object with year, available_years, and months list
         """
+        from django.db.models.functions import ExtractMonth, ExtractYear
+
         user = request.user
-        
-        # Calculate date range: last 30 days from today
-        today = timezone.now().date()
-        thirty_days_ago = today - timedelta(days=29)
-        
-        # Query TaskCompletion records for the user within last 30 days
-        # Group by completed_date and count tasks per day
-        monthly_data = TaskCompletion.objects.filter(
-            user=user,
-            completed_date__gte=thirty_days_ago,
-            completed_date__lte=today
-        ).values('completed_date').annotate(
-            completed_tasks=Count('id')
-        ).order_by('completed_date')
-        
-        # Format response data
-        data = [
+        current_year = timezone.now().year
+
+        # Parse requested year, default to current
+        try:
+            year = int(request.query_params.get('year', current_year))
+        except (TypeError, ValueError):
+            year = current_year
+
+        # Aggregate completions by month for the requested year
+        monthly_data = (
+            TaskCompletion.objects.filter(
+                user=user,
+                completed_date__year=year,
+            )
+            .annotate(month=ExtractMonth('completed_date'))
+            .values('month')
+            .annotate(completed_tasks=Count('id'))
+            .order_by('month')
+        )
+
+        months = [
             {
-                "date": str(item['completed_date']),
-                "completed_tasks": item['completed_tasks']
+                "month": item['month'],
+                "completed_tasks": item['completed_tasks'],
             }
             for item in monthly_data
         ]
-        
-        return Response(data, status=status.HTTP_200_OK)
+
+        # Distinct years that have any completion data for the user
+        available_years = sorted(
+            TaskCompletion.objects.filter(user=user)
+            .annotate(yr=ExtractYear('completed_date'))
+            .values_list('yr', flat=True)
+            .distinct()
+        )
+
+        # Guarantee the current year is always selectable
+        if current_year not in available_years:
+            available_years.append(current_year)
+            available_years.sort()
+
+        return Response(
+            {
+                "year": year,
+                "available_years": available_years,
+                "months": months,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class RecentActivityView(APIView):

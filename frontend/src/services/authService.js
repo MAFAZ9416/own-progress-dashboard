@@ -33,7 +33,10 @@ const authService = {
     // Temporarily set the access token so the profile request is authenticated
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.access}`
 
-    const { data: user } = await apiClient.get('/users/profile/')
+    const { data } = await apiClient.get('/users/profile/')
+    // Backend wraps the payload in { profile: { … } }; unwrap so the
+    // AuthContext stores a flat user object (id, username, email, …).
+    const user = data.profile ?? data
 
     return { access: tokens.access, refresh: tokens.refresh, user }
   },
@@ -69,7 +72,7 @@ const authService = {
    */
   getProfile: async () => {
     const { data } = await apiClient.get('/users/profile/')
-    return data
+    return data.profile ?? data
   },
 
   /**

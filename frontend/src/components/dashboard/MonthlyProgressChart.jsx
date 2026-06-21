@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -9,6 +10,9 @@ import {
   Cell,
 } from 'recharts'
 
+/* ─── Month short names in order ────────────────────────────────────────── */
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 /* ─── Custom Tooltip ────────────────────────────────────────────────────── */
 function MonthlyTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -17,7 +21,7 @@ function MonthlyTooltip({ active, payload, label }) {
       <p className="chart-tooltip__label">{label}</p>
       <div className="chart-tooltip__row">
         <span className="chart-tooltip__dot" style={{ background: '#6366f1' }} />
-        <span className="chart-tooltip__key">Activities</span>
+        <span className="chart-tooltip__key">Completed</span>
         <span className="chart-tooltip__val">{payload[0]?.value ?? 0}</span>
       </div>
     </div>
@@ -48,21 +52,33 @@ function RoundedBar(props) {
 /**
  * MonthlyProgressChart
  *
- * Vertical bar chart plotting monthly activity totals across the year.
+ * Vertical bar chart plotting monthly completed-task totals.
  *
  * Props:
- *   data – array from GET /api/dashboard/monthly/
- *          [{ month: "Jan", count: 12 }, ...]
- *   isLoading – boolean
+ *   data           – array already grouped by month from useDashboard
+ *                    [{ month: "Jun", count: 6 }, ...]
+ *   isLoading      – boolean
+ *   year           – currently displayed year (number)
+ *   availableYears – list of years the user has data for
+ *   onYearChange   – callback(year) to switch years
  */
-export default function MonthlyProgressChart({ data = [], isLoading = false }) {
-  /* Normalise key names */
-  const chartData = data.map(d => ({
-    month: d.month ?? d.label ?? '—',
-    count: d.count ?? d.activities ?? 0,
+export default function MonthlyProgressChart({
+  data = [],
+  isLoading = false,
+  year,
+  availableYears = [],
+  onYearChange,
+}) {
+  /* Build a full 12-month dataset, filling gaps with 0 */
+  const dataMap = Object.fromEntries(data.map(d => [d.month, d.count ?? 0]))
+  const chartData = MONTHS_SHORT.map(m => ({
+    month: m,
+    count: dataMap[m] ?? 0,
   }))
 
   const currentMonth = new Date().toLocaleString('default', { month: 'short' })
+  const displayYear  = year ?? new Date().getFullYear()
+  const isCurrentYear = displayYear === new Date().getFullYear()
 
   /* Gradient palette cycling through purple→indigo→blue */
   const BAR_COLORS = [
@@ -76,17 +92,35 @@ export default function MonthlyProgressChart({ data = [], isLoading = false }) {
       <div className="chart-wrap__header">
         <div>
           <h3 className="chart-wrap__title">Monthly Progress</h3>
-          <p className="chart-wrap__sub">Total activities per month</p>
+          <p className="chart-wrap__sub">Total completed tasks per month</p>
         </div>
-        <div className="chart-badge">
-          <span className="chart-badge__dot" />
-          {new Date().getFullYear()}
-        </div>
+
+        {/* ── Year selector ── */}
+        {availableYears.length > 0 && onYearChange ? (
+          <div className="chart-year-select-wrap">
+            <select
+              id="monthly-year-select"
+              className="chart-year-select"
+              value={displayYear}
+              onChange={e => onYearChange(Number(e.target.value))}
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <ChevronDown size={13} className="chart-year-select__icon" />
+          </div>
+        ) : (
+          <div className="chart-badge">
+            <span className="chart-badge__dot" />
+            {displayYear}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
         <div className="chart-skeleton skeleton-shimmer" style={{ height: 200 }} />
-      ) : chartData.length === 0 ? (
+      ) : chartData.every(d => d.count === 0) ? (
         <p className="dash-empty">No monthly data yet.</p>
       ) : (
         <ResponsiveContainer width="100%" height={200}>
@@ -124,11 +158,11 @@ export default function MonthlyProgressChart({ data = [], isLoading = false }) {
                 <Cell
                   key={`cell-${i}`}
                   fill={
-                    entry.month === currentMonth
+                    isCurrentYear && entry.month === currentMonth
                       ? '#a78bfa'                        /* highlight current month */
                       : BAR_COLORS[i % BAR_COLORS.length]
                   }
-                  opacity={entry.month === currentMonth ? 1 : 0.72}
+                  opacity={isCurrentYear && entry.month === currentMonth ? 1 : 0.72}
                 />
               ))}
             </Bar>

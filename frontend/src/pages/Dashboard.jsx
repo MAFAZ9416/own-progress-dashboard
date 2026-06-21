@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
@@ -6,7 +7,7 @@ import WeeklyProgressChart  from '../components/dashboard/WeeklyProgressChart'
 import MonthlyProgressChart from '../components/dashboard/MonthlyProgressChart'
 import LearningHeatmap      from '../components/dashboard/LearningHeatmap'
 import SkeletonCard, { SkeletonText, SkeletonBlock } from '../components/common/SkeletonCard'
-import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus } from 'lucide-react'
+import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus, X } from 'lucide-react'
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -26,12 +27,12 @@ const PRIORITY_DOT = {
   done:   '#4ade80',
 }
 
-/** Greeting based on current hour */
+/** Greeting + emoji based on current hour */
 function getGreeting() {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (h >= 5 && h < 12)  return { text: 'Good Morning',   emoji: '☀️' }
+  if (h >= 12 && h < 17) return { text: 'Good Afternoon',  emoji: '🌤️' }
+  return { text: 'Good Evening', emoji: '🌙' }
 }
 
 /* ─── Stat card definitions — values injected from API ─────────────────── */
@@ -63,7 +64,7 @@ function buildStats(summary) {
       value: summary?.current_streak ?? 0,
       suffix: 'days',
       gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-      trend: { value: 'active', positive: true },
+      trend: summary?.current_streak_trend ? { value: summary.current_streak_trend, positive: (summary?.current_streak ?? 0) > 0 } : undefined,
       icon: <Flame size={20} strokeWidth={1.8} />,
     },
     {
@@ -72,7 +73,7 @@ function buildStats(summary) {
       value: summary?.longest_streak ?? 0,
       suffix: 'days',
       gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
-      trend: { value: 'best', positive: true },
+      trend: summary?.longest_streak_trend ? { value: summary.longest_streak_trend, positive: (summary?.longest_streak ?? 0) > 0 } : undefined,
       icon: <Trophy size={20} strokeWidth={1.8} />,
     },
   ]
@@ -138,10 +139,14 @@ function TaskSkeleton() {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [showActivityModal, setShowActivityModal] = useState(false)
   const {
     summary,
     weekly,
     monthly,
+    monthlyYear,
+    availableYears,
+    changeMonthlyYear,
     recent,
     heatmap,
     tasks,
@@ -156,9 +161,10 @@ export default function Dashboard() {
   /* Build stat card configs from live data */
   const stats = buildStats(summary)
 
-  /* Streak week dots — mark active days based on current_streak */
-  const streakDays   = summary?.current_streak ?? 0
-  const longestStreak = summary?.longest_streak ?? 0
+  /* Streak week dots — mark active days based on actual activity */
+  const streakDays      = summary?.current_streak ?? 0
+  const longestStreak   = summary?.longest_streak ?? 0
+  const streakActiveDays = summary?.streak_active_days ?? []
 
   /* Heatmap grid: use API data or empty grid while loading */
   const heatGrid = heatmap ?? []
@@ -170,7 +176,11 @@ export default function Dashboard() {
       <div className="dash-greeting">
         <div>
           <h2 className="dash-greeting__title">
-            {getGreeting()}{user?.username ? `, ${user.username}` : ''} 👋
+            {(() => {
+              const { text, emoji } = getGreeting()
+              const name = user?.username ?? user?.first_name
+              return `${text}${name ? `, ${name}` : ''} ${emoji}`
+            })()}
           </h2>
           <p className="dash-greeting__sub">
             Here's what's happening with your progress today.
@@ -202,7 +212,13 @@ export default function Dashboard() {
           <WeeklyProgressChart data={weekly || []} isLoading={isLoading} />
         </section>
         <section className="dash-card dash-card--chart" id="section-chart-monthly">
-          <MonthlyProgressChart data={monthly || []} isLoading={isLoading} />
+          <MonthlyProgressChart
+            data={monthly || []}
+            isLoading={isLoading}
+            year={monthlyYear}
+            availableYears={availableYears}
+            onYearChange={changeMonthlyYear}
+          />
         </section>
       </div>
 
@@ -222,9 +238,9 @@ export default function Dashboard() {
             <div className="dash-card__header">
               <div className="dash-card__title-group">
                 <h3 className="dash-card__title">Recent Activity</h3>
-                <span className="dash-card__subtitle">Your latest actions</span>
+                <span className="dash-card__subtitle">Last 5 activities</span>
               </div>
-              <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => navigate('/tasks')}>
+              <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => setShowActivityModal(true)}>
                 View all
                 <ChevronRight size={14} className="ml-0.5" />
               </button>
@@ -234,7 +250,7 @@ export default function Dashboard() {
               <ActivitySkeleton />
             ) : recent && recent.length > 0 ? (
               <ul className="activity-feed">
-                {recent.map((item, i) => (
+                {recent.slice(0, 5).map((item, i) => (
                   <li
                     key={item.id ?? i}
                     className="activity-item"
@@ -372,11 +388,11 @@ export default function Dashboard() {
             </div>
             <p className="streak-days-label">days in a row</p>
 
-            {/* Mini week dots — active if within current streak */}
+            {/* Mini week dots — highlight only actually active days */}
             <div className="streak-week">
-              {DAYS.map((d, i) => (
+              {DAYS.map((d) => (
                 <div key={d} className="streak-week__item">
-                  <div className={`streak-week__dot ${i < streakDays ? 'streak-week__dot--active' : ''}`} />
+                  <div className={`streak-week__dot ${streakActiveDays.includes(d) ? 'streak-week__dot--active' : ''}`} />
                   <span>{d[0]}</span>
                 </div>
               ))}
@@ -445,6 +461,53 @@ export default function Dashboard() {
 
         </div>
       </div>
+      {/* ── Activity Modal ─────────────────────────────────────────── */}
+      {showActivityModal && (
+        <div className="activity-modal-overlay" onClick={() => setShowActivityModal(false)}>
+          <div className="activity-modal" onClick={e => e.stopPropagation()}>
+            <div className="activity-modal__header">
+              <div>
+                <h2 className="activity-modal__title">All Recent Activity</h2>
+                <p className="activity-modal__sub">Your complete activity history</p>
+              </div>
+              <button
+                className="activity-modal__close"
+                id="btn-close-activity-modal"
+                onClick={() => setShowActivityModal(false)}
+                aria-label="Close"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="activity-modal__body">
+              {recent && recent.length > 0 ? (
+                <ul className="activity-feed">
+                  {recent.map((item, i) => (
+                    <li
+                      key={item.id ?? i}
+                      className="activity-item"
+                      style={{ animationDelay: `${i * 40}ms` }}
+                    >
+                      <span
+                        className="activity-item__dot"
+                        style={{ background: TYPE_DOT[item.type] ?? '#6366f1' }}
+                      />
+                      <div className="activity-item__body">
+                        <p className="activity-item__text">{item.text}</p>
+                        <span className="activity-item__time">{item.time}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="dash-empty">No recent activity yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

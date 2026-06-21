@@ -29,9 +29,8 @@ export default function Sidebar({ isOpen, onClose }) {
     navigate('/login')
   }
 
-  const initials = user?.username?.[0]?.toUpperCase()
-    ?? user?.name?.[0]?.toUpperCase()
-    ?? 'U'
+  const displayName = user?.username ?? user?.first_name ?? ''
+  const initials = displayName?.[0]?.toUpperCase() ?? '?'
 
   return (
     <aside id="sidebar" className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
@@ -81,9 +80,9 @@ export default function Sidebar({ isOpen, onClose }) {
           <div className="sidebar__avatar">{initials}</div>
           <div className="sidebar__user-info">
             <p className="sidebar__user-name">
-              {user?.username ?? user?.name ?? 'User'}
+              {displayName}
             </p>
-            <p className="sidebar__user-email">{user?.email ?? 'user@example.com'}</p>
+            <p className="sidebar__user-email">{user?.email ?? ''}</p>
           </div>
         </div>
 

@@ -51,13 +51,21 @@ const dashboardService = {
   /**
    * GET /api/dashboard/monthly/
    *
+   * Optional query param: ?year=2026
+   *
    * Expected response shape:
-   * [
-   *   { date: "2026-06-19", completed_tasks: 5 }
-   * ]
+   * {
+   *   year: 2026,
+   *   available_years: [2025, 2026],
+   *   months: [
+   *     { month: 1, completed_tasks: 12 },
+   *     { month: 6, completed_tasks: 6 }
+   *   ]
+   * }
    */
-  getMonthly: async () => {
-    const { data } = await apiClient.get('/dashboard/monthly/')
+  getMonthly: async (year) => {
+    const params = year != null ? { year } : {}
+    const { data } = await apiClient.get('/dashboard/monthly/', { params })
     return data
   },
 

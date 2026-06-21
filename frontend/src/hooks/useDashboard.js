@@ -42,17 +42,19 @@ function getRelativeTime(isoString) {
 }
 
 export function useDashboard() {
-  const [summary,   setSummary]   = useState(null)
-  const [weekly,    setWeekly]    = useState(null)
-  const [monthly,   setMonthly]   = useState(null)
-  const [recent,    setRecent]    = useState(null)
-  const [heatmap,   setHeatmap]   = useState(null)
-  const [tasks,     setTasks]     = useState([])
-  const [pendingTasks, setPendingTasks] = useState([])
-  const [skills,    setSkills]    = useState([])
-  const [topSkills, setTopSkills] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error,     setError]     = useState(null)
+  const [summary,        setSummary]        = useState(null)
+  const [weekly,         setWeekly]         = useState(null)
+  const [monthly,        setMonthly]        = useState(null)
+  const [monthlyYear,    setMonthlyYear]    = useState(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState([new Date().getFullYear()])
+  const [recent,         setRecent]         = useState(null)
+  const [heatmap,        setHeatmap]        = useState(null)
+  const [tasks,          setTasks]          = useState([])
+  const [pendingTasks,   setPendingTasks]   = useState([])
+  const [skills,         setSkills]         = useState([])
+  const [topSkills,      setTopSkills]      = useState([])
+  const [isLoading,      setIsLoading]      = useState(true)
+  const [error,          setError]          = useState(null)
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true)
@@ -96,18 +98,13 @@ export function useDashboard() {
         }
       })
 
-      // 2. Transform Monthly Data (convert date key format to month name)
+      // 2. Transform Monthly Data (backend now returns { year, available_years, months })
       const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-      const sortedMonthly = [...(monthlyData || [])].sort((a, b) => a.date.localeCompare(b.date))
-      const transformedMonthly = sortedMonthly.map(item => {
-        const parts = item.date.split('-')
-        const dateObj = new Date(parts[0], parts[1] - 1, parts[2])
-        const monthName = monthsShort[dateObj.getMonth()]
-        return {
-          month: monthName,
-          count: item.completed_tasks ?? 0
-        }
-      })
+      const monthlyPayload = monthlyData || {}
+      const transformedMonthly = (monthlyPayload.months || []).map(item => ({
+        month: monthsShort[(item.month ?? 1) - 1],
+        count: item.completed_tasks ?? 0,
+      }))
 
       // 3. Transform Heatmap Data (convert daily list to 12 weeks × 7 days matrix)
       const dayOfWeek = today.getDay()
@@ -175,6 +172,8 @@ export function useDashboard() {
       setSummary(summaryData)
       setWeekly(transformedWeekly)
       setMonthly(transformedMonthly)
+      setMonthlyYear(monthlyPayload.year ?? new Date().getFullYear())
+      setAvailableYears(monthlyPayload.available_years ?? [new Date().getFullYear()])
       setRecent(transformedRecent)
       setHeatmap(transformedHeatmap)
       setTasks(tasksData || [])
@@ -199,10 +198,35 @@ export function useDashboard() {
     fetchAll()
   }, [fetchAll])
 
+  /**
+   * Change the year for the monthly chart without re-fetching everything.
+   * @param {number} year
+   */
+  const changeMonthlyYear = useCallback(async (year) => {
+    try {
+      const monthlyData = await dashboardService.getMonthly(year)
+      const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const payload = monthlyData || {}
+      const transformed = (payload.months || []).map(item => ({
+        month: monthsShort[(item.month ?? 1) - 1],
+        count: item.completed_tasks ?? 0,
+      }))
+      setMonthly(transformed)
+      setMonthlyYear(payload.year ?? year)
+      setAvailableYears(payload.available_years ?? [year])
+    } catch (err) {
+      // Silently keep the current data on error
+      console.error('Failed to fetch monthly data for year', year, err)
+    }
+  }, [])
+
   return {
     summary,
     weekly,
     monthly,
+    monthlyYear,
+    availableYears,
+    changeMonthlyYear,
     recent,
     heatmap,
     tasks,
