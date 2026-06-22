@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { LayoutDashboard, Brain, ClipboardList, LogOut } from 'lucide-react'
+import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle } from 'lucide-react'
 
 const NAV_ITEMS = [
   {

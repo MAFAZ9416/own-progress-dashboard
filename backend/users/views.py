@@ -12,17 +12,21 @@ class RegisterView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        response_data = {
-            "message": "User registered successfully.",
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-            },
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        if serializer.is_valid():
+            user = serializer.save()
+            response_data = {
+                "message": "User registered successfully.",
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                },
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        
+        print("REQUEST DATA:", request.data)
+        print("SERIALIZER ERRORS:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProfileView(generics.GenericAPIView):

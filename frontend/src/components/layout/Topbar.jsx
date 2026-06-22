@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Menu, Bell } from 'lucide-react'
 
@@ -6,6 +6,7 @@ const PAGE_TITLES = {
   '/dashboard': { title: 'Dashboard',  sub: 'Overview of your progress' },
   '/skills':    { title: 'Skills',     sub: 'Manage and track your skills' },
   '/tasks':     { title: 'Tasks',      sub: 'Your task list and progress' },
+  '/profile':   { title: 'Profile',    sub: 'Your personal information and stats' },
 }
 
 export default function Topbar({ onToggleSidebar }) {
@@ -50,7 +51,9 @@ export default function Topbar({ onToggleSidebar }) {
             <span className="topbar__user-name">{displayName}</span>
             <span className="topbar__user-role">Member</span>
           </div>
-          <div className="topbar__avatar">{initials}</div>
+          <Link to="/profile" className="topbar__avatar hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition-all cursor-pointer" aria-label="Go to profile">
+            {initials}
+          </Link>
         </div>
       </div>
     </header>

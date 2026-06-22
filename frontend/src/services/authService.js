@@ -53,11 +53,12 @@ const authService = {
    * @param {{ username: string, email: string, password: string }} payload
    * @returns {object} created user
    */
-  register: async ({ username, email, password }) => {
+  register: async ({ username, email, password, password2 }) => {
     const { data } = await apiClient.post('/users/register/', {
       username,
       email,
       password,
+      password2,
     })
     return data
   },

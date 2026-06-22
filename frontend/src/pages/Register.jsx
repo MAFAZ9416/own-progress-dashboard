@@ -33,24 +33,31 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (form.password !== form.confirmPassword) return
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.")
+      return
+    }
 
     setIsLoading(true)
     setError('')
     setFieldErrors({})
 
     try {
-      await authService.register({
+      const payload = {
         username: form.username,
         email:    form.email,
         password: form.password,
-      })
+        password2: form.confirmPassword,
+      }
+      console.log("PAYLOAD:", payload)
+      await authService.register(payload)
 
       setSuccess(true)
 
       // Redirect to login after a brief success moment
       setTimeout(() => navigate('/login', { replace: true }), 1500)
     } catch (err) {
+      console.log("API ERROR RESPONSE:", err?.response?.data)
       const data = err?.response?.data
 
       if (data && typeof data === 'object') {
@@ -68,11 +75,13 @@ export default function Register() {
 
         if (Object.keys(perField).length > 0) {
           setFieldErrors(perField)
-        } else {
+        }
+        
+        if (non_field_errors || detail || Object.keys(perField).length === 0) {
           setError(
             non_field_errors?.[0] ??
             detail ??
-            'Registration failed. Please try again.'
+            (Object.keys(perField).length === 0 ? 'Registration failed. Please try again.' : '')
           )
         }
       } else {
@@ -314,6 +323,9 @@ export default function Register() {
             </div>
             {passwordMismatch && (
               <p className="field-error-msg">Passwords do not match</p>
+            )}
+            {fieldErrors.password2 && !passwordMismatch && (
+              <p className="field-error-msg">{fieldErrors.password2}</p>
             )}
           </div>
 

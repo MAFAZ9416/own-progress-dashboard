@@ -8,6 +8,7 @@ import Register from '../pages/Register'
 import Dashboard from '../pages/Dashboard'
 import Skills from '../pages/Skills'
 import Tasks from '../pages/Tasks'
+import Profile from '../pages/Profile'
 
 /**
  * Central route configuration for the application.
@@ -31,6 +32,7 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/skills"    element={<Skills />} />
           <Route path="/tasks"     element={<Tasks />} />
+          <Route path="/profile"   element={<Profile />} />
         </Route>
       </Route>
 
