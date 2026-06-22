@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
-from .serializers import ProfileSerializer, RegisterSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import ProfileSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
 
 
 class RegisterView(generics.GenericAPIView):
@@ -47,3 +48,7 @@ class ProfileView(generics.GenericAPIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmailTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainPairSerializer

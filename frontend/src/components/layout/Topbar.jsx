@@ -14,7 +14,7 @@ export default function Topbar({ onToggleSidebar }) {
   const { user }     = useAuth()
   const page         = PAGE_TITLES[pathname] ?? { title: 'Own Progress', sub: '' }
 
-  const displayName = user?.username ?? user?.first_name ?? ''
+  const displayName = user?.full_name ?? user?.first_name ?? ''
   const initials = displayName?.[0]?.toUpperCase() ?? '?'
 
   return (

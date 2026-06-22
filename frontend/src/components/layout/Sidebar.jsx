@@ -29,7 +29,7 @@ export default function Sidebar({ isOpen, onClose }) {
     navigate('/login')
   }
 
-  const displayName = user?.username ?? user?.first_name ?? ''
+  const displayName = user?.full_name ?? user?.first_name ?? ''
   const initials = displayName?.[0]?.toUpperCase() ?? '?'
 
   return (

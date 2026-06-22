@@ -6,6 +6,7 @@ class User(AbstractUser):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    full_name = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to='profiles/', blank=True, null=True)
     bio = models.TextField(blank=True, max_length=150)
 

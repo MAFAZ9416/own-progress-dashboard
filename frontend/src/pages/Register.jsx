@@ -4,7 +4,7 @@ import authService from '../services/authService'
 
 export default function Register() {
   const [form, setForm] = useState({
-    username: '',
+    full_name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -44,7 +44,7 @@ export default function Register() {
 
     try {
       const payload = {
-        username: form.username,
+        full_name: form.full_name,
         email:    form.email,
         password: form.password,
         password2: form.confirmPassword,
@@ -62,10 +62,10 @@ export default function Register() {
 
       if (data && typeof data === 'object') {
         // Django returns per-field arrays: { username: [...], email: [...], password: [...] }
-        const { username, email, password, non_field_errors, detail, ...rest } = data
+        const { full_name, email, password, non_field_errors, detail, ...rest } = data
 
         const perField = {}
-        if (username)          perField.username = username[0]
+        if (full_name)         perField.full_name = full_name[0]
         if (email)             perField.email    = email[0]
         if (password)          perField.password = password[0]
         // Catch any other field errors
@@ -142,9 +142,9 @@ export default function Register() {
         )}
 
         <form id="register-form" onSubmit={handleSubmit} className="auth-form" noValidate>
-          {/* Username */}
-          <div className={`field-group ${focused === 'username' ? 'field-focused' : ''} ${fieldErrors.username ? 'field-error' : ''}`}>
-            <label htmlFor="register-username" className="field-label">Username</label>
+          {/* Full Name */}
+          <div className={`field-group ${focused === 'full_name' ? 'field-focused' : ''} ${fieldErrors.full_name ? 'field-error' : ''}`}>
+            <label htmlFor="register-full-name" className="field-label">Full Name</label>
             <div className="field-wrapper">
               <span className="field-icon">
                 <svg viewBox="0 0 20 20" fill="currentColor">
@@ -152,21 +152,20 @@ export default function Register() {
                 </svg>
               </span>
               <input
-                id="register-username"
-                name="username"
+                id="register-full-name"
+                name="full_name"
                 type="text"
-                autoComplete="username"
                 required
-                placeholder="yourname"
-                value={form.username}
+                placeholder="Enter your full name"
+                value={form.full_name}
                 onChange={handleChange}
-                onFocus={() => setFocused('username')}
+                onFocus={() => setFocused('full_name')}
                 onBlur={() => setFocused('')}
                 className="field-input"
               />
             </div>
-            {fieldErrors.username && (
-              <p className="field-error-msg">{fieldErrors.username}</p>
+            {fieldErrors.full_name && (
+              <p className="field-error-msg">{fieldErrors.full_name}</p>
             )}
           </div>
 
@@ -186,7 +185,7 @@ export default function Register() {
                 type="email"
                 autoComplete="email"
                 required
-                placeholder="you@example.com"
+                placeholder="your@email.com"
                 value={form.email}
                 onChange={handleChange}
                 onFocus={() => setFocused('email')}

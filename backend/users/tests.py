@@ -17,16 +17,18 @@ class UserProfileTests(APITestCase):
         
         # Create a test user
         self.user_data = {
-            "username": "testuser",
+            "full_name": "Test User",
             "email": "testuser@example.com",
             "password": "TestPassword123!",
             "password2": "TestPassword123!"
         }
         self.user = User.objects.create_user(
-            username="existinguser",
+            username="existing@example.com",
             email="existing@example.com",
             password="ExistingPassword123!"
         )
+        self.user.profile.full_name = "Existing User"
+        self.user.profile.save()
         
         # Authenticate test client
         self.client.force_authenticate(user=self.user)
@@ -36,59 +38,51 @@ class UserProfileTests(APITestCase):
         response = self.client.post(self.register_url, self.user_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
-        new_user = User.objects.get(username="testuser")
+        new_user = User.objects.get(email="testuser@example.com")
         self.assertTrue(UserProfile.objects.filter(user=new_user).exists())
         profile = new_user.profile
+        self.assertEqual(profile.full_name, "Test User")
         self.assertFalse(profile.avatar)
 
     def test_get_profile(self):
         """Verify that an authenticated user can fetch their profile."""
         response = self.client.get(self.profile_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["username"], "existinguser")
+        self.assertEqual(response.data["full_name"], "Existing User")
         self.assertEqual(response.data["email"], "existing@example.com")
         self.assertEqual(response.data["bio"], "")
         self.assertIsNone(response.data["avatar"])
 
     def test_update_profile(self):
-        """Verify updating basic user profile details (username, email, bio)."""
+        """Verify updating basic user profile details (full_name, email, bio)."""
         update_data = {
-            "username": "updatedusername",
+            "full_name": "Updated User Name",
             "email": "updatedemail@example.com",
             "bio": "Software developer specialized in backend."
         }
         response = self.client.put(self.profile_url, update_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["username"], "updatedusername")
+        self.assertEqual(response.data["full_name"], "Updated User Name")
         self.assertEqual(response.data["email"], "updatedemail@example.com")
         self.assertEqual(response.data["bio"], "Software developer specialized in backend.")
         
         self.user.refresh_from_db()
-        self.assertEqual(self.user.username, "updatedusername")
+        self.assertEqual(self.user.username, "updatedemail@example.com")
         self.assertEqual(self.user.email, "updatedemail@example.com")
+        self.assertEqual(self.user.profile.full_name, "Updated User Name")
         self.assertEqual(self.user.profile.bio, "Software developer specialized in backend.")
-
-    def test_username_required(self):
-        """Verify username cannot be set to empty."""
-        update_data = {
-            "username": "",
-            "email": "another@example.com"
-        }
-        response = self.client.put(self.profile_url, update_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("username", response.data)
 
     def test_email_uniqueness(self):
         """Verify that an email already in use cannot be claimed by another user."""
         # Create second user
         other_user = User.objects.create_user(
-            username="otheruser",
+            username="otheruser@example.com",
             email="otheruser@example.com",
             password="OtherPassword123!"
         )
         
         update_data = {
-            "username": "existinguser",
+            "full_name": "Existing User",
             "email": "otheruser@example.com"
         }
         response = self.client.put(self.profile_url, update_data)
@@ -99,7 +93,7 @@ class UserProfileTests(APITestCase):
         """Verify bio cannot exceed 150 characters."""
         long_bio = "a" * 151
         update_data = {
-            "username": "existinguser",
+            "full_name": "Existing User",
             "email": "existing@example.com",
             "bio": long_bio
         }
@@ -116,7 +110,7 @@ class UserProfileTests(APITestCase):
         file_obj.seek(0)
         avatar_file = SimpleUploadedFile("avatar.png", file_obj.read(), content_type="image/png")
         update_data = {
-            "username": "existinguser",
+            "full_name": "Existing User",
             "email": "existing@example.com",
             "avatar": avatar_file
         }

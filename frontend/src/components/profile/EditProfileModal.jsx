@@ -7,7 +7,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
   const { user, updateUser } = useAuth()
   
   const [formData, setFormData] = useState({
-    username: '',
+    full_name: '',
     email: '',
     bio: ''
   })
@@ -41,7 +41,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
           if (response.ok) {
             const data = await response.json()
             setFormData({
-              username: data.username || '',
+              full_name: data.full_name || '',
               email: data.email || '',
               bio: data.bio || ''
             })
@@ -56,7 +56,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
             // Fallback to local auth context if fetch fails
             if (user) {
               setFormData({
-                username: user.username || '',
+                full_name: user.full_name || '',
                 email: user.email || '',
                 bio: user.bio || ''
               })
@@ -68,7 +68,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
           console.error("Failed to fetch profile details", err)
           if (user) {
             setFormData({
-              username: user.username || '',
+              full_name: user.full_name || '',
               email: user.email || '',
               bio: user.bio || ''
             })
@@ -141,8 +141,8 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
 
     // Local Validation
     let errors = {}
-    if (!formData.username.trim()) {
-      errors.username = 'Username is required.'
+    if (!formData.full_name.trim()) {
+      errors.full_name = 'Full Name is required.'
     }
     if (!formData.email.trim()) {
       errors.email = 'Email address is required.'
@@ -160,7 +160,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
     try {
       const token = localStorage.getItem('accessToken')
       const submitData = new FormData()
-      submitData.append('username', formData.username.trim())
+      submitData.append('full_name', formData.full_name.trim())
       submitData.append('email', formData.email.trim())
       submitData.append('bio', formData.bio)
       
@@ -194,6 +194,9 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
               if (data.profile.avatar) {
                 parsedErrors.avatar = Array.isArray(data.profile.avatar) ? data.profile.avatar.join(' ') : data.profile.avatar
               }
+              if (data.profile.full_name) {
+                parsedErrors.full_name = Array.isArray(data.profile.full_name) ? data.profile.full_name.join(' ') : data.profile.full_name
+              }
             } else {
               parsedErrors[key] = Array.isArray(data[key]) ? data[key].join(' ') : data[key]
             }
@@ -218,7 +221,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  const initials = formData.username?.[0]?.toUpperCase() || '?'
+  const initials = formData.full_name?.[0]?.toUpperCase() || '?'
 
   return (
     <div className="ep-modal-overlay" onClick={onClose}>
@@ -299,22 +302,22 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
             {/* Form Fields */}
             <div className="ep-field-group">
               <label className="ep-label">
-                <User size={12} /> Username
+                <User size={12} /> Full Name
               </label>
               <input 
                 type="text" 
-                name="username" 
-                className={`ep-input ${fieldErrors.username ? 'ep-input--error' : ''}`}
-                value={formData.username} 
+                name="full_name" 
+                className={`ep-input ${fieldErrors.full_name ? 'ep-input--error' : ''}`}
+                value={formData.full_name} 
                 onChange={handleInputChange} 
                 disabled={isLoading}
-                placeholder="Username"
+                placeholder="Full Name"
                 required 
               />
-              {fieldErrors.username && (
+              {fieldErrors.full_name && (
                 <div className="ep-field-error">
                   <AlertCircle size={12} />
-                  <span>{fieldErrors.username}</span>
+                  <span>{fieldErrors.full_name}</span>
                 </div>
               )}
             </div>

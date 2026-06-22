@@ -182,7 +182,7 @@ export default function Dashboard() {
           <h2 className="dash-greeting__title">
             {(() => {
               const { text, emoji } = getGreeting()
-              const name = user?.username ?? user?.first_name
+              const name = user?.full_name
               return `${text}${name ? `, ${name}` : ''} ${emoji}`
             })()}
           </h2>

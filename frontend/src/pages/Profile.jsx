@@ -21,7 +21,7 @@ export default function Profile() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const activityLimit = isMobile ? 3 : 5
 
-  const displayName = user?.username ?? user?.first_name ?? 'User'
+  const displayName = user?.full_name ?? user?.first_name ?? 'User'
   const email = user?.email ?? 'No email provided'
   const initials = displayName?.[0]?.toUpperCase() ?? '?'
   
@@ -163,7 +163,7 @@ export default function Profile() {
           </h2>
           <div className="profile-account-list">
             <div className="profile-account-item">
-              <span className="profile-account-label"><User size={16} /> Username</span>
+              <span className="profile-account-label"><User size={16} /> Name</span>
               <span className="profile-account-value">{displayName}</span>
             </div>
             <div className="profile-account-item">

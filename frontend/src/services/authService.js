@@ -24,38 +24,37 @@ const authService = {
    * @returns {{ access: string, refresh: string, user: object }}
    */
   login: async ({ email, password }) => {
-    // Django SimpleJWT defaults to 'username' field. We send email as username.
     const { data: tokens } = await apiClient.post('/token/', {
-      username: email,
+      email,
       password,
     })
-
+ 
     // Temporarily set the access token so the profile request is authenticated
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.access}`
-
+ 
     const { data } = await apiClient.get('/users/profile/')
     // Backend wraps the payload in { profile: { … } }; unwrap so the
     // AuthContext stores a flat user object (id, username, email, …).
     const user = data.profile ?? data
-
+ 
     return { access: tokens.access, refresh: tokens.refresh, user }
   },
-
+ 
   /**
    * Register — create a new user account.
    *
    * POST /api/users/register/
-   * Body:   { username, email, password }
-   * Returns { id, username, email, ... }
+   * Body:   { full_name, email, password }
+   * Returns { id, email, ... }
    *
    * Registration does NOT auto-login; the caller redirects to /login.
    *
-   * @param {{ username: string, email: string, password: string }} payload
+   * @param {{ full_name: string, email: string, password: string }} payload
    * @returns {object} created user
    */
-  register: async ({ username, email, password, password2 }) => {
+  register: async ({ full_name, email, password, password2 }) => {
     const { data } = await apiClient.post('/users/register/', {
-      username,
+      full_name,
       email,
       password,
       password2,
