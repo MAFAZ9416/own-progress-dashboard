@@ -66,7 +66,19 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(false)
   }
 
-  const value = { isAuthenticated, isLoading, user, login, logout }
+  /**
+   * Update user state and localStorage without re-logging in.
+   * Merges existing user data with the provided newData.
+   */
+  const updateUser = (newData) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...newData }
+      localStorage.setItem('user', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const value = { isAuthenticated, isLoading, user, login, logout, updateUser }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

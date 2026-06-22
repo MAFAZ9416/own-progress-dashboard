@@ -2228,3 +2228,11 @@ a { color: inherit; text-decoration: none; }
     padding: 0.875rem !important;
   }
 }
+
+.sidebar__avatar img, .topbar__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+

@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import User
+from .models import User, UserProfile
 from streaks.models import Streak
 
 
@@ -9,3 +9,4 @@ from streaks.models import Streak
 def create_user_streak(sender, instance, created, **kwargs):
     if created:
         Streak.objects.create(user=instance)
+        UserProfile.objects.create(user=instance)

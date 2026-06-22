@@ -399,3 +399,65 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Profile Avatar Image */
+.profile-avatar-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+}
+
+/* Profile Bio */
+.profile-bio {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 8px 0 12px 0;
+  max-width: 500px;
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .profile-bio {
+    margin: 8px auto 12px auto;
+  }
+}
+
+/* Profile Account Bio */
+.profile-account-bio {
+  max-width: 250px;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Profile Success Toast */
+.profile-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(16, 185, 129, 0.9); /* Emerald Green */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 1100;
+  animation: toastFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

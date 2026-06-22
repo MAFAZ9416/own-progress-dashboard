@@ -52,7 +52,11 @@ export default function Topbar({ onToggleSidebar }) {
             <span className="topbar__user-role">Member</span>
           </div>
           <Link to="/profile" className="topbar__avatar hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition-all cursor-pointer" aria-label="Go to profile">
-            {initials}
+            {user?.avatar ? (
+              <img src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} alt={displayName} />
+            ) : (
+              initials
+            )}
           </Link>
         </div>
       </div>

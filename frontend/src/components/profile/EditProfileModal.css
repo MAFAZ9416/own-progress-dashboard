@@ -1,0 +1,433 @@
+/* EditProfileModal.css */
+
+.ep-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(5, 8, 22, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: epFadeIn 0.25s ease-out;
+}
+
+.ep-modal-content {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-main);
+  animation: epScaleSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar */
+.ep-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+.ep-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ep-modal-content::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 3px;
+}
+
+.ep-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.ep-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-main) 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.ep-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ep-close-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  transform: rotate(90deg);
+}
+
+.ep-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Loading state inside modal */
+.ep-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.ep-spinner {
+  color: var(--primary);
+}
+
+/* Avatar Section */
+.ep-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ep-avatar-preview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.ep-avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+}
+
+.ep-avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+  flex-shrink: 0;
+}
+
+.ep-avatar-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ep-btn-upload {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 10px;
+  color: #c084fc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ep-btn-upload:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: var(--primary);
+}
+
+.ep-btn-remove {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ep-btn-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--danger);
+}
+
+.ep-file-input {
+  display: none;
+}
+
+.ep-avatar-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: center;
+}
+
+/* Fields */
+.ep-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.ep-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ep-input, .ep-textarea {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ep-input:focus, .ep-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.ep-input--error {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1) !important;
+}
+
+.ep-textarea {
+  resize: none;
+  height: 90px;
+}
+
+.ep-char-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Validation Errors under fields */
+.ep-field-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f87171;
+  margin-top: 4px;
+  animation: epSlideDown 0.2s ease-out;
+}
+
+/* General Error */
+.ep-general-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  color: #f87171;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+/* Footer / Actions */
+.ep-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+}
+
+.ep-btn-cancel {
+  padding: 12px 24px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.ep-btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.ep-btn-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  font-size: 14px;
+}
+
+.ep-btn-save:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.ep-btn-save:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ep-btn-save:disabled, .ep-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ep-btn-spinner {
+  color: white;
+}
+
+/* Animations */
+@keyframes epFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes epScaleSlideUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes epSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes epSlideUpFromBottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Layouts */
+@media (max-width: 767px) {
+  .ep-modal-overlay {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .ep-modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    max-height: 85vh;
+    padding: 24px;
+    margin-bottom: 0;
+    animation: epSlideUpFromBottom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 16px));
+  }
+
+  .ep-avatar-preview {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .ep-avatar-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .ep-btn-upload, .ep-btn-remove {
+    width: 100%;
+    padding: 14px;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .ep-modal-footer {
+    flex-direction: column-reverse;
+    gap: 10px;
+    padding-top: 16px;
+  }
+
+  .ep-btn-cancel, .ep-btn-save {
+    width: 100%;
+    padding: 14px;
+    justify-content: center;
+    font-size: 15px;
+  }
+}

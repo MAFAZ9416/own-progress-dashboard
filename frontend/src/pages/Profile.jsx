@@ -1,13 +1,22 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target } from 'lucide-react'
+import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText } from 'lucide-react'
+import EditProfileModal from '../components/profile/EditProfileModal'
 import './Profile.css'
 
 export default function Profile() {
   const { user, logout } = useAuth()
   const { summary, recent, isLoading } = useDashboard()
+  
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message) => {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
   
   const isMobile = useMediaQuery('(max-width: 767px)')
   const activityLimit = isMobile ? 3 : 5
@@ -30,18 +39,27 @@ export default function Profile() {
       <div className="profile-hero">
         <div className="profile-hero-content">
           <div className="profile-avatar-container">
-            <div className="profile-avatar">{initials}</div>
+            {user?.avatar ? (
+              <img 
+                src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} 
+                alt={displayName} 
+                className="profile-avatar-img" 
+              />
+            ) : (
+              <div className="profile-avatar">{initials}</div>
+            )}
             <div className="profile-status-indicator"></div>
           </div>
           <div className="profile-hero-info">
             <h1 className="profile-username">{displayName}</h1>
             <p className="profile-email">{email}</p>
+            {user?.bio && <p className="profile-bio">{user.bio}</p>}
             <p className="profile-member-since">
               <Calendar size={14} className="profile-icon" />
               Member since {joinDate}
             </p>
           </div>
-          <button className="profile-edit-button">
+          <button className="profile-edit-button" onClick={() => setIsModalOpen(true)}>
             <User size={14} /> Edit Profile
           </button>
         </div>
@@ -146,6 +164,12 @@ export default function Profile() {
               <span className="profile-account-label"><Mail size={16} /> Email</span>
               <span className="profile-account-value">{email}</span>
             </div>
+            {user?.bio && (
+              <div className="profile-account-item">
+                <span className="profile-account-label"><FileText size={16} /> Bio</span>
+                <span className="profile-account-value profile-account-bio">{user.bio}</span>
+              </div>
+            )}
             <div className="profile-account-item">
               <span className="profile-account-label"><Calendar size={16} /> Member Since</span>
               <span className="profile-account-value">{joinDate}</span>
@@ -191,6 +215,18 @@ export default function Profile() {
           <LogOut size={16} /> Logout
         </button>
       </div>
+
+      <EditProfileModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={showToast} 
+      />
+
+      {toast && (
+        <div className="profile-toast">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

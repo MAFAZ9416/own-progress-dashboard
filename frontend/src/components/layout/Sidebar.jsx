@@ -77,7 +77,13 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* ── User card ── */}
       <div className="sidebar__user">
         <div className="sidebar__user-card">
-          <div className="sidebar__avatar">{initials}</div>
+          <div className="sidebar__avatar">
+            {user?.avatar ? (
+              <img src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} alt={displayName} />
+            ) : (
+              initials
+            )}
+          </div>
           <div className="sidebar__user-info">
             <p className="sidebar__user-name">
               {displayName}
