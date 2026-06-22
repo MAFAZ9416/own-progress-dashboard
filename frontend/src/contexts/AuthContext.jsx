@@ -70,9 +70,12 @@ export function AuthProvider({ children }) {
    * Update user state and localStorage without re-logging in.
    * Merges existing user data with the provided newData.
    */
-  const updateUser = (newData) => {
+  const updateUser = (updatedData) => {
     setUser((prev) => {
-      const updated = { ...prev, ...newData }
+      const updated = {
+        ...prev,
+        ...updatedData,
+      }
       localStorage.setItem('user', JSON.stringify(updated))
       return updated
     })

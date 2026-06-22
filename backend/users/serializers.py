@@ -71,6 +71,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
     email = serializers.EmailField(required=True)
     username = serializers.CharField(required=True)
+    date_joined = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = User
@@ -78,7 +79,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             "username",
             "email",
             "bio",
-            "avatar"
+            "avatar",
+            "date_joined",
         ]
 
     def validate_email(self, value):

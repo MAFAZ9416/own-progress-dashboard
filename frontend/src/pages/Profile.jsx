@@ -26,7 +26,13 @@ export default function Profile() {
   const initials = displayName?.[0]?.toUpperCase() ?? '?'
   
   const joinDate = user?.date_joined 
-    ? new Date(user.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(user.date_joined).toLocaleDateString(
+        "en-US",
+        {
+            month: "long",
+            year: "numeric",
+        }
+      )
     : 'Unknown date'
 
   const totalTasks = summary?.total_tasks ?? 0
