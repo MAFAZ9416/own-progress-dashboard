@@ -5,10 +5,13 @@ import MainLayout from '../components/layout/MainLayout'
 // Pages
 import Login from '../pages/Login'
 import Register from '../pages/Register'
+import ForgotPassword from '../pages/ForgotPassword'
+import ResetPassword from '../pages/ResetPassword'
 import Dashboard from '../pages/Dashboard'
 import Skills from '../pages/Skills'
 import Tasks from '../pages/Tasks'
 import Profile from '../pages/Profile'
+import Settings from '../pages/Settings'
 
 /**
  * Central route configuration for the application.
@@ -25,6 +28,8 @@ export default function AppRoutes() {
       {/* Public routes */}
       <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Protected routes — wrapped in the shared sidebar layout */}
       <Route element={<ProtectedRoute />}>
@@ -33,6 +38,7 @@ export default function AppRoutes() {
           <Route path="/skills"    element={<Skills />} />
           <Route path="/tasks"     element={<Tasks />} />
           <Route path="/profile"   element={<Profile />} />
+          <Route path="/settings"  element={<Settings />} />
         </Route>
       </Route>
 

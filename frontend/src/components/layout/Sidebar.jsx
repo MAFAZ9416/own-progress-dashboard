@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
   {
@@ -17,6 +17,11 @@ const NAV_ITEMS = [
     label: 'Tasks',
     to: '/tasks',
     icon: <ClipboardList size={18} strokeWidth={1.8} />,
+  },
+  {
+    label: 'Settings',
+    to: '/settings',
+    icon: <Settings size={18} strokeWidth={1.8} />,
   },
 ]
 

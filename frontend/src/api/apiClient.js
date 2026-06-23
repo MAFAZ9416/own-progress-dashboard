@@ -9,8 +9,8 @@ import axios from 'axios'
  *  - Handles 401 responses globally (clears both tokens → redirect to /login)
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api',
-  timeout: 10_000,
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api',
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },

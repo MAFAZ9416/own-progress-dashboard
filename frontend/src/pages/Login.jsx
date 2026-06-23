@@ -139,7 +139,7 @@ export default function Login() {
           <div className={`field-group ${focused === 'password' ? 'field-focused' : ''}`}>
             <div className="field-label-row">
               <label htmlFor="login-password" className="field-label">Password</label>
-              <a href="#" className="field-link">Forgot password?</a>
+              <Link to="/forgot-password" className="field-link">Forgot password?</Link>
             </div>
             <div className="field-wrapper">
               <span className="field-icon">

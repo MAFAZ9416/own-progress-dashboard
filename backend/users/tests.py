@@ -10,6 +10,21 @@ from PIL import Image
 User = get_user_model()
 
 
+from unittest.mock import patch
+
+# Mock Thread to run synchronously during tests to prevent database locks and ensure outbox asserts work
+class SyncThread:
+    def __init__(self, target, args=(), kwargs=None, daemon=None):
+        self.target = target
+        self.args = args or ()
+        self.kwargs = kwargs or {}
+
+    def start(self):
+        self.target(*self.args, **self.kwargs)
+
+patch('users.views.Thread', SyncThread).start()
+
+
 class UserProfileTests(APITestCase):
     def setUp(self):
         self.register_url = reverse("user-register")
@@ -43,6 +58,14 @@ class UserProfileTests(APITestCase):
         profile = new_user.profile
         self.assertEqual(profile.full_name, "Test User")
         self.assertFalse(profile.avatar)
+
+        # Check welcome email
+        from django.core import mail
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "Welcome to Own Progress Dashboard")
+        self.assertEqual(email.to, ["testuser@example.com"])
+        self.assertIn("Hello Test User,", email.body)
 
     def test_get_profile(self):
         """Verify that an authenticated user can fetch their profile."""
@@ -269,6 +292,14 @@ class DeleteAccountTests(APITestCase):
         self.assertEqual(TaskCompletion.objects.filter(user_id=self.user.pk).count(), 0)
         self.assertEqual(Streak.objects.filter(user_id=self.user.pk).count(), 0)
 
+        # Check account deletion email was sent
+        from django.core import mail
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "Your Own Progress Dashboard account has been deleted")
+        self.assertEqual(email.to, [self.username])
+        self.assertIn("Hello To Delete,", email.body)
+
     def test_wrong_confirm_text(self):
         """Verify wrong confirm text is blocked."""
         data = {
@@ -288,5 +319,227 @@ class DeleteAccountTests(APITestCase):
         response = self.client.delete(self.delete_account_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
+
+
+class FeedbackTests(APITestCase):
+    def setUp(self):
+        self.feedback_url = reverse("user-feedback")
+
+    def test_feedback_submission_success(self):
+        """Verify successful feedback submission generates and sends email."""
+        from django.core import mail
+        
+        data = {
+            "name": "Jane Doe",
+            "email": "janedoe@example.com",
+            "message": "This is a great app! Keep up the good work."
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Feedback sent successfully.")
+
+        # Check that email was sent (2 emails: feedback_received to sender and feedback_admin to admin)
+        self.assertEqual(len(mail.outbox), 2)
+        email_client = mail.outbox[0]
+        self.assertEqual(email_client.subject, "Thank you for your feedback")
+        self.assertEqual(email_client.to, ["janedoe@example.com"])
+        
+        email_admin = mail.outbox[1]
+        self.assertEqual(email_admin.subject, "[Feedback] Own Progress Dashboard")
+        self.assertEqual(email_admin.to, ["mafaz9416@gmail.com"])
+        self.assertIn("Name:", email_admin.body)
+        self.assertIn("Jane Doe", email_admin.body)
+        self.assertIn("Email:", email_admin.body)
+        self.assertIn("janedoe@example.com", email_admin.body)
+        self.assertIn("This is a great app! Keep up the good work.", email_admin.body)
+
+    def test_feedback_anonymous_submission_success(self):
+        """Verify anonymous feedback with blank name and email works."""
+        from django.core import mail
+        
+        data = {
+            "name": "",
+            "email": "",
+            "message": "Anonymous feedback containing at least ten characters."
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Feedback sent successfully.")
+        
+        # Only admin receives feedback since email is blank
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "[Feedback] Own Progress Dashboard")
+        self.assertEqual(email.to, ["mafaz9416@gmail.com"])
+        self.assertIn("Anonymous feedback containing at least ten characters.", email.body)
+
+    def test_feedback_message_validation_required(self):
+        """Verify that feedback message is required."""
+        data = {
+            "name": "Jane",
+            "email": "jane@example.com"
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("message", response.data)
+
+    def test_feedback_message_validation_min_length(self):
+        """Verify that feedback message must be at least 10 characters long."""
+        data = {
+            "name": "Jane",
+            "email": "jane@example.com",
+            "message": "short"
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("message", response.data)
+        self.assertEqual(response.data["message"], ["Please enter at least 10 characters."])
+
+
+class PasswordResetTests(APITestCase):
+    def setUp(self):
+        self.forgot_url = reverse("user-forgot-password")
+        self.reset_url = reverse("user-reset-password")
+        self.username = "recoveryuser@example.com"
+        self.password = "RecoverPassword123!"
+        self.user = User.objects.create_user(
+            username=self.username,
+            email=self.username,
+            password=self.password
+        )
+        self.user.profile.full_name = "Recovery User"
+        self.user.profile.save()
+
+    def test_forgot_password_success(self):
+        """Verify requesting password reset creates a token and sends reset email."""
+        from django.core import mail
+        from users.models import PasswordResetToken
+
+        data = {"email": self.username}
+        response = self.client.post(self.forgot_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Reset link sent.")
+
+        # Check token created
+        self.assertTrue(PasswordResetToken.objects.filter(user=self.user, is_used=False).exists())
+        token = PasswordResetToken.objects.filter(user=self.user, is_used=False).first()
+        
+        # Check email sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "Reset Your Password")
+        self.assertEqual(email.to, [self.username])
+        self.assertIn("Hello Recovery User,", email.body)
+        html_body = email.alternatives[0][0]
+        self.assertIn(f"/reset-password/{token.token}", html_body)
+
+    def test_forgot_password_user_not_found(self):
+        """Verify that requesting a reset for an unregistered email returns 400 validation error."""
+        data = {"email": "notfound@example.com"}
+        response = self.client.post(self.forgot_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
+    def test_reset_password_success(self):
+        """Verify resetting password updates credentials, invalidates tokens, and sends success email."""
+        from django.core import mail
+        from users.models import PasswordResetToken
+
+        token = PasswordResetToken.generate_token(self.user)
+        data = {
+            "token": token.token,
+            "password": "NewResetPassword123!",
+            "confirm_password": "NewResetPassword123!"
+        }
+        
+        # Verify initial auth works with old password
+        self.assertTrue(self.user.check_password(self.password))
+
+        response = self.client.post(self.reset_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Password updated successfully.")
+
+        # Verify password updated
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewResetPassword123!"))
+        self.assertFalse(self.user.check_password(self.password))
+
+        # Verify token marked as used and no other active tokens exist
+        token.refresh_from_db()
+        self.assertTrue(token.is_used)
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.user, is_used=False).exists())
+
+        # Check safety email sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "Password Changed Successfully")
+        self.assertEqual(email.to, [self.username])
+        self.assertIn("Hello Recovery User,", email.body)
+
+    def test_reset_password_used_token_rejected(self):
+        """Verify already used tokens are rejected."""
+        from users.models import PasswordResetToken
+        token = PasswordResetToken.generate_token(self.user)
+        token.is_used = True
+        token.save()
+
+        data = {
+            "token": token.token,
+            "password": "NewResetPassword123!",
+            "confirm_password": "NewResetPassword123!"
+        }
+        response = self.client.post(self.reset_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", response.data)
+
+    def test_reset_password_expired_token_rejected(self):
+        """Verify expired tokens (> 30 mins) are rejected."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from users.models import PasswordResetToken
+        
+        token = PasswordResetToken.generate_token(self.user)
+        # Mock creation time to 31 minutes ago
+        token.created_at = timezone.now() - timedelta(minutes=31)
+        token.save()
+
+        data = {
+            "token": token.token,
+            "password": "NewResetPassword123!",
+            "confirm_password": "NewResetPassword123!"
+        }
+        response = self.client.post(self.reset_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", response.data)
+
+    def test_reset_password_mismatch_rejected(self):
+        """Verify password mismatch is rejected."""
+        from users.models import PasswordResetToken
+        token = PasswordResetToken.generate_token(self.user)
+
+        data = {
+            "token": token.token,
+            "password": "NewResetPassword123!",
+            "confirm_password": "MismatchPassword123!"
+        }
+        response = self.client.post(self.reset_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("confirm_password", response.data)
+
+    def test_reset_password_weak_rejected(self):
+        """Verify weak password under 8 characters is rejected."""
+        from users.models import PasswordResetToken
+        token = PasswordResetToken.generate_token(self.user)
+
+        data = {
+            "token": token.token,
+            "password": "short",
+            "confirm_password": "short"
+        }
+        response = self.client.post(self.reset_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", response.data)
+
+
 
 

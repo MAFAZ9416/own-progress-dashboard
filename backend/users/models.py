@@ -11,4 +11,24 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True, max_length=150)
 
     def __str__(self):
-        return f"{self.user.username}'s Profile"
+        return f"{self.user.username}'s Profile"
+
+
+import uuid
+from django.utils import timezone
+from datetime import timedelta
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    @classmethod
+    def generate_token(cls, user):
+        token_str = uuid.uuid4().hex + uuid.uuid4().hex
+        return cls.objects.create(user=user, token=token_str)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=30)
+

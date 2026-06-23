@@ -7,6 +7,7 @@ const PAGE_TITLES = {
   '/skills':    { title: 'Skills',     sub: 'Manage and track your skills' },
   '/tasks':     { title: 'Tasks',      sub: 'Your task list and progress' },
   '/profile':   { title: 'Profile',    sub: 'Your personal information and stats' },
+  '/settings':  { title: 'Settings',   sub: 'Customize your dashboard preferences' },
 }
 
 export default function Topbar({ onToggleSidebar }) {

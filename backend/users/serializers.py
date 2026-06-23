@@ -265,3 +265,70 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['access'] = str(refresh.access_token)
 
         return data
+
+
+class FeedbackSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    message = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        message = attrs.get("message", "")
+        if len(message) < 10:
+            raise serializers.ValidationError(
+                {
+                    "message":
+                    "Please enter at least 10 characters."
+                }
+            )
+        return attrs
+
+
+from .models import PasswordResetToken
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value):
+        if not User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("No user is registered with this email address.")
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+    password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+    confirm_password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+
+    def validate_token(self, value):
+        try:
+            reset_token = PasswordResetToken.objects.get(token=value)
+        except PasswordResetToken.DoesNotExist:
+            raise serializers.ValidationError("Invalid token.")
+
+        if reset_token.is_used:
+            raise serializers.ValidationError("This token has already been used.")
+
+        if reset_token.is_expired():
+            raise serializers.ValidationError("This token has expired.")
+
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        confirm_password = attrs.get("confirm_password")
+
+        if password != confirm_password:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+
+        try:
+            validate_password(password)
+        except Exception as e:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            if isinstance(e, DjangoValidationError):
+                raise serializers.ValidationError({"password": list(e.messages)})
+            raise serializers.ValidationError({"password": str(e)})
+
+        return attrs
+
+

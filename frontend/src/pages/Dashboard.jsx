@@ -162,6 +162,12 @@ export default function Dashboard() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const activityLimit = isMobile ? 5 : 8
 
+  // Read preferences from localStorage (defaulting to true)
+  const showHeatmap = localStorage.getItem('showHeatmap') !== 'false'
+  const showRecentActivity = localStorage.getItem('showRecentActivity') !== 'false'
+  const showQuickTasks = localStorage.getItem('showQuickTasks') !== 'false'
+  const showTopSkills = localStorage.getItem('showTopSkills') !== 'false'
+
   /* Build stat card configs from live data */
   const stats = buildStats(summary)
 
@@ -233,153 +239,159 @@ export default function Dashboard() {
         <div className="dash-col-left">
 
           {/* Learning Heatmap (chart component) */}
-          <section className="dash-card" id="section-heatmap">
-            <LearningHeatmap data={heatmap || []} isLoading={isLoading} />
-          </section>
+          {showHeatmap && (
+            <section className="dash-card" id="section-heatmap">
+              <LearningHeatmap data={heatmap || []} isLoading={isLoading} />
+            </section>
+          )}
 
           {/* Recent Activity Feed */}
-          <section className="dash-card" id="section-activity">
-            <div className="dash-card__header">
-              <div className="dash-card__title-group">
-                <h3 className="dash-card__title">Recent Activity</h3>
-                <span className="dash-card__subtitle">{`Last ${activityLimit} activities`}</span>
+          {showRecentActivity && (
+            <section className="dash-card" id="section-activity">
+              <div className="dash-card__header">
+                <div className="dash-card__title-group">
+                  <h3 className="dash-card__title">Recent Activity</h3>
+                  <span className="dash-card__subtitle">{`Last ${activityLimit} activities`}</span>
+                </div>
+                <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => setShowActivityModal(true)}>
+                  View all
+                  <ChevronRight size={14} className="ml-0.5" />
+                </button>
               </div>
-              <button className="dash-card__action-btn" id="btn-view-all-activity" onClick={() => setShowActivityModal(true)}>
-                View all
-                <ChevronRight size={14} className="ml-0.5" />
-              </button>
-            </div>
 
-            {isLoading ? (
-              <ActivitySkeleton />
-            ) : recent && recent.length > 0 ? (
-              <ul className="activity-feed">
-                {recent.slice(0, activityLimit).map((item, i) => (
-                  <li
-                    key={item.id ?? i}
-                    className="activity-item"
-                    style={{ animationDelay: `${i * 60}ms` }}
-                  >
-                    <span
-                      className="activity-item__dot"
-                      style={{ background: TYPE_DOT[item.type] ?? '#6366f1' }}
-                    />
-                    <div className="activity-item__body">
-                      <p className="activity-item__text">{item.text}</p>
-                      <span className="activity-item__time">{item.time}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="dash-empty">No recent activity yet.</p>
-            )}
-          </section>
+              {isLoading ? (
+                <ActivitySkeleton />
+              ) : recent && recent.length > 0 ? (
+                <ul className="activity-feed">
+                  {recent.slice(0, activityLimit).map((item, i) => (
+                    <li
+                      key={item.id ?? i}
+                      className="activity-item"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    >
+                      <span
+                        className="activity-item__dot"
+                        style={{ background: TYPE_DOT[item.type] ?? '#6366f1' }}
+                      />
+                      <div className="activity-item__body">
+                        <p className="activity-item__text">{item.text}</p>
+                        <span className="activity-item__time">{item.time}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="dash-empty">No recent activity yet.</p>
+              )}
+            </section>
+          )}
         </div>
 
         {/* ── RIGHT column ── */}
         <div className="dash-col-right">
 
           {/* Quick Tasks panel */}
-          <section className="dash-card" id="section-quick-tasks">
-            <div className="dash-card__header">
-              <div className="dash-card__title-group">
-                <h3 className="dash-card__title">Quick Tasks</h3>
-                <span className="dash-card__subtitle">Pending items</span>
-              </div>
-              <button className="dash-card__action-btn" id="btn-add-quick-task" onClick={() => navigate('/tasks')}>
-                <Plus size={14} className="mr-0.5" />
-                Add
-              </button>
-            </div>
-
-            {isLoading ? (
-              <TaskSkeleton />
-            ) : pendingTasks.length > 0 ? (
-              <>
-                <ul className="quick-tasks">
-                  {pendingTasks.slice(0, 5).map(task => {
-                    const skillObj = skills.find(s => s.id === task.skill)
-                    const skillName = skillObj?.name ?? 'Unknown Skill'
-                    const skillColor = skillObj?.color ?? '#6366f1'
-                    return (
-                      <li
-                        key={task.id}
-                        className="qtask"
-                        onClick={() => navigate('/tasks')}
-                      >
-                        <div className="qtask__left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-                          <span className="qtask__check" style={{ borderColor: `${skillColor}80` }} />
-                          <span className="qtask__label" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {task.title}
-                          </span>
-                        </div>
-                        <div className="qtask__right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-slate-900/40"
-                            style={{
-                              color: skillColor,
-                              borderColor: `${skillColor}35`,
-                            }}
-                          >
-                            {skillName}
-                          </span>
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            Pending
-                          </span>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-
-                {pendingTasks.length > 5 && (
-                  <div
-                    className="qtask-more"
-                    onClick={() => navigate('/tasks')}
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '0.8rem',
-                      color: '#6366f1',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      marginTop: '-0.5rem',
-                      marginBottom: '1.25rem',
-                      padding: '0.5rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(99, 102, 241, 0.05)',
-                      border: '1px dashed rgba(99, 102, 241, 0.2)',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    + {pendingTasks.length - 5} more tasks
-                  </div>
-                )}
-
-                {/* Progress bar */}
-                <div className="qtask-progress">
-                  <div className="qtask-progress__labels">
-                    <span>Task Progress</span>
-                    <span>
-                      {summary?.tasks_done ?? 0} / {summary?.total_tasks ?? 0}
-                    </span>
-                  </div>
-                  <div className="qtask-progress__track">
-                    <div
-                      className="qtask-progress__fill"
-                      style={{
-                        width: `${(summary?.total_tasks ?? 0) > 0
-                          ? ((summary?.tasks_done ?? 0) / summary.total_tasks) * 100
-                          : 0}%`,
-                      }}
-                    />
-                  </div>
+          {showQuickTasks && (
+            <section className="dash-card" id="section-quick-tasks">
+              <div className="dash-card__header">
+                <div className="dash-card__title-group">
+                  <h3 className="dash-card__title">Quick Tasks</h3>
+                  <span className="dash-card__subtitle">Pending items</span>
                 </div>
-              </>
-            ) : (
-              <p className="dash-empty">No pending tasks 🎉</p>
-            )}
-          </section>
+                <button className="dash-card__action-btn" id="btn-add-quick-task" onClick={() => navigate('/tasks')}>
+                  <Plus size={14} className="mr-0.5" />
+                  Add
+                </button>
+              </div>
+
+              {isLoading ? (
+                <TaskSkeleton />
+              ) : pendingTasks.length > 0 ? (
+                <>
+                  <ul className="quick-tasks">
+                    {pendingTasks.slice(0, 5).map(task => {
+                      const skillObj = skills.find(s => s.id === task.skill)
+                      const skillName = skillObj?.name ?? 'Unknown Skill'
+                      const skillColor = skillObj?.color ?? '#6366f1'
+                      return (
+                        <li
+                          key={task.id}
+                          className="qtask"
+                          onClick={() => navigate('/tasks')}
+                        >
+                          <div className="qtask__left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                            <span className="qtask__check" style={{ borderColor: `${skillColor}80` }} />
+                            <span className="qtask__label" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {task.title}
+                            </span>
+                          </div>
+                          <div className="qtask__right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                            <span
+                              className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-slate-900/40"
+                              style={{
+                                color: skillColor,
+                                borderColor: `${skillColor}35`,
+                              }}
+                            >
+                              {skillName}
+                            </span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              Pending
+                            </span>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+
+                  {pendingTasks.length > 5 && (
+                    <div
+                      className="qtask-more"
+                      onClick={() => navigate('/tasks')}
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '0.8rem',
+                        color: '#6366f1',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        marginTop: '-0.5rem',
+                        marginBottom: '1.25rem',
+                        padding: '0.5rem',
+                        borderRadius: '0.5rem',
+                        background: 'rgba(99, 102, 241, 0.05)',
+                        border: '1px dashed rgba(99, 102, 241, 0.2)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      + {pendingTasks.length - 5} more tasks
+                    </div>
+                  )}
+
+                  {/* Progress bar */}
+                  <div className="qtask-progress">
+                    <div className="qtask-progress__labels">
+                      <span>Task Progress</span>
+                      <span>
+                        {summary?.tasks_done ?? 0} / {summary?.total_tasks ?? 0}
+                      </span>
+                    </div>
+                    <div className="qtask-progress__track">
+                      <div
+                        className="qtask-progress__fill"
+                        style={{
+                          width: `${(summary?.total_tasks ?? 0) > 0
+                            ? ((summary?.tasks_done ?? 0) / summary.total_tasks) * 100
+                            : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="dash-empty">No pending tasks 🎉</p>
+              )}
+            </section>
+          )}
 
           {/* Streak card */}
           <section className="dash-card dash-card--streak" id="section-streak">
@@ -409,59 +421,61 @@ export default function Dashboard() {
           </section>
 
           {/* Skills overview mini */}
-          <section className="dash-card" id="section-skills-mini">
-            <div className="dash-card__header">
-              <div className="dash-card__title-group">
-                <h3 className="dash-card__title">Top Skills</h3>
-                <span className="dash-card__subtitle">By progress</span>
+          {showTopSkills && (
+            <section className="dash-card" id="section-skills-mini">
+              <div className="dash-card__header">
+                <div className="dash-card__title-group">
+                  <h3 className="dash-card__title">Top Skills</h3>
+                  <span className="dash-card__subtitle">By progress</span>
+                </div>
+                <button className="dash-card__action-btn" id="btn-view-all-skills" onClick={() => navigate('/skills')}>
+                  View all
+                  <ChevronRight size={14} className="ml-0.5" />
+                </button>
               </div>
-              <button className="dash-card__action-btn" id="btn-view-all-skills" onClick={() => navigate('/skills')}>
-                View all
-                <ChevronRight size={14} className="ml-0.5" />
-              </button>
-            </div>
 
-            {isLoading ? (
-              <div className="skeleton-feed">
-                {[80, 65, 50, 40].map(w => (
-                  <div key={w} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <SkeletonText width={`${w}%`} height="12px" />
-                    <SkeletonText width="100%" height="5px" />
-                  </div>
-                ))}
-              </div>
-            ) : topSkills.length > 0 ? (
-              <ul className="skills-mini">
-                {topSkills.map(s => {
-                  const completedTasksCount = Math.round((s.progress / 100) * s.target_tasks)
-                  return (
-                    <li key={s.id ?? s.name} className="skill-mini-item">
-                      <div className="skill-mini-item__top">
-                        <span className="skill-mini-item__name">{s.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'rgba(148,163,184,0.5)', fontWeight: '500' }}>
-                            ({completedTasksCount} / {s.target_tasks} tasks)
-                          </span>
-                          <span className="skill-mini-item__pct">{s.progress}%</span>
+              {isLoading ? (
+                <div className="skeleton-feed">
+                  {[80, 65, 50, 40].map(w => (
+                    <div key={w} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <SkeletonText width={`${w}%`} height="12px" />
+                      <SkeletonText width="100%" height="5px" />
+                    </div>
+                  ))}
+                </div>
+              ) : topSkills.length > 0 ? (
+                <ul className="skills-mini">
+                  {topSkills.map(s => {
+                    const completedTasksCount = Math.round((s.progress / 100) * s.target_tasks)
+                    return (
+                      <li key={s.id ?? s.name} className="skill-mini-item">
+                        <div className="skill-mini-item__top">
+                          <span className="skill-mini-item__name">{s.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'rgba(148,163,184,0.5)', fontWeight: '500' }}>
+                              ({completedTasksCount} / {s.target_tasks} tasks)
+                            </span>
+                            <span className="skill-mini-item__pct">{s.progress}%</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="skill-mini-item__track">
-                        <div
-                          className="skill-mini-item__fill"
-                          style={{
-                            width: `${s.progress}%`,
-                            background: s.color ?? '#6366f1',
-                          }}
-                        />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <p className="dash-empty">Create your first skill to start tracking progress</p>
-            )}
-          </section>
+                        <div className="skill-mini-item__track">
+                          <div
+                            className="skill-mini-item__fill"
+                            style={{
+                              width: `${s.progress}%`,
+                              background: s.color ?? '#6366f1',
+                            }}
+                          />
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <p className="dash-empty">Create your first skill to start tracking progress</p>
+              )}
+            </section>
+          )}
 
         </div>
       </div>

@@ -109,6 +109,32 @@ const authService = {
   },
 
   /**
+   * Request password reset link.
+   *
+   * POST /api/users/forgot-password/
+   * Body: { email }
+   */
+  forgotPassword: async (email) => {
+    const { data } = await apiClient.post('/users/forgot-password/', { email })
+    return data
+  },
+
+  /**
+   * Reset password using token.
+   *
+   * POST /api/users/reset-password/
+   * Body: { token, password, confirm_password }
+   */
+  resetPassword: async ({ token, password, confirm_password }) => {
+    const { data } = await apiClient.post('/users/reset-password/', {
+      token,
+      password,
+      confirm_password,
+    })
+    return data
+  },
+
+  /**
    * Logout — client-side only.
    * (No Django blacklist endpoint assumed; just clear local tokens.)
    */
@@ -118,3 +144,4 @@ const authService = {
 }
 
 export default authService
+
