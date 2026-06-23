@@ -92,6 +92,23 @@ const authService = {
   },
 
   /**
+   * Delete user account permanently.
+   *
+   * DELETE /api/users/delete-account/
+   * Body: { confirm_text, password }
+   * Returns { message: "Account deleted successfully." }
+   */
+  deleteAccount: async ({ confirm_text, password }) => {
+    const { data } = await apiClient.delete('/users/delete-account/', {
+      data: {
+        confirm_text,
+        password,
+      }
+    })
+    return data
+  },
+
+  /**
    * Logout — client-side only.
    * (No Django blacklist endpoint assumed; just clear local tokens.)
    */

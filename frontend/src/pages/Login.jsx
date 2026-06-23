@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import authService from '../services/authService'
@@ -9,6 +9,15 @@ export default function Login() {
   const [focused, setFocused]     = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError]         = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+
+  useEffect(() => {
+    const msg = localStorage.getItem('logoutMessage')
+    if (msg) {
+      setSuccessMsg(msg)
+      localStorage.removeItem('logoutMessage')
+    }
+  }, [])
 
   const { login } = useAuth()
   const navigate  = useNavigate()
@@ -78,6 +87,16 @@ export default function Login() {
           <h1 className="auth-title">Welcome back</h1>
           <p className="auth-subtitle">Sign in to continue your journey</p>
         </div>
+
+        {/* ── Success banner ── */}
+        {successMsg && (
+          <div className="auth-alert auth-alert--success" role="status">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="alert-icon">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{successMsg}</span>
+          </div>
+        )}
 
         {/* ── Error banner ── */}
         {error && (

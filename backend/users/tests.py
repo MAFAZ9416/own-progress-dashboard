@@ -215,3 +215,78 @@ class ChangePasswordTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("new_password", response.data)
 
+
+class DeleteAccountTests(APITestCase):
+    def setUp(self):
+        self.delete_account_url = reverse("user-delete-account")
+        self.username = "deleteuser@example.com"
+        self.password = "DeletePassword123!"
+        self.user = User.objects.create_user(
+            username=self.username,
+            email=self.username,
+            password=self.password
+        )
+        self.user.profile.full_name = "To Delete"
+        self.user.profile.save()
+
+        from skills.models import Skill
+        from tasks.models import Task, TaskCompletion
+        from streaks.models import Streak
+
+        self.skill = Skill.objects.create(user=self.user, name="Temporary Skill")
+        self.task = Task.objects.create(user=self.user, skill=self.skill, title="Temporary Task")
+        self.completion = TaskCompletion.objects.create(user=self.user, task=self.task, skill=self.skill)
+        self.streak = self.user.streak
+
+        self.client.force_authenticate(user=self.user)
+
+    def test_delete_account_success(self):
+        """Verify successful account deletion removes User and all related data."""
+        data = {
+            "confirm_text": "DELETE",
+            "password": self.password
+        }
+        
+        from skills.models import Skill
+        from tasks.models import Task, TaskCompletion
+        from streaks.models import Streak
+
+        self.assertEqual(User.objects.filter(pk=self.user.pk).count(), 1)
+        self.assertEqual(UserProfile.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(Skill.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(Task.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(TaskCompletion.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(Streak.objects.filter(user=self.user).count(), 1)
+
+        response = self.client.delete(self.delete_account_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Account deleted successfully.")
+
+        self.assertEqual(User.objects.filter(pk=self.user.pk).count(), 0)
+        self.assertEqual(UserProfile.objects.filter(user_id=self.user.pk).count(), 0)
+        self.assertEqual(Skill.objects.filter(user_id=self.user.pk).count(), 0)
+        self.assertEqual(Task.objects.filter(user_id=self.user.pk).count(), 0)
+        self.assertEqual(TaskCompletion.objects.filter(user_id=self.user.pk).count(), 0)
+        self.assertEqual(Streak.objects.filter(user_id=self.user.pk).count(), 0)
+
+    def test_wrong_confirm_text(self):
+        """Verify wrong confirm text is blocked."""
+        data = {
+            "confirm_text": "WRONGTEXT",
+            "password": self.password
+        }
+        response = self.client.delete(self.delete_account_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("confirm_text", response.data)
+
+    def test_wrong_password(self):
+        """Verify wrong password is blocked."""
+        data = {
+            "confirm_text": "DELETE",
+            "password": "WrongPassword123!"
+        }
+        response = self.client.delete(self.delete_account_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", response.data)
+
+

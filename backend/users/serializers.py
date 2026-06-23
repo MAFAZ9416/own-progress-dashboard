@@ -207,6 +207,29 @@ class ChangePasswordSerializer(serializers.Serializer):
         return user
 
 
+class DeleteAccountSerializer(serializers.Serializer):
+    confirm_text = serializers.CharField(required=True)
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"}
+    )
+
+    def validate_confirm_text(self, value):
+        if value != "DELETE":
+            raise serializers.ValidationError("You must type DELETE to confirm.")
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        user = self.context['request'].user
+
+        if not user.check_password(password):
+            raise serializers.ValidationError({"password": "Incorrect password."})
+
+        return attrs
+
+
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
     email = serializers.EmailField()

@@ -96,6 +96,73 @@ export default function Profile() {
       setIsChangingPassword(false)
     }
   }
+
+  const [deleteData, setDeleteData] = useState({
+    confirm_text: '',
+    password: '',
+  })
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [deleteErrors, setDeleteErrors] = useState({})
+
+  const handleDeleteAccountChange = (e) => {
+    const { name, value } = e.target
+    setDeleteData(prev => ({ ...prev, [name]: value }))
+    if (deleteErrors[name]) {
+      setDeleteErrors(prev => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const handleDeleteAccountSubmit = async (e) => {
+    e.preventDefault()
+    setIsDeletingAccount(true)
+    setDeleteErrors({})
+
+    // Client-side validation
+    const errors = {}
+    if (!deleteData.confirm_text) {
+      errors.confirm_text = 'Confirmation text is required.'
+    } else if (deleteData.confirm_text !== 'DELETE') {
+      errors.confirm_text = 'You must type DELETE to confirm.'
+    }
+    if (!deleteData.password) {
+      errors.password = 'Password is required.'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setDeleteErrors(errors)
+      setIsDeletingAccount(false)
+      return
+    }
+
+    try {
+      await authService.deleteAccount({
+        confirm_text: deleteData.confirm_text,
+        password: deleteData.password,
+      })
+
+      localStorage.setItem('logoutMessage', 'Account deleted successfully.')
+      logout()
+      window.location.href = '/login'
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data) {
+        const backendErrors = {}
+        Object.keys(err.response.data).forEach(key => {
+          backendErrors[key] = Array.isArray(err.response.data[key])
+            ? err.response.data[key].join(' ')
+            : err.response.data[key]
+        })
+        setDeleteErrors(backendErrors)
+      } else {
+        setDeleteErrors({
+          confirm_text: err.response?.data?.confirm_text || '',
+          password: err.response?.data?.password || '',
+          general: err.response?.data?.detail || err.response?.data?.message || 'Failed to delete account. Please try again.'
+        })
+      }
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }
   
   const isMobile = useMediaQuery('(max-width: 767px)')
   const activityLimit = isMobile ? 3 : 5
@@ -386,6 +453,78 @@ export default function Profile() {
         <button className="profile-logout-button" onClick={logout}>
           <LogOut size={16} /> Logout
         </button>
+
+        {/* Delete Account Card */}
+        <div className="profile-danger-card profile-delete-account">
+          <h3 className="profile-danger-card-title">Delete Account</h3>
+          <p className="profile-danger-card-warning">
+            Once you delete your account, there is no going back. All your data will be permanently removed.
+          </p>
+          
+          <form onSubmit={handleDeleteAccountSubmit} className="profile-delete-form">
+            {deleteErrors.general && (
+              <div className="profile-delete-error-banner">
+                <AlertCircle size={14} />
+                <span>{deleteErrors.general}</span>
+              </div>
+            )}
+
+            <div className="profile-delete-field-group">
+              <label className="profile-delete-label">
+                Type <span className="delete-keyword-highlight">DELETE</span>
+              </label>
+              <input
+                type="text"
+                name="confirm_text"
+                className={`profile-delete-input ${deleteErrors.confirm_text ? 'profile-delete-input--error' : ''}`}
+                value={deleteData.confirm_text}
+                onChange={handleDeleteAccountChange}
+                placeholder="Type DELETE"
+                disabled={isDeletingAccount}
+              />
+              {deleteErrors.confirm_text && (
+                <div className="profile-delete-field-error">
+                  <AlertCircle size={12} />
+                  <span>{deleteErrors.confirm_text}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-delete-field-group">
+              <label className="profile-delete-label">Enter Password</label>
+              <input
+                type="password"
+                name="password"
+                className={`profile-delete-input ${deleteErrors.password ? 'profile-delete-input--error' : ''}`}
+                value={deleteData.password}
+                onChange={handleDeleteAccountChange}
+                placeholder="Enter password"
+                disabled={isDeletingAccount}
+              />
+              {deleteErrors.password && (
+                <div className="profile-delete-field-error">
+                  <AlertCircle size={12} />
+                  <span>{deleteErrors.password}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="profile-delete-btn"
+              disabled={isDeletingAccount}
+            >
+              {isDeletingAccount ? (
+                <>
+                  <Loader2 size={14} className="profile-delete-spinner animate-spin" />
+                  <span>Deleting Account...</span>
+                </>
+              ) : (
+                <span>Delete Account</span>
+              )}
+            </button>
+          </form>
+        </div>
       </div>
 
       <EditProfileModal 
