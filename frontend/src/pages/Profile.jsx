@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText } from 'lucide-react'
+import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
+import authService from '../services/authService'
 import './Profile.css'
 
 export default function Profile() {
@@ -16,6 +17,84 @@ export default function Profile() {
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  })
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordErrors, setPasswordErrors] = useState({})
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target
+    setPasswordData(prev => ({ ...prev, [name]: value }))
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault()
+    setIsChangingPassword(true)
+    setPasswordErrors({})
+
+    // Client-side validation
+    const errors = {}
+    if (!passwordData.current_password) {
+      errors.current_password = 'Current password is required.'
+    }
+    if (!passwordData.new_password) {
+      errors.new_password = 'New password is required.'
+    } else if (passwordData.new_password.length < 8) {
+      errors.new_password = 'Password must be at least 8 characters.'
+    }
+    if (!passwordData.confirm_password) {
+      errors.confirm_password = 'Confirm password is required.'
+    } else if (passwordData.new_password !== passwordData.confirm_password) {
+      errors.confirm_password = 'Passwords do not match.'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors)
+      setIsChangingPassword(false)
+      return
+    }
+
+    try {
+      await authService.changePassword({
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password,
+        confirm_password: passwordData.confirm_password,
+      })
+      
+      showToast('✓ Password updated successfully.')
+      setPasswordData({
+        current_password: '',
+        new_password: '',
+        confirm_password: '',
+      })
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data) {
+        const backendErrors = {}
+        Object.keys(err.response.data).forEach(key => {
+          backendErrors[key] = Array.isArray(err.response.data[key])
+            ? err.response.data[key].join(' ')
+            : err.response.data[key]
+        })
+        setPasswordErrors(backendErrors)
+      } else {
+        setPasswordErrors({
+          current_password: err.response?.data?.current_password || '',
+          new_password: err.response?.data?.new_password || '',
+          confirm_password: err.response?.data?.confirm_password || '',
+          general: err.response?.data?.detail || err.response?.data?.message || 'Failed to update password. Please try again.'
+        })
+      }
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
   
   const isMobile = useMediaQuery('(max-width: 767px)')
@@ -210,6 +289,93 @@ export default function Profile() {
               <p className="profile-activity-text">No recent activity yet.</p>
             )}
           </div>
+        </div>
+
+        {/* Change Password Card */}
+        <div className="profile-card profile-change-password">
+          <h2 className="profile-card-title">
+            <Lock size={18} /> Change Password
+          </h2>
+          <form onSubmit={handlePasswordSubmit} className="profile-password-form">
+            {passwordErrors.general && (
+              <div className="profile-password-error-banner">
+                <AlertCircle size={14} />
+                <span>{passwordErrors.general}</span>
+              </div>
+            )}
+            
+            <div className="profile-password-field-group">
+              <label className="profile-password-label">Current Password</label>
+              <input
+                type="password"
+                name="current_password"
+                className={`profile-password-input ${passwordErrors.current_password ? 'profile-password-input--error' : ''}`}
+                value={passwordData.current_password}
+                onChange={handlePasswordChange}
+                placeholder="Enter current password"
+                disabled={isChangingPassword}
+              />
+              {passwordErrors.current_password && (
+                <div className="profile-password-field-error">
+                  <AlertCircle size={12} />
+                  <span>{passwordErrors.current_password}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-password-field-group">
+              <label className="profile-password-label">New Password</label>
+              <input
+                type="password"
+                name="new_password"
+                className={`profile-password-input ${passwordErrors.new_password ? 'profile-password-input--error' : ''}`}
+                value={passwordData.new_password}
+                onChange={handlePasswordChange}
+                placeholder="Enter new password (min. 8 characters)"
+                disabled={isChangingPassword}
+              />
+              {passwordErrors.new_password && (
+                <div className="profile-password-field-error">
+                  <AlertCircle size={12} />
+                  <span>{passwordErrors.new_password}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-password-field-group">
+              <label className="profile-password-label">Confirm Password</label>
+              <input
+                type="password"
+                name="confirm_password"
+                className={`profile-password-input ${passwordErrors.confirm_password ? 'profile-password-input--error' : ''}`}
+                value={passwordData.confirm_password}
+                onChange={handlePasswordChange}
+                placeholder="Confirm new password"
+                disabled={isChangingPassword}
+              />
+              {passwordErrors.confirm_password && (
+                <div className="profile-password-field-error">
+                  <AlertCircle size={12} />
+                  <span>{passwordErrors.confirm_password}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="profile-password-btn"
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 size={14} className="profile-password-spinner animate-spin" />
+                  <span>Updating Password...</span>
+                </>
+              ) : (
+                <span>Update Password</span>
+              )}
+            </button>
+          </form>
         </div>
       </div>
 

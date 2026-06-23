@@ -142,6 +142,71 @@ class ProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"}
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"}
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"}
+    )
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Incorrect password.")
+        return value
+
+    def validate(self, attrs):
+        current_password = attrs.get("current_password")
+        new_password = attrs.get("new_password")
+        confirm_password = attrs.get("confirm_password")
+
+        # New password and confirm password must match.
+        if new_password != confirm_password:
+            raise serializers.ValidationError({
+                "confirm_password": "Passwords do not match."
+            })
+
+        # New password must not equal current password.
+        if new_password == current_password:
+            raise serializers.ValidationError({
+                "new_password": "New password cannot be the same as the current password."
+            })
+
+        # Password length minimum: 8 characters
+        if len(new_password) < 8:
+            raise serializers.ValidationError({
+                "new_password": "Password must be at least 8 characters."
+            })
+
+        # Use Django password validators
+        user = self.context['request'].user
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({
+                "new_password": list(e.messages)
+            })
+
+        return attrs
+
+    def save(self):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
+
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
     email = serializers.EmailField()

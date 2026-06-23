@@ -76,6 +76,22 @@ const authService = {
   },
 
   /**
+   * Change password for the authenticated user.
+   *
+   * PUT /api/users/change-password/
+   * Body: { current_password, new_password, confirm_password }
+   * Returns { message: "Password updated successfully." }
+   */
+  changePassword: async ({ current_password, new_password, confirm_password }) => {
+    const { data } = await apiClient.put('/users/change-password/', {
+      current_password,
+      new_password,
+      confirm_password,
+    })
+    return data
+  },
+
+  /**
    * Logout — client-side only.
    * (No Django blacklist endpoint assumed; just clear local tokens.)
    */

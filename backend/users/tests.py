@@ -139,3 +139,79 @@ class UserProfileTests(APITestCase):
         response = self.client.put(self.profile_url, {"avatar": large_file}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("avatar", response.data)
+
+
+class ChangePasswordTests(APITestCase):
+    def setUp(self):
+        self.change_password_url = reverse("user-change-password")
+        self.username = "testuser@example.com"
+        self.password = "OldPassword123!"
+        self.user = User.objects.create_user(
+            username=self.username,
+            email=self.username,
+            password=self.password
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_change_password_success(self):
+        """Verify password can be updated successfully and logins work with new credentials."""
+        data = {
+            "current_password": self.password,
+            "new_password": "NewPassword1234!",
+            "confirm_password": "NewPassword1234!"
+        }
+        response = self.client.put(self.change_password_url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Password updated successfully.")
+
+        # Verify old password no longer works
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password(self.password))
+
+        # Verify new password works
+        self.assertTrue(self.user.check_password("NewPassword1234!"))
+
+    def test_wrong_current_password(self):
+        """Verify providing a wrong current password is blocked."""
+        data = {
+            "current_password": "WrongPassword123!",
+            "new_password": "NewPassword1234!",
+            "confirm_password": "NewPassword1234!"
+        }
+        response = self.client.put(self.change_password_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("current_password", response.data)
+
+    def test_password_mismatch(self):
+        """Verify mismatch between new password and confirm password is blocked."""
+        data = {
+            "current_password": self.password,
+            "new_password": "NewPassword1234!",
+            "confirm_password": "MismatchPassword!"
+        }
+        response = self.client.put(self.change_password_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("confirm_password", response.data)
+
+    def test_same_old_and_new_password(self):
+        """Verify that setting the new password to the current password is blocked."""
+        data = {
+            "current_password": self.password,
+            "new_password": self.password,
+            "confirm_password": self.password
+        }
+        response = self.client.put(self.change_password_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("new_password", response.data)
+
+    def test_weak_password_length(self):
+        """Verify weak password under 8 characters is blocked."""
+        data = {
+            "current_password": self.password,
+            "new_password": "short",
+            "confirm_password": "short"
+        }
+        response = self.client.put(self.change_password_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("new_password", response.data)
+

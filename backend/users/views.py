@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import ProfileSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
+from .serializers import ProfileSerializer, RegisterSerializer, EmailTokenObtainPairSerializer, ChangePasswordSerializer
 
 
 class RegisterView(generics.GenericAPIView):
@@ -47,6 +47,23 @@ class ProfileView(generics.GenericAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    """View to change the password of the authenticated user."""
+
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Password updated successfully."},
+                status=status.HTTP_200_OK
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
