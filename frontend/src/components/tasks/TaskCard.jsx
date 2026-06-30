@@ -1,10 +1,16 @@
-import React from 'react'
-import { Check, History, Pencil, Trash2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { Check, History, Pencil, Trash2, Calendar } from 'lucide-react'
 
 /**
- * TaskCard
+ * TaskCard — V3 Premium Redesign
  *
- * Displays a premium glassmorphic card representing a task.
+ * Large glassmorphic card with:
+ *   - Large circular toggle checkbox (purple outline → filled on complete)
+ *   - Bold white 20px title, 16px gray description
+ *   - Skill badge (blue gradient pill), Status badge (amber/green), Due date
+ *   - Three floating 48×48 circular action buttons (History, Edit, Delete)
+ *   - Hover lift + purple glow animation via CSS
+ *   - Skill-color left accent bar
  *
  * Props:
  *   - task: The task object from the API.
@@ -15,116 +21,130 @@ import { Check, History, Pencil, Trash2 } from 'lucide-react'
  *   - onViewHistory: Callback function to open completion history.
  */
 export default function TaskCard({ task, skills, onEdit, onDelete, onToggleStatus, onViewHistory }) {
+  const [isToggling, setIsToggling] = useState(false)
+
   // Resolve associated skill
   const skillObj = skills.find((s) => s.id === task.skill)
   const skillName = skillObj?.name ?? 'Unknown Skill'
-  const skillColor = skillObj?.color ?? '#4f46e5' // Fallback Indigo
+  const skillColor = skillObj?.color ?? '#4f46e5'
 
   const isCompleted = task.status === 'completed'
-  const createdDate = new Date(task.created_at).toLocaleDateString('en-US', {
+
+  const formattedDate = new Date(task.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 
+  const handleToggle = async () => {
+    if (isToggling) return
+    setIsToggling(true)
+    try {
+      await onToggleStatus(task)
+    } finally {
+      setIsToggling(false)
+    }
+  }
+
   return (
     <div
-      className="bg-slate-900/65 backdrop-blur-xl border border-slate-800/80 rounded-[28px] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_rgba(59,130,246,0.12)] flex flex-col gap-4 relative overflow-hidden group animate-fade-in"
+      className="tc-card"
       id={`task-card-${task.id}`}
+      style={{
+        '--skill-color': skillColor,
+        '--skill-color-20': `${skillColor}33`,
+      }}
     >
+      {/* Skill-color left accent bar */}
+      <div className="tc-card__accent" style={{ backgroundColor: skillColor }} />
+
+      {/* Top glow orb (subtle) */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2 pointer-events-none"
-        style={{ backgroundColor: skillColor }}
+        className="tc-card__glow"
+        style={{ background: `radial-gradient(circle at 50% 0%, ${skillColor}18 0%, transparent 70%)` }}
       />
 
-      <div className="flex items-start gap-4 w-full">
+      {/* ── Main Content Row ── */}
+      <div className="tc-card__body">
+        {/* Circular checkbox toggle */}
         <button
-          onClick={() => onToggleStatus(task)}
-          className="shrink-0 flex items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-950/50 w-11 h-11 transition-all duration-200 hover:border-violet-400 hover:bg-violet-500/10 focus:outline-none"
-          title={isCompleted ? 'Reopen Task' : 'Complete Task'}
+          onClick={handleToggle}
+          disabled={isToggling}
+          className={`tc-card__check ${isCompleted ? 'tc-card__check--done' : 'tc-card__check--pending'}`}
+          title={isCompleted ? 'Reopen Task' : 'Mark as Complete'}
           aria-label={isCompleted ? 'Mark task as pending' : 'Mark task as completed'}
         >
           {isCompleted ? (
-            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-violet-500 text-white shadow-lg shadow-violet-500/20">
-              <Check size={14} strokeWidth={3} />
-            </div>
+            <Check size={18} strokeWidth={3} className="tc-card__check-icon" />
           ) : (
-            <div className="w-5.5 h-5.5 rounded-full border-2 border-slate-600 transition-all duration-200" />
+            <span className="tc-card__check-ring" />
           )}
         </button>
 
-        <div className="flex-1 min-w-0">
+        {/* Title + Description */}
+        <div className="tc-card__text">
           <h3
-            className={`font-semibold text-base sm:text-lg leading-tight ${
-              isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
-            }`}
+            className={`tc-card__title ${isCompleted ? 'tc-card__title--done' : ''}`}
             title={task.title}
           >
             {task.title}
           </h3>
           {task.description && (
-            <p className="mt-2 text-sm leading-6 text-slate-400 break-words">
-              {task.description}
-            </p>
+            <p className="tc-card__desc">{task.description}</p>
           )}
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3 sm:gap-0 sm:flex-row sm:items-center sm:justify-between py-3 border-t border-slate-800/50">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="text-[11px] font-semibold uppercase tracking-[0.22em] px-3 py-1 rounded-full border bg-slate-950/60"
-            style={{
-              color: skillColor,
-              borderColor: `${skillColor}35`,
-            }}
-          >
-            {skillName}
-          </span>
-
-          <span
-            className={`text-[11px] font-semibold uppercase tracking-[0.22em] px-3 py-1 rounded-full border ${
-              isCompleted
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-            }`}
-          >
-            {isCompleted ? 'Completed' : 'Pending'}
-          </span>
-
-          <span className="text-[11px] text-slate-500 font-medium">
-            {createdDate}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Action buttons cluster — floats to the right */}
+        <div className="tc-card__actions">
           <button
             onClick={() => onViewHistory(task)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 border border-slate-800/60 text-slate-400 hover:border-slate-700 hover:text-emerald-300 transition-all duration-200"
+            className="tc-card__action-btn tc-card__action-btn--history"
             title="View History"
-            aria-label="View history"
+            aria-label="View task history"
           >
-            <History size={16} strokeWidth={2} />
+            <History size={17} strokeWidth={2} />
           </button>
           <button
             onClick={() => onEdit(task)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 border border-slate-800/60 text-slate-400 hover:border-slate-700 hover:text-indigo-300 transition-all duration-200"
+            className="tc-card__action-btn tc-card__action-btn--edit"
             title="Edit Task"
             aria-label="Edit task"
           >
-            <Pencil size={16} strokeWidth={2} />
+            <Pencil size={17} strokeWidth={2} />
           </button>
           <button
             onClick={() => onDelete(task)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 border border-slate-800/60 text-slate-400 hover:border-slate-700 hover:text-rose-300 transition-all duration-200"
+            className="tc-card__action-btn tc-card__action-btn--delete"
             title="Delete Task"
             aria-label="Delete task"
           >
-            <Trash2 size={16} strokeWidth={2} />
+            <Trash2 size={17} strokeWidth={2} />
           </button>
         </div>
+      </div>
+
+      {/* ── Metadata Footer ── */}
+      <div className="tc-card__footer">
+        {/* Skill Badge */}
+        <span className="tc-card__badge tc-card__badge--skill" style={{ '--skill-color': skillColor }}>
+          {skillName}
+        </span>
+
+        {/* Status Badge */}
+        <span
+          className={`tc-card__badge ${
+            isCompleted ? 'tc-card__badge--completed' : 'tc-card__badge--pending'
+          }`}
+        >
+          {isCompleted ? 'Completed' : 'Pending'}
+        </span>
+
+        {/* Due Date */}
+        <span className="tc-card__date">
+          <Calendar size={12} className="inline-block mr-1 opacity-60" />
+          {formattedDate}
+        </span>
       </div>
     </div>
   )
 }
-
