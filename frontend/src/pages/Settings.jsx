@@ -327,7 +327,7 @@ export default function Settings() {
         <div className="app-details-grid">
           <div className="app-detail-row">
             <span className="app-detail-label">Version</span>
-            <span className="app-detail-value">Own Progress Dashboard V1.6</span>
+            <span className="app-detail-value">Progressly V1.6</span>
           </div>
           <div className="app-detail-row">
             <span className="app-detail-label">Developer</span>

@@ -13,7 +13,7 @@ const PAGE_TITLES = {
 export default function Topbar({ onToggleSidebar }) {
   const { pathname } = useLocation()
   const { user }     = useAuth()
-  const page         = PAGE_TITLES[pathname] ?? { title: 'Own Progress', sub: '' }
+  const page         = PAGE_TITLES[pathname] ?? { title: 'Progressly', sub: '' }
 
   const displayName = user?.full_name ?? user?.first_name ?? ''
   const initials = displayName?.[0]?.toUpperCase() ?? '?'

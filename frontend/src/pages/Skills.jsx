@@ -1,47 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import skillsService from '../services/skillsService'
 import { SkillCard, SkillModal, DeleteConfirmModal } from '../components/skills'
-import { Plus, Brain, AlertCircle } from 'lucide-react'
+import { Plus, Layers, AlertCircle } from 'lucide-react'
 
-/**
- * SkillCardSkeleton
- *
- * Shimmer placeholder that matches the shape of a SkillCard.
- * Rendered while fetching skills.
- */
+/* ─── Skeleton Card ─────────────────────────────────────────────────── */
 function SkillCardSkeleton() {
   return (
-    <div className="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-6 h-[178px] flex flex-col justify-between animate-pulse">
-      <div>
-        <div className="flex justify-between items-start">
-          <div className="h-6 bg-slate-800/60 rounded w-1/2" />
-          <div className="flex gap-1.5">
-            <div className="h-7 w-7 bg-slate-800/60 rounded-lg" />
-            <div className="h-7 w-7 bg-slate-800/60 rounded-lg" />
-          </div>
+    <div className="sc-skeleton">
+      <div className="sc-skeleton__header">
+        <div className="sc-skeleton__icon" />
+        <div className="sc-skeleton__name-wrap">
+          <div className="sc-skeleton__line sc-skeleton__line--title" />
+          <div className="sc-skeleton__line sc-skeleton__line--sub" />
         </div>
-        <div className="h-4 bg-slate-800/60 rounded w-1/3 mt-2" />
       </div>
-      <div className="space-y-2 mt-4">
-        <div className="flex justify-between">
-          <div className="h-3 bg-slate-800/60 rounded w-1/4" />
-          <div className="h-3 bg-slate-800/60 rounded w-1/12" />
+      <div className="sc-skeleton__progress">
+        <div className="sc-skeleton__label-row">
+          <div className="sc-skeleton__line sc-skeleton__line--label" />
+          <div className="sc-skeleton__line sc-skeleton__line--pct" />
         </div>
-        <div className="h-2 bg-slate-800/60 rounded-full w-full" />
-        <div className="flex justify-between pt-0.5">
-          <div className="h-3 bg-slate-800/60 rounded w-1/5" />
-          <div className="h-3 bg-slate-800/60 rounded w-1/6" />
+        <div className="sc-skeleton__bar" />
+        <div className="sc-skeleton__footer">
+          <div className="sc-skeleton__line sc-skeleton__line--count" />
+          <div className="sc-skeleton__line sc-skeleton__line--count" />
         </div>
       </div>
     </div>
   )
 }
 
-/**
- * ErrorBanner
- *
- * Rendered when the skills fetch API request fails.
- */
+/* ─── Error Banner ──────────────────────────────────────────────────── */
 function ErrorBanner({ message, onRetry }) {
   return (
     <div className="dash-error" role="alert">
@@ -59,12 +47,51 @@ function ErrorBanner({ message, onRetry }) {
   )
 }
 
+/* ─── Empty State ───────────────────────────────────────────────────── */
+function EmptyState({ onAdd }) {
+  return (
+    <div className="sc-empty">
+      {/* Glowing stacked-layers illustration */}
+      <div className="sc-empty__illus" aria-hidden="true">
+        <div className="sc-empty__orb sc-empty__orb--1" />
+        <div className="sc-empty__orb sc-empty__orb--2" />
+        <div className="sc-empty__illus-icon">
+          <Layers size={48} strokeWidth={1} />
+          {/* Sparkles */}
+          <span className="sc-empty__spark sc-empty__spark--tl">✦</span>
+          <span className="sc-empty__spark sc-empty__spark--tr">✦</span>
+          <span className="sc-empty__spark sc-empty__spark--bl">✦</span>
+          <span className="sc-empty__spark sc-empty__spark--br">✦</span>
+        </div>
+      </div>
+
+      <h3 className="sc-empty__title">Add your first skill</h3>
+      <p className="sc-empty__desc">
+        Start building your technical journey by adding your first competency.
+      </p>
+
+      <button
+        onClick={onAdd}
+        className="sc-empty__cta"
+        id="skills-empty-add-btn"
+        aria-label="Add your first skill"
+      >
+        <Plus size={18} strokeWidth={2.5} />
+        Add Skill
+      </button>
+    </div>
+  )
+}
+
+/* ─── Skills Page ────────────────────────────────────────────────────── */
 /**
- * Skills
+ * Skills — V3 Premium Redesign
  *
- * Page controller representing the Skills page.
- * Manages rendering of skills list, loading states, edit/delete actions,
- * and page-level modals.
+ * Page controller for the Skills management interface.
+ * Manages rendering of skill cards, loading/error states, and CRUD modals.
+ *
+ * All business logic is preserved exactly as-is.
+ * Only the UI/layout has been updated.
  */
 export default function Skills() {
   const [skills, setSkills] = useState([])
@@ -123,7 +150,6 @@ export default function Skills() {
 
   const handleConfirmDelete = async () => {
     if (!selectedDeleteSkill) return
-
     setIsDeleting(true)
     try {
       await skillsService.remove(selectedDeleteSkill.id)
@@ -143,55 +169,53 @@ export default function Skills() {
   }
 
   return (
-    <div id="page-skills" className="dash-page animate-fade-in">
-      {/* ── Page Header / Greetings ── */}
-      <div className="dash-greeting">
-        <div>
-          <h2 className="dash-greeting__title">Skills & Competencies</h2>
-          <p className="dash-greeting__sub font-medium">
+    <div id="page-skills" className="sc-page animate-fade-in">
+
+      {/* ══ Page Header ══════════════════════════════════════════════ */}
+      <div className="sc-header">
+        <div className="sc-header__text">
+          <h1 className="sc-header__title">Skills &amp; Competencies</h1>
+          <p className="sc-header__sub">
             Define, monitor, and master your technical capabilities.
           </p>
         </div>
+
+        {/* Desktop Add Skill button */}
         <button
           id="skills-add-btn"
           onClick={handleOpenCreateModal}
-          className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 transition-all cursor-pointer flex items-center gap-2"
+          className="sc-add-btn sc-add-btn--desktop"
+          aria-label="Add new skill"
         >
-          <Plus size={16} strokeWidth={2.5} />
+          <Plus size={18} strokeWidth={2.5} />
           Add Skill
         </button>
       </div>
 
-      {/* ── Error Banner ── */}
+      {/* ══ Error Banner ══════════════════════════════════════════════ */}
       {error && <ErrorBanner message={error} onRetry={fetchSkills} />}
 
-      {/* ── Skills Grid / Content Area ── */}
+      {/* ══ Mobile Add Skill button (full width) ══════════════════════ */}
+      {!error && (
+        <button
+          onClick={handleOpenCreateModal}
+          className="sc-add-btn sc-add-btn--mobile"
+          aria-label="Add new skill"
+        >
+          <Plus size={18} strokeWidth={2.5} />
+          Add Skill
+        </button>
+      )}
+
+      {/* ══ Skills Grid / Content Area ════════════════════════════════ */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <SkillCardSkeleton key={i} />
-          ))}
+        <div className="sc-grid">
+          {[1, 2, 3, 4].map((i) => <SkillCardSkeleton key={i} />)}
         </div>
       ) : skills.length === 0 && !error ? (
-        /* Empty State */
-        <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800/60 shadow-xl backdrop-blur-md max-w-xl mx-auto mt-8 transition-all hover:border-slate-700/60">
-          <div className="w-16 h-16 rounded-full bg-slate-800/40 border border-slate-750 flex items-center justify-center text-slate-400 mb-4">
-            <Brain size={32} strokeWidth={1.5} className="text-slate-400 animate-pulse" />
-          </div>
-          <h3 className="text-slate-200 text-base font-semibold mb-2">No skills found</h3>
-          <p className="text-slate-450 text-xs max-w-sm mb-6 leading-relaxed">
-            It looks like you haven't defined any skills yet. Establish a skill, choose a target tasks quota, and track your development.
-          </p>
-          <button
-            onClick={handleOpenCreateModal}
-            className="px-5 py-2.5 bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/5 hover:-translate-y-0.5"
-          >
-            Create Your First Skill
-          </button>
-        </div>
-      ) : (
-        /* Render Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+        <EmptyState onAdd={handleOpenCreateModal} />
+      ) : !error ? (
+        <div className="sc-grid">
           {skills.map((skill) => (
             <SkillCard
               key={skill.id}
@@ -201,9 +225,9 @@ export default function Skills() {
             />
           ))}
         </div>
-      )}
+      ) : null}
 
-      {/* ── Modal Dialogs ── */}
+      {/* ══ Modals ════════════════════════════════════════════════════ */}
 
       {/* Create / Edit Form Modal */}
       <SkillModal
