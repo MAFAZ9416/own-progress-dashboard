@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from .models import Task, TaskCompletion, TaskActivity
 from .serializers import TaskCompletionSerializer, TaskSerializer, TaskActivitySerializer
 from streaks.models import Streak
+from streaks.services import update_user_streak
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -58,18 +59,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 TaskActivity.objects.create(task=task, user=self.request.user, action="completed")
 
                 # Update streak
-                today = timezone.now().date()
-                streak_obj, _ = Streak.objects.get_or_create(user=self.request.user)
-                if streak_obj.last_active_date == today:
-                    pass
-                elif streak_obj.last_active_date == today - timedelta(days=1):
-                    streak_obj.current_streak += 1
-                else:
-                    streak_obj.current_streak = 1
-                if streak_obj.current_streak > streak_obj.longest_streak:
-                    streak_obj.longest_streak = streak_obj.current_streak
-                streak_obj.last_active_date = today
-                streak_obj.save(update_fields=["current_streak", "longest_streak", "last_active_date"])
+                update_user_streak(self.request.user)
             elif new_status == 'pending':
                 # Clean up TaskCompletion to keep dashboard analytics consistent
                 TaskCompletion.objects.filter(task=task).delete()
@@ -108,21 +98,7 @@ class CompleteTaskView(APIView):
             skill=task.skill,
         )
 
-        today = timezone.now().date()
-        streak, _ = Streak.objects.get_or_create(user=request.user)
-
-        if streak.last_active_date == today:
-            pass
-        elif streak.last_active_date == today - timedelta(days=1):
-            streak.current_streak += 1
-        else:
-            streak.current_streak = 1
-
-        if streak.current_streak > streak.longest_streak:
-            streak.longest_streak = streak.current_streak
-
-        streak.last_active_date = today
-        streak.save(update_fields=["current_streak", "longest_streak", "last_active_date"])
+        update_user_streak(request.user)
 
         serializer = TaskCompletionSerializer(completion)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
