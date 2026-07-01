@@ -82,11 +82,17 @@ class DashboardSummaryView(APIView):
     def get(self, request):
         user = request.user
 
-        # Basic counts
+        # Basic counts via aggregated queries
+        from django.db.models import Q
         total_skills = Skill.objects.filter(user=user).count()
-        total_tasks  = Task.objects.filter(user=user).count()
-        completed_tasks = Task.objects.filter(user=user, status='completed').count()
-        pending_tasks   = Task.objects.filter(user=user, status='pending').count()
+        task_stats = Task.objects.filter(user=user).aggregate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(status='completed')),
+            pending=Count('id', filter=Q(status='pending'))
+        )
+        total_tasks = task_stats['total']
+        completed_tasks = task_stats['completed']
+        pending_tasks = task_stats['pending']
 
         # ── Dynamic streak calculation ────────────────────────────
         active_dates = list(

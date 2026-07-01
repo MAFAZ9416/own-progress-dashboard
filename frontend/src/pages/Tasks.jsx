@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import tasksService from '../services/tasksService'
 import skillsService from '../services/skillsService'
 import { TaskCard, TaskModal, TaskHistoryModal, DeleteConfirmModal } from '../components/tasks'
@@ -209,20 +209,23 @@ export default function Tasks() {
   }
 
   // Client-Side Task Filter Resolution
-  const filteredTasks = tasks.filter((task) => {
-    // 1. Text Search Filter (Title & Description)
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.toLowerCase()
+    return tasks.filter((task) => {
+      // 1. Text Search Filter (Title & Description)
+      const matchesSearch =
+        task.title.toLowerCase().includes(query) ||
+        (task.description && task.description.toLowerCase().includes(query))
 
-    // 2. Associated Skill Filter
-    const matchesSkill = selectedSkillFilter === 'all' || task.skill.toString() === selectedSkillFilter
+      // 2. Associated Skill Filter
+      const matchesSkill = selectedSkillFilter === 'all' || task.skill.toString() === selectedSkillFilter
 
-    // 3. Status Filter
-    const matchesStatus = selectedStatusFilter === 'all' || task.status === selectedStatusFilter
+      // 3. Status Filter
+      const matchesStatus = selectedStatusFilter === 'all' || task.status === selectedStatusFilter
 
-    return matchesSearch && matchesSkill && matchesStatus
-  })
+      return matchesSearch && matchesSkill && matchesStatus
+    })
+  }, [tasks, searchQuery, selectedSkillFilter, selectedStatusFilter])
 
   const STATUS_TABS = [
     { label: 'All', value: 'all' },
