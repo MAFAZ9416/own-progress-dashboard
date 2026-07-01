@@ -17,6 +17,9 @@ class Skill(models.Model):
 
     class Meta:
         unique_together = ('user', 'name')
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
 
     def __str__(self):
         return self.name

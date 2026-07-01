@@ -21,7 +21,11 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Task.objects.filter(user=self.request.user).order_by("-created_at")
+        return (
+            Task.objects.filter(user=self.request.user)
+            .select_related("skill")
+            .order_by("-created_at")
+        )
 
     def perform_create(self, serializer):
         skill = serializer.validated_data.get("skill")
@@ -31,8 +35,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         TaskActivity.objects.create(task=task, user=self.request.user, action="created")
 
     def perform_update(self, serializer):
-        # Fetch the old values from database to compare changes
-        old_instance = Task.objects.get(pk=serializer.instance.pk)
+        old_instance = serializer.instance
         old_title = old_instance.title
         old_description = old_instance.description
         old_skill = old_instance.skill_id
@@ -82,7 +85,9 @@ class CompleteTaskView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, task_id, *args, **kwargs):
-        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        task = get_object_or_404(
+            Task.objects.select_related("skill"), pk=task_id, user=request.user
+        )
 
         if task.status == "completed":
             raise ValidationError({"detail": "Task is already completed."})
@@ -110,7 +115,9 @@ class ReopenTaskView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, task_id, *args, **kwargs):
-        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        task = get_object_or_404(
+            Task.objects.select_related("skill"), pk=task_id, user=request.user
+        )
 
         task.status = "pending"
         task.save(update_fields=["status"])
@@ -126,7 +133,9 @@ class TaskHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, task_id, *args, **kwargs):
-        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        task = get_object_or_404(
+            Task.objects.select_related("skill"), pk=task_id, user=request.user
+        )
         completions = TaskCompletion.objects.filter(task=task).order_by("-completed_at")
         serializer = TaskCompletionSerializer(completions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -138,7 +147,9 @@ class TaskActivityView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, task_id, *args, **kwargs):
-        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        task = get_object_or_404(
+            Task.objects.select_related("skill"), pk=task_id, user=request.user
+        )
         activities = TaskActivity.objects.filter(task=task)
         serializer = TaskActivitySerializer(activities, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

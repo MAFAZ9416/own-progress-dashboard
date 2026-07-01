@@ -168,10 +168,7 @@ class ForgotPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data["email"]
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            user = User.objects.get(email__iexact=email)
+            user = serializer.context['reset_user']
             
             from .models import PasswordResetToken
             reset_token = PasswordResetToken.generate_token(user)
@@ -201,11 +198,9 @@ class ResetPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            token_val = serializer.validated_data["token"]
+            reset_token = serializer.context['reset_token']
             password = serializer.validated_data["password"]
             
-            from .models import PasswordResetToken
-            reset_token = PasswordResetToken.objects.get(token=token_val)
             user = reset_token.user
             
             user.set_password(password)
@@ -214,6 +209,7 @@ class ResetPasswordView(generics.GenericAPIView):
             # Invalidate all unused tokens for this user
             reset_token.is_used = True
             reset_token.save()
+            from .models import PasswordResetToken
             PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
             
             # Send password reset success email

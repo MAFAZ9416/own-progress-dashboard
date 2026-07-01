@@ -24,6 +24,11 @@ class PasswordResetToken(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_used']),
+        ]
+
     @classmethod
     def generate_token(cls, user):
         token_str = uuid.uuid4().hex + uuid.uuid4().hex

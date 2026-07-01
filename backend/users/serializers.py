@@ -246,14 +246,9 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not email or not password:
             raise serializers.ValidationError("Must include 'email' and 'password'.")
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("No active account found with the given credentials")
-
         authenticated_user = authenticate(
             request=self.context.get('request'),
-            username=user.username,
+            username=email,
             password=password
         )
 
@@ -294,8 +289,11 @@ class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
     def validate_email(self, value):
-        if not User.objects.filter(email__iexact=value).exists():
+        try:
+            user = User.objects.select_related('profile').get(email__iexact=value)
+        except User.DoesNotExist:
             raise serializers.ValidationError("No user is registered with this email address.")
+        self.context['reset_user'] = user
         return value
 
 
@@ -306,7 +304,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def validate_token(self, value):
         try:
-            reset_token = PasswordResetToken.objects.get(token=value)
+            reset_token = PasswordResetToken.objects.select_related('user', 'user__profile').get(token=value)
         except PasswordResetToken.DoesNotExist:
             raise serializers.ValidationError("Invalid token.")
 
@@ -316,6 +314,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         if reset_token.is_expired():
             raise serializers.ValidationError("This token has expired.")
 
+        self.context['reset_token'] = reset_token
         return value
 
     def validate(self, attrs):

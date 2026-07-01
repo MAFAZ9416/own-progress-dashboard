@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import permissions, viewsets
 
 from .models import Skill
@@ -11,7 +12,15 @@ class SkillViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Skill.objects.filter(user=self.request.user).order_by("-created_at")
+        return (
+            Skill.objects.filter(user=self.request.user)
+            .annotate(
+                completed_tasks_count=Count(
+                    'tasks', filter=Q(tasks__status='completed')
+                )
+            )
+            .order_by("-created_at")
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

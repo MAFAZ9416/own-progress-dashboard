@@ -33,6 +33,12 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
     def __str__(self):
         return self.title
     
@@ -56,6 +62,12 @@ class TaskCompletion(models.Model):
 
     completed_at = models.DateTimeField(auto_now_add=True)
     completed_date = models.DateField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'completed_date']),
+            models.Index(fields=['user', '-completed_at']),
+        ]
 
     def __str__(self):
         return f"{self.task.title} completed"
@@ -93,4 +105,4 @@ class TaskActivity(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.task.title} - {self.action}"
+        return f"{self.task.title} - {self.action}"

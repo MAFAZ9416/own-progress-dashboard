@@ -22,7 +22,9 @@ class SkillSerializer(serializers.ModelSerializer):
 
     def get_progress(self, obj):
         """Calculate progress from completed tasks for this skill."""
-        completed_tasks = obj.tasks.filter(status="completed").count()
+        completed_tasks = getattr(obj, 'completed_tasks_count', None)
+        if completed_tasks is None:
+            completed_tasks = obj.tasks.filter(status="completed").count()
         if not obj.target_tasks:
             return 0
         progress_percent = round((completed_tasks / obj.target_tasks) * 100, 2)

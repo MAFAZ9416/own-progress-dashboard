@@ -21,8 +21,8 @@ class DashboardSummaryView(APIView):
     - Active days in the current week (for the streak widget)
 
     Streaks are derived from distinct ``TaskCompletion.completed_date``
-    values — **not** from the cached ``Streak`` model — so they are
-    always accurate even if a day is missed.
+    values for accuracy. The cached ``Streak`` model is read (not written)
+    on this endpoint to preserve historical longest-streak records.
 
     Authentication: Required (IsAuthenticated)
     HTTP Methods: GET
@@ -81,20 +81,29 @@ class DashboardSummaryView(APIView):
     # ── GET ────────────────────────────────────────────────────────
     def get(self, request):
         user = request.user
+        today = timezone.now().date()
+        thirty_days_ago = today - timedelta(days=30)
 
-        # Basic counts via aggregated queries
+        # Consolidated counts — one query per model instead of separate count() calls
         from django.db.models import Q
-        total_skills = Skill.objects.filter(user=user).count()
+        skill_stats = Skill.objects.filter(user=user).aggregate(
+            total=Count('id'),
+            recent=Count('id', filter=Q(created_at__gte=thirty_days_ago)),
+        )
         task_stats = Task.objects.filter(user=user).aggregate(
             total=Count('id'),
             completed=Count('id', filter=Q(status='completed')),
-            pending=Count('id', filter=Q(status='pending'))
+            pending=Count('id', filter=Q(status='pending')),
+            recent=Count('id', filter=Q(created_at__gte=thirty_days_ago)),
         )
+        total_skills = skill_stats['total']
         total_tasks = task_stats['total']
         completed_tasks = task_stats['completed']
         pending_tasks = task_stats['pending']
+        skills_change = skill_stats['recent']
+        tasks_change = task_stats['recent']
 
-        # ── Dynamic streak calculation ────────────────────────────
+        # ── Dynamic streak calculation (single completion scan) ───
         active_dates = list(
             TaskCompletion.objects.filter(user=user)
             .values_list('completed_date', flat=True)
@@ -103,39 +112,20 @@ class DashboardSummaryView(APIView):
         )
         current_streak, longest_streak = self._compute_streaks(active_dates)
 
-        # Persist back to Streak model so other views stay in sync
+        # Read cached longest streak; avoid write on read path
         streak_obj, _ = Streak.objects.get_or_create(user=user)
-        streak_obj.current_streak = current_streak
-        streak_obj.longest_streak = max(longest_streak, streak_obj.longest_streak)
-        if active_dates:
-            streak_obj.last_active_date = active_dates[-1]
-        streak_obj.save(update_fields=['current_streak', 'longest_streak', 'last_active_date'])
+        longest_streak = max(longest_streak, streak_obj.longest_streak)
 
-        # ── Active days in the current week (Mon–Sun) ─────────────
-        today = timezone.now().date()
-        # Monday of this week
+        # ── Active days in the current week (derived from active_dates) ──
         monday = today - timedelta(days=today.weekday())
         sunday = monday + timedelta(days=6)
-        week_active = set(
-            TaskCompletion.objects.filter(
-                user=user,
-                completed_date__gte=monday,
-                completed_date__lte=sunday,
-            )
-            .values_list('completed_date', flat=True)
-            .distinct()
-        )
+        week_active = {d for d in active_dates if monday <= d <= sunday}
         day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         streak_active_days = [
             day_names[i]
             for i in range(7)
             if (monday + timedelta(days=i)) in week_active
         ]
-
-        # ── Changes in the last 30 days ───────────────────────────
-        thirty_days_ago = today - timedelta(days=30)
-        skills_change = Skill.objects.filter(user=user, created_at__gte=thirty_days_ago).count()
-        tasks_change = Task.objects.filter(user=user, created_at__gte=thirty_days_ago).count()
 
         current_streak_trend = "active" if current_streak > 0 else "inactive"
         longest_streak_trend = "best"
@@ -146,7 +136,7 @@ class DashboardSummaryView(APIView):
             "completed_tasks":    completed_tasks,
             "pending_tasks":      pending_tasks,
             "current_streak":     current_streak,
-            "longest_streak":     max(longest_streak, streak_obj.longest_streak),
+            "longest_streak":     longest_streak,
             "tasks_done":         completed_tasks,
             "streak_active_days": streak_active_days,
             "skills_change":      skills_change,
@@ -267,6 +257,7 @@ class MonthlyAnalyticsView(APIView):
         Returns:
             Response: Object with year, available_years, and months list
         """
+        from datetime import date
         from django.db.models.functions import ExtractMonth, ExtractYear
 
         user = request.user
@@ -278,11 +269,15 @@ class MonthlyAnalyticsView(APIView):
         except (TypeError, ValueError):
             year = current_year
 
-        # Aggregate completions by month for the requested year
+        year_start = date(year, 1, 1)
+        year_end = date(year, 12, 31)
+
+        # Range filter uses composite index on (user, completed_date)
         monthly_data = (
             TaskCompletion.objects.filter(
                 user=user,
-                completed_date__year=year,
+                completed_date__gte=year_start,
+                completed_date__lte=year_end,
             )
             .annotate(month=ExtractMonth('completed_date'))
             .values('month')
