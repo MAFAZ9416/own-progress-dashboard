@@ -16,7 +16,6 @@ urlpatterns = [
     path("api/skills/", include("skills.urls")),
     path("api/tasks/", include("tasks.urls")),
     path("api/dashboard/", include("analytics.urls")),
-    path("api/admin/", include("admin_panel.urls")),
 ]
 
 if settings.DEBUG:

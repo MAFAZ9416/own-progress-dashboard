@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
-import AdminRoute from './AdminRoute'
 import MainLayout from '../components/layout/MainLayout'
 
 // Pages
@@ -13,8 +12,6 @@ import Skills from '../pages/Skills'
 import Tasks from '../pages/Tasks'
 import Profile from '../pages/Profile'
 import Settings from '../pages/Settings'
-import Admin from '../pages/Admin'
-import AdminLogin from '../pages/AdminLogin'
 
 /**
  * Central route configuration for the application.
@@ -33,7 +30,6 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
 
       {/* Protected routes — wrapped in the shared sidebar layout */}
       <Route element={<ProtectedRoute />}>
@@ -44,11 +40,6 @@ export default function AppRoutes() {
           <Route path="/profile"   element={<Profile />} />
           <Route path="/settings"  element={<Settings />} />
         </Route>
-      </Route>
-
-      {/* Protected Admin routes */}
-      <Route element={<AdminRoute />}>
-        <Route path="/admin" element={<Admin />} />
       </Route>
 
       {/* Fallback: redirect root to dashboard */}

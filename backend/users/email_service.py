@@ -45,36 +45,9 @@ def send_html_email(subject, template_name, context, to_email):
         msg.send(fail_silently=False)
         elapsed = time.time() - start
         logger.info(f"Email sent to {to_email} in {elapsed:.2f} seconds")
-        
-        # Log to DB
-        try:
-            from admin_panel.models import EmailLog
-            EmailLog.objects.create(
-                recipient=to_email,
-                subject=subject,
-                template_name=template_name,
-                status='delivered'
-            )
-        except Exception as e_log:
-            logger.error(f"Failed to log email success to DB: {e_log}")
-
         return True
     except Exception as e:
         logger.exception(f"Failed to send email to {to_email} using template {template_name}: {str(e)}")
-        
-        # Log to DB
-        try:
-            from admin_panel.models import EmailLog
-            EmailLog.objects.create(
-                recipient=to_email,
-                subject=subject,
-                template_name=template_name,
-                status='failed',
-                error_message=str(e)
-            )
-        except Exception as e_log:
-            logger.error(f"Failed to log email failure to DB: {e_log}")
-
         return False
 
 def send_welcome_email(email, full_name):

@@ -152,19 +152,7 @@ class FeedbackView(generics.GenericAPIView):
             except Exception:
                 logger.exception("Failed to start email thread.")
 
-            # Save feedback to DB
-            try:
-                from admin_panel.models import Feedback
-                Feedback.objects.create(
-                    user=request.user if request.user and request.user.is_authenticated else None,
-                    name=name,
-                    email=email,
-                    feedback_type=feedback_type,
-                    message=message,
-                    status='pending'
-                )
-            except Exception as e_fb:
-                logger.error(f"Failed to save feedback to DB: {e_fb}")
+
 
             return Response(
                 {"message": "Feedback sent successfully."},
