@@ -82,12 +82,16 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            "id",
             "full_name",
             "email",
             "bio",
             "avatar",
             "date_joined",
+            "is_staff",
+            "is_superuser",
         ]
+        read_only_fields = ["id", "is_staff", "is_superuser"]
 
     def validate_email(self, value):
         user = self.context['request'].user
