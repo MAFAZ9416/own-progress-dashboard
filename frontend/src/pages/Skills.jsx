@@ -130,25 +130,22 @@ export default function Skills() {
     fetchSkills()
   }, [fetchSkills])
 
-  // Create Skill Handlers
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = useCallback(() => {
     setSelectedEditSkill(null)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
-  // Edit Skill Handlers
-  const handleOpenEditModal = (skill) => {
+  const handleOpenEditModal = useCallback((skill) => {
     setSelectedEditSkill(skill)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
-  // Delete Skill Handlers
-  const handleOpenDeleteModal = (skill) => {
+  const handleOpenDeleteModal = useCallback((skill) => {
     setSelectedDeleteSkill(skill)
     setIsDeleteModalOpen(true)
-  }
+  }, [])
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!selectedDeleteSkill) return
     setIsDeleting(true)
     try {
@@ -166,7 +163,10 @@ export default function Skills() {
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [selectedDeleteSkill])
+
+  const handleCloseFormModal = useCallback(() => setIsFormModalOpen(false), [])
+  const handleCloseDeleteModal = useCallback(() => setIsDeleteModalOpen(false), [])
 
   return (
     <div id="page-skills" className="sc-page animate-fade-in">
@@ -229,22 +229,24 @@ export default function Skills() {
 
       {/* ══ Modals ════════════════════════════════════════════════════ */}
 
-      {/* Create / Edit Form Modal */}
-      <SkillModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSaveSuccess={fetchSkills}
-        editSkill={selectedEditSkill}
-      />
+      {isFormModalOpen && (
+        <SkillModal
+          isOpen={isFormModalOpen}
+          onClose={handleCloseFormModal}
+          onSaveSuccess={fetchSkills}
+          editSkill={selectedEditSkill}
+        />
+      )}
 
-      {/* Custom Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        skillName={selectedDeleteSkill?.name || ''}
-        isDeleting={isDeleting}
-      />
+      {isDeleteModalOpen && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          skillName={selectedDeleteSkill?.name || ''}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   )
 }

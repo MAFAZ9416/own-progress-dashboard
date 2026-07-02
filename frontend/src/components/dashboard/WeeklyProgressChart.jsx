@@ -1,3 +1,4 @@
+import { useMemo, memo } from 'react'
 import {
   Area,
   AreaChart,
@@ -40,15 +41,17 @@ function WeeklyTooltip({ active, payload, label }) {
  *          [{ day: "Mon", count: 3, tasks_done?: 2 }, ...]
  *   isLoading – boolean
  */
-export default function WeeklyProgressChart({ data = [], isLoading = false }) {
-  /* Normalise: ensure both `count` and `tasks_done` keys exist */
-  const chartData = data.map(d => ({
-  day: d.day ?? d.date ?? '—',
-  count: d.completed_tasks ?? d.count ?? d.activities ?? 0,
-  tasksDone: d.completed_tasks ?? d.tasks_done ?? d.tasksDone ?? 0,
-}))
+const WeeklyProgressChart = memo(function WeeklyProgressChart({ data = [], isLoading = false }) {
+  const chartData = useMemo(() => data.map(d => ({
+    day: d.day ?? d.date ?? '—',
+    count: d.completed_tasks ?? d.count ?? d.activities ?? 0,
+    tasksDone: d.completed_tasks ?? d.tasks_done ?? d.tasksDone ?? 0,
+  })), [data])
 
-  const maxVal = Math.max(...chartData.map(d => d.count), 1)
+  const maxVal = useMemo(
+    () => Math.max(...chartData.map(d => d.count), 1),
+    [chartData]
+  )
 
   return (
     <div className="chart-wrap" id="chart-weekly">
@@ -110,7 +113,7 @@ export default function WeeklyProgressChart({ data = [], isLoading = false }) {
               width={32}
             />
 
-            <Tooltip content={<WeeklyTooltip />} cursor={{ stroke: 'rgba(124,58,237,0.2)', strokeWidth: 1 }} />
+            <Tooltip content={WeeklyTooltip} cursor={{ stroke: 'rgba(124,58,237,0.2)', strokeWidth: 1 }} />
 
             {/* Activities area + line */}
             <Area
@@ -139,4 +142,6 @@ export default function WeeklyProgressChart({ data = [], isLoading = false }) {
       )}
     </div>
   )
-}
+})
+
+export default WeeklyProgressChart

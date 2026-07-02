@@ -1,17 +1,22 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import MainLayout from '../components/layout/MainLayout'
+import PageLoader from '../components/common/PageLoader'
 
-// Pages
-import Login from '../pages/Login'
-import Register from '../pages/Register'
-import ForgotPassword from '../pages/ForgotPassword'
-import ResetPassword from '../pages/ResetPassword'
-import Dashboard from '../pages/Dashboard'
-import Skills from '../pages/Skills'
-import Tasks from '../pages/Tasks'
-import Profile from '../pages/Profile'
-import Settings from '../pages/Settings'
+const Login = lazy(() => import('../pages/Login'))
+const Register = lazy(() => import('../pages/Register'))
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('../pages/ResetPassword'))
+const Dashboard = lazy(() => import('../pages/Dashboard'))
+const Skills = lazy(() => import('../pages/Skills'))
+const Tasks = lazy(() => import('../pages/Tasks'))
+const Profile = lazy(() => import('../pages/Profile'))
+const Settings = lazy(() => import('../pages/Settings'))
+
+function LazyPage({ children }) {
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+}
 
 /**
  * Central route configuration for the application.
@@ -26,19 +31,19 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/login"    element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/login" element={<LazyPage><Login /></LazyPage>} />
+      <Route path="/register" element={<LazyPage><Register /></LazyPage>} />
+      <Route path="/forgot-password" element={<LazyPage><ForgotPassword /></LazyPage>} />
+      <Route path="/reset-password/:token" element={<LazyPage><ResetPassword /></LazyPage>} />
 
       {/* Protected routes — wrapped in the shared sidebar layout */}
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/skills"    element={<Skills />} />
-          <Route path="/tasks"     element={<Tasks />} />
-          <Route path="/profile"   element={<Profile />} />
-          <Route path="/settings"  element={<Settings />} />
+          <Route path="/dashboard" element={<LazyPage><Dashboard /></LazyPage>} />
+          <Route path="/skills" element={<LazyPage><Skills /></LazyPage>} />
+          <Route path="/tasks" element={<LazyPage><Tasks /></LazyPage>} />
+          <Route path="/profile" element={<LazyPage><Profile /></LazyPage>} />
+          <Route path="/settings" element={<LazyPage><Settings /></LazyPage>} />
         </Route>
       </Route>
 

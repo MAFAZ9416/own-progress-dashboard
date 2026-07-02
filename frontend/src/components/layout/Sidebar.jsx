@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle, Settings } from 'lucide-react'
@@ -25,7 +26,7 @@ const NAV_ITEMS = [
   },
 ]
 
-export default function Sidebar({ isOpen, onClose }) {
+const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth()
   const navigate         = useNavigate()
 
@@ -69,27 +70,6 @@ export default function Sidebar({ isOpen, onClose }) {
             <span className="sidebar__nav-indicator" />
           </NavLink>
         ))}
-
-        {(user?.is_staff || user?.is_superuser) && (
-          <NavLink
-            to="/admin"
-            id="sidebar-nav-admin"
-            onClick={onClose}
-            className={({ isActive }) =>
-              `sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}`
-            }
-            style={{ marginTop: 'auto', borderColor: 'rgba(168, 85, 247, 0.25)' }}
-          >
-            <span className="sidebar__nav-icon" style={{ color: '#A855F7' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[18px] h-[18px]">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </span>
-            <span className="sidebar__nav-label text-purple-300 font-semibold">Admin Panel</span>
-            <span className="sidebar__nav-indicator" style={{ background: '#A855F7' }} />
-          </NavLink>
-        )}
       </nav>
 
       {/* ── Spacer ── */}
@@ -124,4 +104,6 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
     </aside>
   )
-}
+})
+
+export default Sidebar

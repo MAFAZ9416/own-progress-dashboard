@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 
 /**
  * AuthContext
@@ -12,65 +12,49 @@ import { createContext, useContext, useState, useEffect } from 'react'
  */
 const AuthContext = createContext(null)
 
-export function AuthProvider({ children }) {
-  const [user, setUser]                       = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading]             = useState(true)
+function readStoredAuth() {
+  const accessToken = localStorage.getItem('accessToken')
+  const refreshToken = localStorage.getItem('refreshToken')
+  const userData = localStorage.getItem('user')
 
-  // Hydrate auth state from localStorage on first render
-  useEffect(() => {
-    const accessToken  = localStorage.getItem('accessToken')
-    const refreshToken = localStorage.getItem('refreshToken')
-    const userData     = localStorage.getItem('user')
-
-    if (accessToken && refreshToken && userData) {
-      try {
-        setUser(JSON.parse(userData))
-        setIsAuthenticated(true)
-      } catch {
-        // Corrupted storage — wipe everything
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
+  if (accessToken && refreshToken && userData) {
+    try {
+      return {
+        user: JSON.parse(userData),
+        isAuthenticated: true,
       }
+    } catch {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
     }
-
-    setIsLoading(false)
-  }, [])
-
-  /**
-   * Call after a successful login API response.
-   * Persists both JWT tokens and the user profile to localStorage,
-   * then updates React state so the rest of the app reacts immediately.
-   *
-   * @param {string} accessToken
-   * @param {string} refreshToken
-   * @param {object} userData
-   */
-  const login = (accessToken, refreshToken, userData) => {
-    localStorage.setItem('accessToken',  accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    localStorage.setItem('user',         JSON.stringify(userData))
-    setUser(userData)
-    setIsAuthenticated(true)
   }
 
-  /**
-   * Clear all auth state — called on explicit logout or 401 interception.
-   */
-  const logout = () => {
+  return { user: null, isAuthenticated: false }
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => readStoredAuth().user)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => readStoredAuth().isAuthenticated)
+  const isLoading = false
+
+  const login = useCallback((accessToken, refreshToken, userData) => {
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+    localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
+    setIsAuthenticated(true)
+  }, [])
+
+  const logout = useCallback(() => {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
     setUser(null)
     setIsAuthenticated(false)
-  }
+  }, [])
 
-  /**
-   * Update user state and localStorage without re-logging in.
-   * Merges existing user data with the provided newData.
-   */
-  const updateUser = (updatedData) => {
+  const updateUser = useCallback((updatedData) => {
     setUser((prev) => {
       const updated = {
         ...prev,
@@ -79,9 +63,12 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(updated))
       return updated
     })
-  }
+  }, [])
 
-  const value = { isAuthenticated, isLoading, user, login, logout, updateUser }
+  const value = useMemo(
+    () => ({ isAuthenticated, isLoading, user, login, logout, updateUser }),
+    [isAuthenticated, isLoading, user, login, logout, updateUser]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

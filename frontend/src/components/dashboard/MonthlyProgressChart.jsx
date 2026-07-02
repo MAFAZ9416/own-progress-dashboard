@@ -1,3 +1,4 @@
+import { useMemo, memo } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
   BarChart,
@@ -62,19 +63,20 @@ function RoundedBar(props) {
  *   availableYears – list of years the user has data for
  *   onYearChange   – callback(year) to switch years
  */
-export default function MonthlyProgressChart({
+const MonthlyProgressChart = memo(function MonthlyProgressChart({
   data = [],
   isLoading = false,
   year,
   availableYears = [],
   onYearChange,
 }) {
-  /* Build a full 12-month dataset, filling gaps with 0 */
-  const dataMap = Object.fromEntries(data.map(d => [d.month, d.count ?? 0]))
-  const chartData = MONTHS_SHORT.map(m => ({
-    month: m,
-    count: dataMap[m] ?? 0,
-  }))
+  const chartData = useMemo(() => {
+    const dataMap = Object.fromEntries(data.map(d => [d.month, d.count ?? 0]))
+    return MONTHS_SHORT.map(m => ({
+      month: m,
+      count: dataMap[m] ?? 0,
+    }))
+  }, [data])
 
   const currentMonth = new Date().toLocaleString('default', { month: 'short' })
   const displayYear  = year ?? new Date().getFullYear()
@@ -151,7 +153,7 @@ export default function MonthlyProgressChart({
               width={32}
             />
 
-            <Tooltip content={<MonthlyTooltip />} cursor={{ fill: 'rgba(99,102,241,0.05)' }} />
+            <Tooltip content={MonthlyTooltip} cursor={{ fill: 'rgba(99,102,241,0.05)' }} />
 
             <Bar dataKey="count" shape={<RoundedBar />} maxBarSize={32}>
               {chartData.map((entry, i) => (
@@ -171,4 +173,6 @@ export default function MonthlyProgressChart({
       )}
     </div>
   )
-}
+})
+
+export default MonthlyProgressChart

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useDashboard } from '../hooks/useDashboard'
+import { useProfileStats } from '../hooks/useProfileStats'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
@@ -9,7 +9,7 @@ import './Profile.css'
 
 export default function Profile() {
   const { user, logout } = useAuth()
-  const { summary, recent, isLoading } = useDashboard()
+  const { summary, recent, isLoading } = useProfileStats()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [toast, setToast] = useState(null)

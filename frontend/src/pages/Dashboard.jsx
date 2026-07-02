@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboard } from '../hooks/useDashboard'
@@ -7,7 +7,7 @@ import StatCard from '../components/dashboard/StatCard'
 import WeeklyProgressChart  from '../components/dashboard/WeeklyProgressChart'
 import MonthlyProgressChart from '../components/dashboard/MonthlyProgressChart'
 import LearningHeatmap      from '../components/dashboard/LearningHeatmap'
-import SkeletonCard, { SkeletonText, SkeletonBlock } from '../components/common/SkeletonCard'
+import SkeletonCard, { SkeletonText } from '../components/common/SkeletonCard'
 import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus, X } from 'lucide-react'
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
@@ -18,14 +18,6 @@ const TYPE_DOT = {
   skill:  '#7c3aed',
   task:   '#3b82f6',
   streak: '#f59e0b',
-}
-
-/** Map priority label → hex colour */
-const PRIORITY_DOT = {
-  high:   '#f87171',
-  medium: '#fb923c',
-  low:    '#94a3b8',
-  done:   '#4ade80',
 }
 
 /** Greeting + emoji based on current hour */
@@ -150,7 +142,6 @@ export default function Dashboard() {
     changeMonthlyYear,
     recent,
     heatmap,
-    tasks,
     pendingTasks,
     skills,
     topSkills,
@@ -169,15 +160,12 @@ export default function Dashboard() {
   const showTopSkills = localStorage.getItem('showTopSkills') !== 'false'
 
   /* Build stat card configs from live data */
-  const stats = buildStats(summary)
+  const stats = useMemo(() => buildStats(summary), [summary])
 
   /* Streak week dots — mark active days based on actual activity */
   const streakDays      = summary?.current_streak ?? 0
   const longestStreak   = summary?.longest_streak ?? 0
   const streakActiveDays = summary?.streak_active_days ?? []
-
-  /* Heatmap grid: use API data or empty grid while loading */
-  const heatGrid = heatmap ?? []
 
   return (
     <div id="page-dashboard" className="dash-page">

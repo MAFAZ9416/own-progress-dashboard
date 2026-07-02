@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Menu, Bell } from 'lucide-react'
@@ -10,7 +11,7 @@ const PAGE_TITLES = {
   '/settings':  { title: 'Settings',   sub: 'Customize your dashboard preferences' },
 }
 
-export default function Topbar({ onToggleSidebar }) {
+const Topbar = memo(function Topbar({ onToggleSidebar }) {
   const { pathname } = useLocation()
   const { user }     = useAuth()
   const page         = PAGE_TITLES[pathname] ?? { title: 'Progressly', sub: '' }
@@ -63,4 +64,6 @@ export default function Topbar({ onToggleSidebar }) {
       </div>
     </header>
   )
-}
+})
+
+export default Topbar

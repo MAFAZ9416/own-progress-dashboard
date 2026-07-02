@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { Check, History, Pencil, Trash2, Calendar } from 'lucide-react'
 
 /**
@@ -20,7 +20,7 @@ import { Check, History, Pencil, Trash2, Calendar } from 'lucide-react'
  *   - onToggleStatus: Callback function to mark task as completed or reopen it.
  *   - onViewHistory: Callback function to open completion history.
  */
-export default function TaskCard({ task, skills, onEdit, onDelete, onToggleStatus, onViewHistory }) {
+export default memo(function TaskCard({ task, skills, onEdit, onDelete, onToggleStatus, onViewHistory }) {
   const [isToggling, setIsToggling] = useState(false)
 
   // Resolve associated skill
@@ -147,4 +147,4 @@ export default function TaskCard({ task, skills, onEdit, onDelete, onToggleStatu
       </div>
     </div>
   )
-}
+})

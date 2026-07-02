@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -14,6 +14,9 @@ export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const location = useLocation()
 
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), [])
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), [])
+
   // Close sidebar automatically when path changes (i.e. selecting a menu item)
   useEffect(() => {
     setIsSidebarOpen(false)
@@ -25,17 +28,17 @@ export default function MainLayout() {
       {isSidebarOpen && (
         <div
           className="sidebar-overlay"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
           aria-hidden="true"
         />
       )}
 
       {/* Fixed sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Topbar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Topbar onToggleSidebar={toggleSidebar} />
 
         <main
           id="main-content"

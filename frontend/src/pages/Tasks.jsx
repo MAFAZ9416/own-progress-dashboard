@@ -144,38 +144,37 @@ export default function Tasks() {
   }, [fetchTasksAndSkills])
 
   // Open Create Modal
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = useCallback(() => {
     setSelectedEditTask(null)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
   // Open Edit Modal
-  const handleOpenEditModal = (task) => {
+  const handleOpenEditModal = useCallback((task) => {
     setSelectedEditTask(task)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
   // Open Delete Modal
-  const handleOpenDeleteModal = (task) => {
+  const handleOpenDeleteModal = useCallback((task) => {
     setSelectedDeleteTask(task)
     setIsDeleteModalOpen(true)
-  }
+  }, [])
 
   // Open History Modal
-  const handleOpenHistoryModal = (task) => {
+  const handleOpenHistoryModal = useCallback((task) => {
     setSelectedHistoryTask(task)
     setIsHistoryModalOpen(true)
-  }
+  }, [])
 
   // Handle Complete / Reopen Status Toggle
-  const handleToggleStatus = async (task) => {
+  const handleToggleStatus = useCallback(async (task) => {
     try {
       if (task.status === 'completed') {
         await tasksService.reopen(task.id)
       } else {
         await tasksService.complete(task.id)
       }
-      // Silent refresh for smooth transition, updates progress counts in backend
       await fetchTasksAndSkills(false)
     } catch (err) {
       alert(
@@ -185,10 +184,9 @@ export default function Tasks() {
         'Failed to update task status.'
       )
     }
-  }
+  }, [fetchTasksAndSkills])
 
-  // Handle Delete Confirmation
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!selectedDeleteTask) return
     setIsDeleting(true)
     try {
@@ -206,7 +204,12 @@ export default function Tasks() {
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [selectedDeleteTask])
+
+  const handleCloseFormModal = useCallback(() => setIsFormModalOpen(false), [])
+  const handleCloseDeleteModal = useCallback(() => setIsDeleteModalOpen(false), [])
+  const handleCloseHistoryModal = useCallback(() => setIsHistoryModalOpen(false), [])
+  const handleSaveSuccess = useCallback(() => fetchTasksAndSkills(false), [fetchTasksAndSkills])
 
   // Client-Side Task Filter Resolution
   const filteredTasks = useMemo(() => {
@@ -352,30 +355,33 @@ export default function Tasks() {
 
       {/* ══ Modals ════════════════════════════════════════════════════ */}
 
-      {/* Create / Edit Form Modal */}
-      <TaskModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSaveSuccess={() => fetchTasksAndSkills(false)}
-        editTask={selectedEditTask}
-        skills={skills}
-      />
+      {isFormModalOpen && (
+        <TaskModal
+          isOpen={isFormModalOpen}
+          onClose={handleCloseFormModal}
+          onSaveSuccess={handleSaveSuccess}
+          editTask={selectedEditTask}
+          skills={skills}
+        />
+      )}
 
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        taskTitle={selectedDeleteTask?.title || ''}
-        isDeleting={isDeleting}
-      />
+      {isDeleteModalOpen && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          taskTitle={selectedDeleteTask?.title || ''}
+          isDeleting={isDeleting}
+        />
+      )}
 
-      {/* View Task Completions History Modal */}
-      <TaskHistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-        task={selectedHistoryTask}
-      />
+      {isHistoryModalOpen && (
+        <TaskHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={handleCloseHistoryModal}
+          task={selectedHistoryTask}
+        />
+      )}
     </div>
   )
 }

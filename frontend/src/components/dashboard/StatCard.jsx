@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
 /**
@@ -15,7 +16,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react'
  *   suffix     – optional string appended after value ('days', '%', …)
  *   delay      – animation stagger delay in ms (default 0)
  */
-export default function StatCard({
+export default memo(function StatCard({
   id,
   label,
   value,
@@ -66,4 +67,4 @@ export default function StatCard({
       <div className="stat-card__stripe" style={{ background: gradient }} />
     </div>
   )
-}
+})

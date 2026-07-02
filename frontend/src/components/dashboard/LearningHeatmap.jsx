@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const DAYS        = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -33,7 +33,7 @@ function HeatTooltip({ day, week, level, visible, x, y }) {
  *               data[weekIndex][dayIndex] = 0..4
  *   isLoading – boolean
  */
-export default function LearningHeatmap({ data = [], isLoading = false }) {
+const LearningHeatmap = memo(function LearningHeatmap({ data = [], isLoading = false }) {
   const [tooltip, setTooltip] = useState({ visible: false, day: '', week: 0, level: 0, x: 0, y: 0 })
 
   const handleCellEnter = (e, dayLabel, weekIdx, level) => {
@@ -51,9 +51,10 @@ export default function LearningHeatmap({ data = [], isLoading = false }) {
 
   const handleCellLeave = () => setTooltip(t => ({ ...t, visible: false }))
 
-  /* Compute totals for the summary row */
-  const totalActivity  = data.flatMap(w => w).reduce((a, v) => a + (v > 0 ? 1 : 0), 0)
-  const activeDays     = data.flatMap(w => w).filter(v => v > 0).length
+  const activeDays = useMemo(
+    () => data.flatMap(w => w).filter(v => v > 0).length,
+    [data]
+  )
   const weekCount      = data.length
 
   return (
@@ -142,4 +143,6 @@ export default function LearningHeatmap({ data = [], isLoading = false }) {
       )}
     </div>
   )
-}
+})
+
+export default LearningHeatmap
