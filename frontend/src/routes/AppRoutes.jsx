@@ -8,6 +8,7 @@ const Login = lazy(() => import('../pages/Login'))
 const Register = lazy(() => import('../pages/Register'))
 const ForgotPassword = lazy(() => import('../pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('../pages/ResetPassword'))
+const AdminLogin = lazy(() => import('../pages/AdminLogin'))
 const Dashboard = lazy(() => import('../pages/Dashboard'))
 const Skills = lazy(() => import('../pages/Skills'))
 const Tasks = lazy(() => import('../pages/Tasks'))
@@ -35,6 +36,7 @@ export default function AppRoutes() {
       <Route path="/register" element={<LazyPage><Register /></LazyPage>} />
       <Route path="/forgot-password" element={<LazyPage><ForgotPassword /></LazyPage>} />
       <Route path="/reset-password/:token" element={<LazyPage><ResetPassword /></LazyPage>} />
+      <Route path="/admin/login" element={<LazyPage><AdminLogin /></LazyPage>} />
 
       {/* Protected routes — wrapped in the shared sidebar layout */}
       <Route element={<ProtectedRoute />}>
