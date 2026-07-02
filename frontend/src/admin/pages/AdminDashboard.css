@@ -1,0 +1,7 @@
+/* Admin Workspace Dashboard Base Styles */
+
+.admin-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

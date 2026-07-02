@@ -1,0 +1,119 @@
+import React from 'react'
+import {
+  LayoutDashboard,
+  Users,
+  Brain,
+  ClipboardList,
+  Flame,
+  LineChart,
+  FileText,
+  Bell,
+  MessageSquare,
+  Mail,
+  Database,
+  ShieldAlert,
+  ShieldCheck,
+  Settings,
+  HardDrive,
+  History
+} from 'lucide-react'
+
+export const NAVIGATION_ITEMS = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/admin/dashboard',
+  },
+  {
+    id: 'users',
+    label: 'Users',
+    icon: Users,
+    path: '/admin/users',
+  },
+  {
+    id: 'skills',
+    label: 'Skills',
+    icon: Brain,
+    path: '/admin/skills',
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks',
+    icon: ClipboardList,
+    path: '/admin/tasks',
+  },
+  {
+    id: 'streaks',
+    label: 'Streaks',
+    icon: Flame,
+    path: '/admin/streaks',
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: LineChart,
+    path: '/admin/analytics',
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: FileText,
+    path: '/admin/reports',
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: Bell,
+    path: '/admin/notifications',
+    badgeCount: 8,
+  },
+  {
+    id: 'feedback',
+    label: 'Feedback',
+    icon: MessageSquare,
+    path: '/admin/feedback',
+  },
+  {
+    id: 'emaillogs',
+    label: 'Email Logs',
+    icon: Mail,
+    path: '/admin/email-logs',
+  },
+  {
+    id: 'database',
+    label: 'Database',
+    icon: Database,
+    path: '/admin/database',
+  },
+  {
+    id: 'systemhealth',
+    label: 'System Health',
+    icon: ShieldAlert,
+    path: '/admin/system-health',
+  },
+  {
+    id: 'backups',
+    label: 'Backups',
+    icon: HardDrive,
+    path: '/admin/backups',
+  },
+  {
+    id: 'roles',
+    label: 'Roles & Permissions',
+    icon: ShieldCheck,
+    path: '/admin/roles',
+  },
+  {
+    id: 'activitylogs',
+    label: 'Activity Logs',
+    icon: History,
+    path: '/admin/activity-logs',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings,
+    path: '/admin/settings',
+  },
+]

@@ -71,7 +71,7 @@ export default function AdminLogin() {
 
       // Admin verified — persist session and redirect
       login(access, refresh, user)
-      navigate('/dashboard', { replace: true })
+      navigate('/admin/dashboard', { replace: true })
     } catch (err) {
       const msg =
         err?.response?.data?.detail ??

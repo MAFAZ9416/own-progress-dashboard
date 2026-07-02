@@ -1,0 +1,64 @@
+/* ══════════════════════════════════════════════════════════
+   Progressly Enterprise Admin Theme - Design Tokens
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Theme Base Colors */
+  --admin-bg: #07080e;
+  --admin-surface: #0f1021;
+  --admin-surface-hover: #161833;
+  --admin-surface-translucent: rgba(15, 16, 33, 0.75);
+  
+  /* Borders & Dividers */
+  --admin-border-color: rgba(99, 102, 241, 0.14);
+  --admin-border-hover: rgba(99, 102, 241, 0.28);
+  --admin-border-glow: rgba(124, 58, 237, 0.35);
+  
+  /* Text Palette */
+  --admin-text-primary: #ffffff;
+  --admin-text-secondary: #94a3b8;
+  --admin-text-muted: #5e6b7e;
+  
+  /* Brand Accents */
+  --admin-accent-purple: #7c3aed;
+  --admin-accent-indigo: #6366f1;
+  --admin-accent-blue: #3b82f6;
+  
+  /* Gradients */
+  --admin-grad-purple: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  --admin-grad-blue: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  --admin-grad-glow: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+  --admin-grad-banner: linear-gradient(135deg, #5b21b6 0%, #312e81 40%, #07080e 100%);
+  
+  /* UI Elements */
+  --admin-sidebar-width: 260px;
+  --admin-topbar-height: 70px;
+  
+  /* Status Colors */
+  --admin-status-success: #10b981;
+  --admin-status-success-bg: rgba(16, 185, 129, 0.12);
+  --admin-status-warning: #f59e0b;
+  --admin-status-warning-bg: rgba(245, 158, 11, 0.12);
+  --admin-status-danger: #ef4444;
+  --admin-status-danger-bg: rgba(239, 68, 68, 0.12);
+  
+  /* Transitions */
+  --admin-transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --admin-transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base utility for premium glowing shadows */
+.admin-glow-card {
+  background: var(--admin-surface-translucent);
+  border: 1px solid var(--admin-border-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  transition: var(--admin-transition);
+}
+
+.admin-glow-card:hover {
+  border-color: var(--admin-border-hover);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(124, 58, 237, 0.1);
+}

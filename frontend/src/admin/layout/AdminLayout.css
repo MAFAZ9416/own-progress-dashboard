@@ -1,0 +1,75 @@
+@import '../styles/admin-theme.css';
+
+/* Top-level Layout shell */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--admin-bg);
+  color: var(--admin-text-primary);
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Dark Backdrop Overlay on Mobile when Sidebar Drawer is open */
+.admin-layout__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 48;
+  animation: adminFadeIn 0.22s ease-out;
+}
+
+@keyframes adminFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Main content wrapper next to sidebar on desktop */
+.admin-layout__main-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding-left: var(--admin-sidebar-width);
+  min-height: 100vh;
+  transition: var(--admin-transition-slow);
+}
+
+/* Inner scrollable content container */
+.admin-layout__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.admin-layout__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-layout__content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.admin-layout__content-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Responsive adjustment for Mobile/Tablet viewports */
+@media (max-width: 992px) {
+  .admin-layout__main-wrapper {
+    padding-left: 0; /* Sidebar is now a hidden slide-in drawer */
+    padding-bottom: 60px; /* Safe space to prevent content clipping behind Bottom Nav */
+  }
+  
+  .admin-layout__content {
+    padding: 1.5rem 1rem;
+  }
+}

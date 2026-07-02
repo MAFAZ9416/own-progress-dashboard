@@ -6,15 +6,11 @@ import { useAuth } from '../contexts/AuthContext'
  *
  * Guards all child routes behind authentication.
  * If the user is not logged in, they are redirected to /login.
+ * If adminOnly is true, verifies that the user has admin status (is_staff or is_superuser).
  * Uses React Router's <Outlet /> so it can wrap nested route groups.
- *
- * Usage (in AppRoutes):
- *   <Route element={<ProtectedRoute />}>
- *     <Route path="/dashboard" element={<Dashboard />} />
- *   </Route>
  */
-export default function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth()
+export default function ProtectedRoute({ adminOnly = false }) {
+  const { isAuthenticated, isLoading, user } = useAuth()
 
   // Show nothing (or a spinner) while auth state is being resolved
   if (isLoading) {
@@ -25,5 +21,15 @@ export default function ProtectedRoute() {
     )
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  // If page requires admin rights, and the user is NOT staff or superuser,
+  // redirect them back to standard user dashboard
+  if (adminOnly && !user?.is_staff && !user?.is_superuser) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
 }

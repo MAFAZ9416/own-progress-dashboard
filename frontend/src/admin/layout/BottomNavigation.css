@@ -1,0 +1,64 @@
+@import '../styles/admin-theme.css';
+
+/* Mobile Bottom Navigation Bar Container */
+.admin-bottom-nav {
+  display: none; /* Hidden by default on desktop/tablet */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: rgba(12, 13, 25, 0.92);
+  border-top: 1px solid var(--admin-border-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 45;
+  padding-bottom: env(safe-area-inset-bottom);
+  justify-content: space-around;
+  align-items: center;
+}
+
+/* Individual Bottom Nav Tab Button */
+.admin-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: none;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  transition: var(--admin-transition);
+}
+
+.admin-bottom-nav__label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active Bottom Nav Tab state */
+.admin-bottom-nav__item--active {
+  color: #a78bfa; /* Fuchsia-purple active highlight */
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.2);
+}
+
+.admin-bottom-nav__item--active svg {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.4));
+  transition: var(--admin-transition);
+}
+
+/* Media Query to show on smaller viewports */
+@media (max-width: 992px) {
+  .admin-bottom-nav {
+    display: flex;
+  }
+}
