@@ -32,8 +32,9 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
   const tables = databaseData?.tables || []
   const totalSize = databaseData?.total_size || '0 MB'
   const totalRows = databaseData?.total_rows || 0
-  const activeConnections = 4 // standard operational connections count
-  const indexCount = 12 // total indexed columns on core models
+  const activeConnections = databaseData?.connections || 1
+  const indexCount = databaseData?.indexes || 0
+  const dbName = databaseData?.database_name || 'PostgreSQL'
 
   const hasTables = tables.length > 0
 
@@ -46,7 +47,7 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
         </div>
         <div className="admin-db-header__engine">
           <Database size={12} className="admin-db-engine-icon" />
-          <span>PostgreSQL</span>
+          <span>{dbName}</span>
         </div>
       </div>
 

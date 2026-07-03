@@ -3,7 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { Calendar } from 'lucide-react'
 import './TaskCompletionChart.css'
 
-export default function TaskCompletionChart({ data = [], isLoading }) {
+export default function TaskCompletionChart({ data = [], isLoading, period = 'month', onPeriodChange }) {
   
   // Handle Loading Skeleton State
   if (isLoading) {
@@ -58,7 +58,7 @@ export default function TaskCompletionChart({ data = [], isLoading }) {
         <div className="admin-donut-card__actions">
           <div className="admin-donut-card__select-wrapper">
             <Calendar size={12} className="admin-donut-card__select-icon" />
-            <select className="admin-donut-card__select" defaultValue="month">
+            <select className="admin-donut-card__select" value={period} onChange={(e) => onPeriodChange(e.target.value)}>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="year">This Year</option>

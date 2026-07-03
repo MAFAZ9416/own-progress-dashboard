@@ -11,8 +11,8 @@ export const adminDashboardService = {
    * GET /api/admin/dashboard/
    * Retrieves the unified dashboard data (stats, charts, tables, system status).
    */
-  getDashboardSummary: async () => {
-    const response = await apiClient.get('/admin/dashboard/')
+  getDashboardSummary: async (period = 'month', isFull = true) => {
+    const response = await apiClient.get(`/admin/dashboard/?period=${period}&full=${isFull}`)
     return response.data
   },
 

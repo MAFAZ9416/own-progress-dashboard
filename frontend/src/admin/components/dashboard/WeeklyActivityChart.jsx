@@ -3,7 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recha
 import { Calendar } from 'lucide-react'
 import './WeeklyActivityChart.css'
 
-export default function WeeklyActivityChart({ data = [], isLoading }) {
+export default function WeeklyActivityChart({ data = [], isLoading, period = 'month', onPeriodChange }) {
   
   // Format numeric ticks (e.g., 1000 -> "1K")
   const formatYAxis = (tick) => {
@@ -32,19 +32,28 @@ export default function WeeklyActivityChart({ data = [], isLoading }) {
   // Calculate total activities in current week
   const totalActivities = data.reduce((acc, curr) => acc + (curr.value || 0), 0)
 
+  // Map header title based on current period
+  const titleMap = {
+    week: 'Weekly Activity',
+    month: 'Monthly Activity',
+    year: 'Yearly Activity'
+  }
+  const title = titleMap[period] || 'Weekly Activity'
+
   return (
     <div className="admin-bar-card admin-glow-card">
       <div className="admin-bar-card__header">
         <div className="admin-bar-card__title-group">
-          <h3 className="admin-bar-card__title">Weekly Activity</h3>
+          <h3 className="admin-bar-card__title">{title}</h3>
           <span className="admin-bar-card__subtitle">Daily actions completed</span>
         </div>
         <div className="admin-bar-card__actions">
           <div className="admin-bar-card__select-wrapper">
             <Calendar size={12} className="admin-bar-card__select-icon" />
-            <select className="admin-bar-card__select" defaultValue="week">
+            <select className="admin-bar-card__select" value={period} onChange={(e) => onPeriodChange(e.target.value)}>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
+              <option value="year">This Year</option>
             </select>
           </div>
         </div>

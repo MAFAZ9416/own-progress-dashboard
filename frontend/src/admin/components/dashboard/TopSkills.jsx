@@ -41,11 +41,9 @@ export default function TopSkills({ skillsData = [], isLoading }) {
         {hasSkills ? (
           <div className="admin-skills-progress-list">
             {skillsData.slice(0, 5).map((skill, idx) => {
-              // Generate dynamic trend and learner count to avoid hardcoding static values,
-              // while keeping them connected to real data (derived from the progress/index)
-              const learnersCount = Math.max(3, Math.floor((skill.progress * 1.6) + (idx * 3)))
-              const trendValue = Math.max(1, Math.floor((skill.progress * 0.12) + (idx * 1.5)))
-              const isPositiveTrend = idx % 3 !== 0
+              const learnersCount = skill.learners || 0
+              const trendValue = skill.trend || 0.0
+              const isPositiveTrend = trendValue >= 0
 
               // Match color class
               const skillColor = skill.color || '#7c3aed'
@@ -62,7 +60,7 @@ export default function TopSkills({ skillsData = [], isLoading }) {
                         </span>
                         <span className={`admin-skill-progress-row__trend admin-skill-progress-row__trend--${isPositiveTrend ? 'up' : 'down'}`}>
                           {isPositiveTrend ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                          {isPositiveTrend ? '+' : '-'}{trendValue}%
+                          {isPositiveTrend ? '+' : ''}{trendValue}%
                         </span>
                       </div>
                     </div>

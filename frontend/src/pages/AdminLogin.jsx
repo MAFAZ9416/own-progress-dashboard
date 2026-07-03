@@ -98,7 +98,7 @@ export default function AdminLogin() {
           </div>
 
           <h1 className="admin-login__hero-title">
-            <span>Enterprise</span> Admin Portal
+            <span>Progressly</span> Admin Portal
           </h1>
 
           <p className="admin-login__hero-subtitle">
@@ -162,9 +162,8 @@ export default function AdminLogin() {
           >
             {/* Email field */}
             <div
-              className={`admin-login__field ${
-                focused === 'email' ? 'admin-login__field--focused' : ''
-              }`}
+              className={`admin-login__field ${focused === 'email' ? 'admin-login__field--focused' : ''
+                }`}
             >
               <label htmlFor="admin-login-email" className="admin-login__label">
                 Email Address
@@ -191,9 +190,8 @@ export default function AdminLogin() {
 
             {/* Password field */}
             <div
-              className={`admin-login__field ${
-                focused === 'password' ? 'admin-login__field--focused' : ''
-              }`}
+              className={`admin-login__field ${focused === 'password' ? 'admin-login__field--focused' : ''
+                }`}
             >
               <label
                 htmlFor="admin-login-password"

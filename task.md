@@ -1,0 +1,22 @@
+- [x] Database Model Updates
+  - [x] Add `user` ForeignKey to `AdminFeedback` model in `models.py` (nullable, SET_NULL, safe for existing rows)
+  - [x] Generate migrations and run `migrate`
+- [x] Backend Query & Filtering Layer (`selectors.py`)
+  - [x] Update `get_statistics(period)` to dynamically calculate growth trend based on selected period
+  - [x] Update `get_charts_data(period)` to return period-aware datasets: Mon-Sun for `week`, Week 1 to 5 for `month`, Jan-Dec for `year`
+  - [x] Bind `TaskCompletion` chart data to filter tasks created within period
+  - [x] Update `get_feedback()` to select-relate `user` and resolve name and avatar
+  - [x] Update `get_database_overview()` to fetch name from `current_database()`, storage size from `pg_database_size()`, active connections from `pg_stat_activity()`, tables list from `pg_catalog.pg_statio_user_tables()`, and indexes count from `pg_indexes`
+- [x] Backend Views & APIs (`views.py`)
+  - [x] Capture query parameter `period = request.query_params.get('period', 'month')`
+  - [x] Update `AdminDashboardSummaryView` GET handler to pass `period` to statistics and chart selectors
+  - [x] Support partial period refresh (Additional Fix 2: don't reload DB overview / system health unnecessarily on period switch)
+- [x] Frontend Bindings & Components
+  - [x] Bind chart dropdowns (`UserGrowthChart`, `TaskCompletionChart`, `WeeklyActivityChart`) to trigger parent period state updates
+  - [x] Synchronize period state across charts
+  - [x] Map title of weekly activity chart dynamically based on period
+- [x] Verification & Tests
+  - [x] Verify zero static mockup values inside `src/admin`
+  - [x] Run `python manage.py check`
+  - [x] Run `python manage.py test`
+  - [x] Run `npm run build`

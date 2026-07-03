@@ -21,28 +21,40 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [responseTimeMs, setResponseTimeMs] = useState(0)
+  const [period, setPeriod] = useState('month')
+  const [isFirstLoad, setIsFirstLoad] = useState(true)
 
-  const fetchDashboardData = useCallback(async () => {
-    setIsLoading(true)
+  const fetchDashboardData = useCallback(async (isInitial = false) => {
+    setIsLoading(isInitial)
     setError(null)
     const startTime = performance.now()
 
     try {
-      const result = await adminDashboardService.getDashboardSummary()
+      const result = await adminDashboardService.getDashboardSummary(period, isInitial)
       const endTime = performance.now()
       setResponseTimeMs(Math.round(endTime - startTime))
-      setData(result)
+      setData(prev => {
+        if (!prev || isInitial) return result
+        return {
+          ...prev,
+          stats: result.stats,
+          charts: result.charts
+        }
+      })
+      if (isInitial) {
+        setIsFirstLoad(false)
+      }
     } catch (err) {
       console.error('Error fetching dashboard summary:', err)
       setError(err.response?.data?.message || err.message || 'Failed to connect to administrative server.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [period])
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
+    fetchDashboardData(isFirstLoad)
+  }, [period, fetchDashboardData, isFirstLoad])
 
   // Handles export CSV/JSON from the hero banner
   const handleExportData = () => {
@@ -60,7 +72,7 @@ export default function Dashboard() {
 
   // Action Success callback to refresh dashboard metrics
   const handleActionSuccess = () => {
-    fetchDashboardData()
+    fetchDashboardData(true)
   }
 
   if (error) {
@@ -71,7 +83,7 @@ export default function Dashboard() {
           <h2 className="admin-error-boundary__title">System Error</h2>
           <p className="admin-error-boundary__message">{error}</p>
           <button 
-            onClick={fetchDashboardData} 
+            onClick={() => fetchDashboardData(true)} 
             className="admin-error-boundary__retry-btn"
             id="admin-dashboard-retry-btn"
           >
@@ -113,14 +125,20 @@ export default function Dashboard() {
           totalValue={totalUsersValue}
           trend={totalUsersTrend}
           isLoading={isLoading} 
+          period={period}
+          onPeriodChange={setPeriod}
         />
         <TaskCompletionChart 
           data={charts.task_completion} 
           isLoading={isLoading} 
+          period={period}
+          onPeriodChange={setPeriod}
         />
         <WeeklyActivityChart 
           data={charts.weekly_activity} 
           isLoading={isLoading} 
+          period={period}
+          onPeriodChange={setPeriod}
         />
       </div>
 

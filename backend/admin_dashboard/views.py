@@ -15,20 +15,26 @@ class AdminDashboardSummaryView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # Run seeder to ensure initial feedback, logs, and alerts are present in the DB
-        seed_initial_data()
-
+        selectors.bootstrap_lifecycle_events()
+        period = request.query_params.get('period', 'month')
+        is_full = request.query_params.get('full', 'true').lower() == 'true'
+        
         data = {
-            'stats': selectors.get_statistics(),
-            'charts': selectors.get_charts_data(),
-            'recent_users': selectors.get_recent_users(),
-            'recent_activity': selectors.get_recent_activities(),
-            'system_health': selectors.get_system_health(),
-            'database': selectors.get_database_overview(),
-            'top_skills': selectors.get_top_skills(),
-            'feedback': selectors.get_feedback(),
-            'notifications': selectors.get_notifications()
+            'stats': selectors.get_statistics(period=period),
+            'charts': selectors.get_charts_data(period=period),
         }
+        
+        if is_full:
+            data.update({
+                'recent_users': selectors.get_recent_users(),
+                'recent_activity': selectors.get_recent_activities(),
+                'system_health': selectors.get_system_health(),
+                'database': selectors.get_database_overview(),
+                'top_skills': selectors.get_top_skills(),
+                'feedback': selectors.get_feedback(),
+                'notifications': selectors.get_notifications()
+            })
+            
         return Response(data, status=status.HTTP_200_OK)
 
 

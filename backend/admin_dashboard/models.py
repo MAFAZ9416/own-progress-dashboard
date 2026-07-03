@@ -1,7 +1,9 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 class AdminFeedback(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=100)
     avatar_url = models.URLField(max_length=500, blank=True, null=True)
     rating = models.PositiveIntegerField(default=5)  # 1 to 5 stars
@@ -12,7 +14,7 @@ class AdminFeedback(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Feedback from {self.name} - {self.rating} Stars"
+        return f"Feedback from {self.name or (self.user.username if self.user else 'Anonymous')} - {self.rating} Stars"
 
 
 class AdminNotification(models.Model):
@@ -44,3 +46,19 @@ class AdminActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.username} - {self.action} at {self.created_at}"
+
+
+class UserLifecycleEvent(models.Model):
+    EVENT_TYPES = (
+        ('create', 'Create'),
+        ('delete', 'Delete'),
+    )
+    event_type = models.CharField(max_length=10, choices=EVENT_TYPES)
+    username = models.CharField(max_length=150)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.event_type.upper()} - {self.username} at {self.timestamp}"

@@ -1,25 +1,49 @@
 import os
+import logging
 from django.db import connection, models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
+from django.db.models import Count, Q
 from skills.models import Skill
 from tasks.models import Task, TaskActivity, TaskCompletion
 from streaks.models import Streak
-from .models import AdminFeedback, AdminNotification, AdminActivityLog
+from .models import AdminFeedback, AdminNotification, AdminActivityLog, UserLifecycleEvent
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
-def get_sparkline_data(queryset, date_field='created_at'):
+def bootstrap_lifecycle_events():
     """
-    Generates a list of 7 values representing cumulative counts over the last 7 days.
+    Ensure all existing users have a 'create' UserLifecycleEvent based on their date_joined.
     """
-    now = timezone.now()
+    try:
+        existing_usernames = set(UserLifecycleEvent.objects.filter(event_type='create').values_list('username', flat=True))
+        users_to_bootstrap = User.objects.exclude(username__in=existing_usernames)
+        
+        events_to_create = []
+        for u in users_to_bootstrap:
+            events_to_create.append(UserLifecycleEvent(
+                event_type='create',
+                username=u.username,
+                timestamp=u.date_joined
+            ))
+            
+        if events_to_create:
+            UserLifecycleEvent.objects.bulk_create(events_to_create)
+    except Exception as e:
+        logger.error(f"Error bootstrapping lifecycle events: {e}")
+
+def calculate_sparkline_data(total_count, recent_dates, now):
+    """
+    Computes a 7-day sparkline cumulative count in-memory to prevent N+1 DB queries.
+    """
     sparkline = []
+    recent_dates = [d for d in recent_dates if d is not None]
     for i in range(6, -1, -1):
-        day = now - timedelta(days=i)
-        count = queryset.filter(**{f"{date_field}__date__lte": day.date()}).count()
-        sparkline.append(count)
+        day_limit = now - timedelta(days=i)
+        after_count = sum(1 for d in recent_dates if d > day_limit)
+        sparkline.append(total_count - after_count)
     return sparkline
 
 def get_active_users_count():
@@ -27,91 +51,92 @@ def get_active_users_count():
     Counts active users based on recent login activity or task updates.
     """
     now = timezone.now()
-    # Users who logged in or updated tasks in the last 30 days
     return User.objects.filter(
         models.Q(last_login__gte=now - timedelta(days=30)) |
         models.Q(is_active=True)
     ).distinct().count()
 
-def get_trend_percentage(queryset, date_field='created_at'):
+def get_statistics(period='month'):
     """
-    Calculates percentage change in the last 30 days vs the previous 30 days.
-    """
-    now = timezone.now()
-    current_30_start = now - timedelta(days=30)
-    prev_30_start = now - timedelta(days=60)
-    
-    current_count = queryset.filter(**{f"{date_field}__gte": current_30_start}).count()
-    prev_count = queryset.filter(**{f"{date_field}__range": [prev_30_start, current_30_start]}).count()
-    
-    if prev_count == 0:
-        return 0.0
-    return round(((current_count - prev_count) / prev_count) * 100, 1)
-
-def get_completion_rate_trend():
-    """
-    Calculates completion rate trend comparing current 30 days to previous 30 days.
+    Aggregates the six premium stats cards using dynamic period trend calculations.
     """
     now = timezone.now()
-    current_30_start = now - timedelta(days=30)
-    prev_30_start = now - timedelta(days=60)
     
-    def get_rate(start_date, end_date):
-        tasks = Task.objects.filter(created_at__range=[start_date, end_date])
-        total = tasks.count()
-        completed = tasks.filter(status='completed').count()
-        return (completed / total * 100) if total > 0 else 0.0
+    # Resolve period days window
+    if period == 'week':
+        days_limit = 7
+    elif period == 'year':
+        days_limit = 365
+    else:
+        days_limit = 30
         
-    current_rate = get_rate(current_30_start, now)
-    prev_rate = get_rate(prev_30_start, current_30_start)
+    limit_date = now - timedelta(days=days_limit)
+    seven_days_ago = now - timedelta(days=7)
     
-    return round(current_rate - prev_rate, 1)
-
-def get_statistics():
-    """
-    Aggregates the six premium stats cards.
-    """
-    now = timezone.now()
+    # Helper trend calculator
+    def calc_trend(current, previous):
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return round(((current - previous) / previous * 100), 1)
     
     # 1. Total Users
     total_users = User.objects.count()
-    users_sparkline = get_sparkline_data(User.objects, 'date_joined')
-    users_trend = get_trend_percentage(User.objects, 'date_joined')
+    users_prev = User.objects.filter(date_joined__lt=limit_date).count()
+    users_trend = calc_trend(total_users, users_prev)
     
     # 2. Active Users
     active_users = get_active_users_count()
-    # Estimate active users sparkline based on logins or default variation
-    active_sparkline = [int(u * 0.65) for u in users_sparkline]
-    active_trend = users_trend  # Match user trend for visual consistency
-
+    active_users_prev = User.objects.filter(
+        models.Q(last_login__lt=limit_date) | models.Q(is_active=True)
+    ).distinct().count()
+    active_trend = calc_trend(active_users, active_users_prev)
+    
     # 3. Total Skills
     total_skills = Skill.objects.count()
-    skills_sparkline = get_sparkline_data(Skill.objects, 'created_at')
-    skills_trend = get_trend_percentage(Skill.objects, 'created_at')
+    skills_prev = Skill.objects.filter(created_at__lt=limit_date).count()
+    skills_trend = calc_trend(total_skills, skills_prev)
     
     # 4. Total Tasks
     total_tasks = Task.objects.count()
-    tasks_sparkline = get_sparkline_data(Task.objects, 'created_at')
-    tasks_trend = get_trend_percentage(Task.objects, 'created_at')
+    tasks_prev = Task.objects.filter(created_at__lt=limit_date).count()
+    tasks_trend = calc_trend(total_tasks, tasks_prev)
     
     # 5. Completion Rate
     completed_tasks = Task.objects.filter(status='completed').count()
     completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0.0
     
-    # Generate completion rate sparkline
-    completion_sparkline = []
-    for i in range(6, -1, -1):
-        day = now - timedelta(days=i)
-        t_total = Task.objects.filter(created_at__date__lte=day.date()).count()
-        t_comp = Task.objects.filter(status='completed', created_at__date__lte=day.date()).count()
-        rate = round((t_comp / t_total * 100), 1) if t_total > 0 else 0.0
-        completion_sparkline.append(rate)
-    completion_trend = get_completion_rate_trend()
+    tasks_completed_prev = Task.objects.filter(status='completed', created_at__lt=limit_date).count()
+    completion_rate_prev = round((tasks_completed_prev / tasks_prev * 100), 1) if tasks_prev > 0 else 0.0
+    completion_trend = round(completion_rate - completion_rate_prev, 1)
 
     # 6. Active Streaks
     active_streaks = Streak.objects.filter(current_streak__gt=0).count()
-    streaks_sparkline = get_sparkline_data(Streak.objects, 'updated_at')
-    streaks_trend = get_trend_percentage(Streak.objects, 'updated_at')
+    streaks_prev = Streak.objects.filter(current_streak__gt=0, updated_at__lt=limit_date).count()
+    streaks_trend = calc_trend(active_streaks, streaks_prev)
+
+    # Sparklines (always 7 days)
+    user_dates = list(User.objects.filter(date_joined__gte=seven_days_ago).values_list('date_joined', flat=True))
+    skills_dates = list(Skill.objects.filter(created_at__gte=seven_days_ago).values_list('created_at', flat=True))
+    tasks_dates = list(Task.objects.filter(created_at__gte=seven_days_ago).values_list('created_at', flat=True))
+    tasks_comp_dates = list(Task.objects.filter(status='completed', created_at__gte=seven_days_ago).values_list('created_at', flat=True))
+    streaks_dates = list(Streak.objects.filter(current_streak__gt=0, updated_at__gte=seven_days_ago).values_list('updated_at', flat=True))
+
+    users_sparkline = calculate_sparkline_data(total_users, user_dates, now)
+    active_sparkline = [int(u * 0.65) for u in users_sparkline]
+    skills_sparkline = calculate_sparkline_data(total_skills, skills_dates, now)
+    tasks_sparkline = calculate_sparkline_data(total_tasks, tasks_dates, now)
+    
+    completion_sparkline = []
+    for i in range(6, -1, -1):
+        day_limit = now - timedelta(days=i)
+        t_after = sum(1 for d in tasks_dates if d > day_limit)
+        c_after = sum(1 for d in tasks_comp_dates if d > day_limit)
+        t_count = total_tasks - t_after
+        c_count = completed_tasks - c_after
+        rate = round((c_count / t_count * 100), 1) if t_count > 0 else 0.0
+        completion_sparkline.append(rate)
+
+    streaks_sparkline = calculate_sparkline_data(active_streaks, streaks_dates, now)
 
     return {
         'total_users': {'value': total_users, 'trend': users_trend, 'sparkline': users_sparkline},
@@ -122,51 +147,149 @@ def get_statistics():
         'active_streaks': {'value': active_streaks, 'trend': streaks_trend, 'sparkline': streaks_sparkline},
     }
 
-def get_charts_data():
+def get_charts_data(period='month'):
     """
-    Returns charts datasets.
+    Returns filtered, period-aware datasets for charts dynamically querying the database.
     """
     now = timezone.now()
+    today = timezone.localdate()
+    year = today.year
     
-    # --- 1. User Growth (Last 30 Days) ---
-    user_growth = []
-    for i in range(30, -1, -5):  # Sample every 5 days
-        day = now - timedelta(days=i)
-        count = User.objects.filter(date_joined__lte=day).count()
-        label = day.strftime("%b %d")
-        user_growth.append({'name': label, 'value': count})
+    # 1. Resolve period boundaries
+    if period == 'week':
+        start_of_week = today - timedelta(days=today.weekday())
+        start_dt = timezone.make_aware(datetime(start_of_week.year, start_of_week.month, start_of_week.day, 0, 0, 0))
+        end_dt = timezone.make_aware(datetime(today.year, today.month, today.day, 23, 59, 59))
+        days_limit = 7
+    elif period == 'year':
+        start_dt = timezone.make_aware(datetime(year, 1, 1, 0, 0, 0))
+        end_dt = timezone.make_aware(datetime(year, 12, 31, 23, 59, 59))
+        days_limit = 365
+    else: # month
+        start_dt = timezone.make_aware(datetime(year, today.month, 1, 0, 0, 0))
+        if today.month == 12:
+            last_day = 31
+        else:
+            last_day = (datetime(year, today.month + 1, 1) - timedelta(days=1)).day
+        end_dt = timezone.make_aware(datetime(year, today.month, last_day, 23, 59, 59))
+        days_limit = 30
 
-    # --- 2. Task Completion status splits ---
-    completed = Task.objects.filter(status='completed').count()
-    # In Progress: pending tasks with activity log records
-    in_progress = Task.objects.filter(status='pending', activities__isnull=False).distinct().count()
-    # Pending: pending tasks with no activity records
-    pending = Task.objects.filter(status='pending', activities__isnull=True).distinct().count()
+    day_limit_ago = now - timedelta(days=days_limit)
+    total_users = User.objects.count()
+    recent_events = list(UserLifecycleEvent.objects.filter(timestamp__gte=day_limit_ago))
     
+    # 2. User Growth Chart
+    user_growth = []
+    if period == 'week':
+        weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        start_of_week = today - timedelta(days=today.weekday())
+        for i in range(7):
+            day = start_of_week + timedelta(days=i)
+            end_of_day = timezone.make_aware(datetime(day.year, day.month, day.day, 23, 59, 59))
+            if end_of_day.date() > today:
+                continue
+            creations_after = sum(1 for e in recent_events if e.event_type == 'create' and e.timestamp > end_of_day)
+            deletions_after = sum(1 for e in recent_events if e.event_type == 'delete' and e.timestamp > end_of_day)
+            count_at_day = total_users - creations_after + deletions_after
+            user_growth.append({'name': weekday_names[i], 'value': count_at_day})
+            
+    elif period == 'year':
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        for m in range(1, 13):
+            if m == 12:
+                end_of_month = timezone.make_aware(datetime(year, 12, 31, 23, 59, 59))
+            else:
+                end_of_month = timezone.make_aware(datetime(year, m + 1, 1)) - timedelta(seconds=1)
+            if end_of_month.date() > today:
+                continue
+            creations_after = sum(1 for e in recent_events if e.event_type == 'create' and e.timestamp > end_of_month)
+            deletions_after = sum(1 for e in recent_events if e.event_type == 'delete' and e.timestamp > end_of_month)
+            count_at_m = total_users - creations_after + deletions_after
+            user_growth.append({'name': month_names[m - 1], 'value': count_at_m})
+            
+    else: # month
+        weeks_config = [
+            ('Week 1', 7),
+            ('Week 2', 14),
+            ('Week 3', 21),
+            ('Week 4', 28),
+            ('Week 5', None)
+        ]
+        for name, day_num in weeks_config:
+            if day_num is not None:
+                end_date = timezone.make_aware(datetime(year, today.month, day_num, 23, 59, 59))
+            else:
+                if today.month == 12:
+                    last_d = 31
+                else:
+                    last_d = (datetime(year, today.month + 1, 1) - timedelta(days=1)).day
+                end_date = timezone.make_aware(datetime(year, today.month, last_d, 23, 59, 59))
+            if end_date.date() > today:
+                continue
+            creations_after = sum(1 for e in recent_events if e.event_type == 'create' and e.timestamp > end_date)
+            deletions_after = sum(1 for e in recent_events if e.event_type == 'delete' and e.timestamp > end_date)
+            count_at_w = total_users - creations_after + deletions_after
+            user_growth.append({'name': name, 'value': count_at_w})
+
+    # 3. Task Completion splits (filtered by period)
+    task_splits = Task.objects.filter(created_at__range=[start_dt, end_dt]).aggregate(
+        completed=Count('id', filter=Q(status='completed')),
+        in_progress=Count('id', filter=Q(status='pending', activities__isnull=False), distinct=True),
+        pending=Count('id', filter=Q(status='pending', activities__isnull=True), distinct=True)
+    )
     task_completion = [
-        {'name': 'Completed', 'value': completed},
-        {'name': 'In Progress', 'value': in_progress},
-        {'name': 'Pending', 'value': pending},
+        {'name': 'Completed', 'value': task_splits['completed']},
+        {'name': 'In Progress', 'value': task_splits['in_progress']},
+        {'name': 'Pending', 'value': task_splits['pending']},
     ]
 
-    # --- 3. Weekly Activity (Activities counted per day of current week) ---
-    weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    weekly_activity = []
-    
-    # Get start of current week (Monday)
-    today = timezone.localdate()
-    start_of_week = today - timedelta(days=today.weekday())
-    
-    for i in range(7):
-        day = start_of_week + timedelta(days=i)
-        # Count TaskActivity events on this specific date
-        count = TaskActivity.objects.filter(created_at__date=day).count()
-        weekly_activity.append({'name': weekday_names[i], 'value': count})
-
+    # 4. Activity Chart Data (Weekly / Monthly / Yearly Activity)
+    activity_data = []
+    if period == 'week':
+        weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        start_of_week = today - timedelta(days=today.weekday())
+        for i in range(7):
+            day = start_of_week + timedelta(days=i)
+            start_date = timezone.make_aware(datetime(day.year, day.month, day.day, 0, 0, 0))
+            end_date = timezone.make_aware(datetime(day.year, day.month, day.day, 23, 59, 59))
+            count = TaskActivity.objects.filter(created_at__range=[start_date, end_date]).count()
+            activity_data.append({'name': weekday_names[i], 'value': count})
+            
+    elif period == 'year':
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        activity_counts = dict(
+            TaskActivity.objects.filter(
+                created_at__year=year
+            ).annotate(month=models.functions.ExtractMonth('created_at')).values('month').annotate(count=Count('id')).values_list('month', 'count')
+        )
+        for m in range(1, 13):
+            count = activity_counts.get(m, 0)
+            activity_data.append({'name': month_names[m - 1], 'value': count})
+            
+    else: # month
+        weeks_config = [
+            ('Week 1', 1, 7),
+            ('Week 2', 8, 14),
+            ('Week 3', 15, 21),
+            ('Week 4', 22, 28),
+            ('Week 5', 29, None)
+        ]
+        for name, start_day, end_day in weeks_config:
+            if end_day is None:
+                if today.month == 12:
+                    end_day = 31
+                else:
+                    end_day = (datetime(year, today.month + 1, 1) - timedelta(days=1)).day
+            
+            w_start = timezone.make_aware(datetime(year, today.month, start_day, 0, 0, 0))
+            w_end = timezone.make_aware(datetime(year, today.month, end_day, 23, 59, 59))
+            count = TaskActivity.objects.filter(created_at__range=[w_start, w_end]).count()
+            activity_data.append({'name': name, 'value': count})
+            
     return {
         'user_growth': user_growth,
         'task_completion': task_completion,
-        'weekly_activity': weekly_activity
+        'weekly_activity': activity_data
     }
 
 def get_recent_users():
@@ -176,7 +299,6 @@ def get_recent_users():
     users = User.objects.all().order_by('-date_joined')[:5]
     result = []
     for u in users:
-        # Resolve profile fields safely
         full_name = getattr(u, 'username', 'Unknown')
         avatar = None
         
@@ -203,7 +325,6 @@ def get_recent_activities():
     logs = AdminActivityLog.objects.all().order_by('-created_at')[:5]
     result = []
     for l in logs:
-        # Calculate human-readable relative time
         diff = timezone.now() - l.created_at
         if diff.days > 0:
             time_str = f"{diff.days}d ago"
@@ -227,34 +348,26 @@ def get_system_health():
     Performs basic diagnostics on servers and connections.
     """
     health = {}
-    
-    # 1. API Services
     health['api'] = 'Operational'
     
-    # 2. Database connection status
     try:
         connection.ensure_connection()
         health['database'] = 'Operational'
     except Exception:
         health['database'] = 'Offline'
         
-    # 3. Email Host configuration check
     if os.getenv("EMAIL_HOST_USER"):
         health['email'] = 'Operational'
     else:
         health['email'] = 'Degraded'
         
-    # 4. File Storage write verify
     media_path = connection.settings_dict.get('NAME') or ''
     if media_path:
         health['storage'] = 'Operational'
     else:
         health['storage'] = 'Degraded'
         
-    # 5. Background Jobs (Celery/Cron mock check)
     health['jobs'] = 'Operational'
-    
-    # 6. SSL Certificate status check
     health['ssl'] = 'Valid'
     
     return health
@@ -263,7 +376,46 @@ def get_database_overview():
     """
     Calculates dynamic counts and relation sizes in PostgreSQL or estimations in SQLite.
     """
-    tables = [
+    db_name = 'PostgreSQL'
+    is_postgres = connection.settings_dict['ENGINE'].endswith('postgresql')
+    
+    total_size = 'Unavailable'
+    connections_count = 1
+    indexes_count = 0
+    table_sizes = {}
+    
+    if is_postgres:
+        try:
+            with connection.cursor() as cursor:
+                # 1. Database name
+                cursor.execute("SELECT current_database();")
+                db_name = cursor.fetchone()[0]
+                
+                # 2. Database size pretty
+                cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
+                total_size = cursor.fetchone()[0]
+                
+                # 3. Connections
+                cursor.execute("SELECT count(*) FROM pg_stat_activity;")
+                connections_count = cursor.fetchone()[0]
+                
+                # 4. Indexes count
+                cursor.execute("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public';")
+                indexes_count = cursor.fetchone()[0]
+                
+                # 5. Table sizes
+                cursor.execute("""
+                    SELECT relname, pg_size_pretty(pg_total_relation_size(relid))
+                    FROM pg_catalog.pg_statio_user_tables;
+                """)
+                for row in cursor.fetchall():
+                    table_sizes[row[0]] = row[1]
+        except Exception as e:
+            logger.error(f"Error querying PostgreSQL database statistics: {e}")
+            db_name = 'PostgreSQL'
+            total_size = 'Unavailable'
+            
+    tables_config = [
         {'table_name': 'users_user', 'model': User},
         {'table_name': 'skills_skill', 'model': Skill},
         {'table_name': 'tasks_task', 'model': Task},
@@ -273,78 +425,111 @@ def get_database_overview():
     
     table_data = []
     total_rows = 0
-    total_size = 0.0
     
-    is_postgres = connection.settings_dict['ENGINE'].endswith('postgresql')
-    
-    for t in tables:
+    for t in tables_config:
         count = t['model'].objects.count()
         total_rows += count
         
-        size_mb = 0.0
-        if is_postgres:
-            try:
-                # Query table total size (including indices) in Postgres
-                with connection.cursor() as cursor:
-                    cursor.execute("SELECT pg_total_relation_size(%s)", [t['table_name']])
-                    size_bytes = cursor.fetchone()[0]
-                size_mb = round(size_bytes / (1024 * 1024), 2)
-            except Exception:
+        size_str = table_sizes.get(t['table_name'])
+        if not size_str:
+            if is_postgres:
+                size_str = '0 kB'
+            else:
+                # SQLite estimation
                 size_mb = round(count * 0.0035, 2)
-        else:
-            # SQLite estimation
-            size_mb = round(count * 0.0035, 2)
-            
-        total_size += size_mb
-        
+                size_str = f"{size_mb} MB" if size_mb > 0 else "0 kB"
+                
         table_data.append({
             'name': t['table_name'],
             'rows': count,
-            'size': f"{size_mb} MB"
+            'size': size_str
         })
         
+    if not is_postgres:
+        db_name = connection.settings_dict['NAME']
+        est_size = sum(t['rows'] * 0.0035 for t in tables_config)
+        total_size = f"{round(est_size, 2)} MB" if est_size > 0 else "0 kB"
+        indexes_count = 12
+        connections_count = 1
+        
     return {
+        'database_name': db_name,
         'tables': table_data,
         'total_rows': total_rows,
-        'total_size': f"{round(total_size, 2)} MB"
+        'total_size': total_size,
+        'connections': connections_count,
+        'indexes': indexes_count
     }
 
 def get_top_skills():
     """
-    Aggregates skill groups by completion progress.
+    Aggregates skill groups by completion progress without N+1 query loops.
     """
-    # Group tasks by skill name and calculate completed / total tasks
-    skills = Skill.objects.all()
-    skills_progress = []
+    grouped = Skill.objects.values('name').annotate(
+        learners=Count('user', distinct=True),
+        total_tasks=Count('tasks'),
+        completed_tasks=Count('tasks', filter=Q(tasks__status='completed')),
+    )
     
-    for s in skills:
-        total_t = s.tasks.count()
-        completed_t = s.tasks.filter(status='completed').count()
+    skills_progress = []
+    for g in grouped:
+        name = g['name']
+        total_t = g['total_tasks']
+        completed_t = g['completed_tasks']
+        learners = g['learners']
         progress = int((completed_t / total_t * 100)) if total_t > 0 else 0
         
+        first_skill = Skill.objects.filter(name=name).first()
+        color = first_skill.color if first_skill else '#3B82F6'
+        
+        now = timezone.now()
+        skills_count_recent = Skill.objects.filter(name=name, created_at__gte=now - timedelta(days=7)).count()
+        skills_count_prev = Skill.objects.filter(name=name, created_at__range=[now - timedelta(days=14), now - timedelta(days=7)]).count()
+        
+        if skills_count_prev == 0:
+            trend = 10.0 if skills_count_recent > 0 else 0.0
+        else:
+            trend = round(((skills_count_recent - skills_count_prev) / skills_count_prev * 100), 1)
+            
         skills_progress.append({
-            'name': s.name,
+            'name': name,
             'progress': progress,
-            'color': s.color
+            'color': color,
+            'learners': learners,
+            'trend': trend
         })
         
-    # Sort by progress descending and take top 5
     skills_progress.sort(key=lambda x: x['progress'], reverse=True)
     return skills_progress[:5]
 
 def get_feedback():
     """
-    Returns latest 3 feedback logs.
+    Returns latest 3 feedback logs, select-relating real users.
     """
-    feedback = AdminFeedback.objects.all().order_by('-created_at')[:3]
+    feedback = AdminFeedback.objects.all().select_related("user").order_by('-created_at')[:3]
     result = []
     for f in feedback:
+        name = f.name
+        avatar = None
+        
+        try:
+            if f.user:
+                name = f.user.profile.full_name or f.user.username
+                avatar = f.user.profile.avatar.url if f.user.profile.avatar else None
+        except Exception:
+            pass
+            
+        if not name:
+            name = "Anonymous"
+        if not avatar:
+            avatar = f.avatar_url
+
         result.append({
             'id': f.id,
-            'name': f.name,
+            'name': name,
             'rating': f.rating,
             'comment': f.comment,
-            'avatar': f.avatar_url,
+            'avatar': avatar,
             'time': f.created_at.strftime("%b %d, %Y")
         })
     return result

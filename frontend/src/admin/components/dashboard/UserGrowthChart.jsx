@@ -3,7 +3,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'rec
 import { TrendingUp, Calendar } from 'lucide-react'
 import './UserGrowthChart.css'
 
-export default function UserGrowthChart({ data = [], totalValue, trend, isLoading }) {
+export default function UserGrowthChart({ data = [], totalValue, trend, isLoading, period = 'month', onPeriodChange }) {
   
   // Format numeric ticks (e.g., 5000 -> "5K")
   const formatYAxis = (tick) => {
@@ -41,7 +41,7 @@ export default function UserGrowthChart({ data = [], totalValue, trend, isLoadin
         <div className="admin-chart-card__actions">
           <div className="admin-chart-card__select-wrapper">
             <Calendar size={12} className="admin-chart-card__select-icon" />
-            <select className="admin-chart-card__select" defaultValue="month">
+            <select className="admin-chart-card__select" value={period} onChange={(e) => onPeriodChange(e.target.value)}>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="year">This Year</option>
