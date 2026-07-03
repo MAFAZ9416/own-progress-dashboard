@@ -1,0 +1,149 @@
+@import '../../styles/admin-theme.css';
+
+/* Bar Chart Card Main Container */
+.admin-bar-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  background: var(--admin-surface-translucent);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  transition: var(--admin-transition);
+  height: 320px;
+  width: 100%;
+}
+
+.admin-bar-card:hover {
+  border-color: var(--admin-border-hover);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(124, 58, 237, 0.05);
+}
+
+/* Card Header group */
+.admin-bar-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.admin-bar-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-bar-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-bar-card__subtitle {
+  font-size: 0.75rem;
+  color: var(--admin-text-secondary);
+}
+
+/* Select wrapper styling */
+.admin-bar-card__select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--admin-border-color);
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  color: var(--admin-text-secondary);
+}
+
+.admin-bar-card__select-icon {
+  color: var(--admin-accent-purple);
+  opacity: 0.8;
+}
+
+.admin-bar-card__select {
+  background: transparent;
+  border: none;
+  color: var(--admin-text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding-right: 0.25rem;
+}
+
+.admin-bar-card__select option {
+  background-color: var(--admin-surface);
+  color: var(--admin-text-primary);
+}
+
+/* Metrics area */
+.admin-bar-card__metrics {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-bar-card__value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  letter-spacing: -0.03em;
+}
+
+.admin-bar-card__unit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+}
+
+/* Plotting window size */
+.admin-bar-card__plot {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+}
+
+.admin-bar-card__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 0.8125rem;
+  color: var(--admin-text-muted);
+}
+
+/* Loading Skeleton Styles */
+.admin-bar-card__title-skeleton {
+  width: 120px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.admin-bar-card__filter-skeleton {
+  width: 90px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.admin-bar-card__val-skeleton {
+  width: 80px;
+  height: 32px;
+  border-radius: 4px;
+}
+
+.admin-bar-card__plot-skeleton {
+  flex: 1;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.01) 25%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0.01) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

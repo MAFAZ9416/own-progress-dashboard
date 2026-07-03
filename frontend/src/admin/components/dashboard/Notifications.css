@@ -1,0 +1,144 @@
+@import '../../styles/admin-theme.css';
+
+.admin-notif-header-icon {
+  color: var(--admin-accent-purple);
+  opacity: 0.8;
+}
+
+.admin-notif-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: var(--admin-transition);
+}
+
+.admin-notif-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.admin-notif-row--unread {
+  background: rgba(99, 102, 241, 0.02);
+  border-color: rgba(99, 102, 241, 0.05);
+}
+
+.admin-notif-row__icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.admin-notif-item__icon--info {
+  color: var(--admin-accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.admin-notif-item__icon--success {
+  color: var(--admin-status-success);
+  background: var(--admin-status-success-bg);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.admin-notif-item__icon--warning {
+  color: var(--admin-status-warning);
+  background: var(--admin-status-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.admin-notif-item__icon--error {
+  color: var(--admin-status-danger);
+  background: var(--admin-status-danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.admin-notif-row__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-notif-row__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-notif-row__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-notif-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-notif-row__time {
+  font-size: 9px;
+  color: var(--admin-text-muted);
+}
+
+.admin-notif-row__unread-dot {
+  color: var(--admin-accent-indigo);
+  filter: drop-shadow(0 0 3px var(--admin-accent-indigo));
+}
+
+.admin-notif-row__message {
+  font-size: 0.75rem;
+  color: var(--admin-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Skeletons */
+.admin-notif-row--skeleton {
+  pointer-events: none;
+}
+
+.admin-notif-row__icon-skeleton {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+.admin-notif-row__content-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.admin-notif-row__title-skeleton {
+  width: 50%;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.admin-notif-row__desc-skeleton {
+  width: 80%;
+  height: 8px;
+  border-radius: 2px;
+}

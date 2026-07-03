@@ -1,0 +1,233 @@
+@import '../../styles/admin-theme.css';
+
+/* Donut Card Container */
+.admin-donut-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  background: var(--admin-surface-translucent);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  transition: var(--admin-transition);
+  height: 320px;
+  width: 100%;
+}
+
+.admin-donut-card:hover {
+  border-color: var(--admin-border-hover);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(124, 58, 237, 0.05);
+}
+
+.admin-donut-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.admin-donut-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-donut-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-donut-card__subtitle {
+  font-size: 0.75rem;
+  color: var(--admin-text-secondary);
+}
+
+/* Select wrapper styling */
+.admin-donut-card__select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--admin-border-color);
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  color: var(--admin-text-secondary);
+}
+
+.admin-donut-card__select-icon {
+  color: var(--admin-accent-purple);
+  opacity: 0.8;
+}
+
+.admin-donut-card__select {
+  background: transparent;
+  border: none;
+  color: var(--admin-text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding-right: 0.25rem;
+}
+
+.admin-donut-card__select option {
+  background-color: var(--admin-surface);
+  color: var(--admin-text-primary);
+}
+
+/* Body layout */
+.admin-donut-card__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.admin-donut-card__chart-container {
+  width: 160px;
+  height: 160px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Centered Label details */
+.admin-donut-card__center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.admin-donut-card__center-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.admin-donut-card__center-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.15rem;
+}
+
+/* Legend items on the right */
+.admin-donut-card__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  padding-left: 1.25rem;
+  min-width: 0;
+}
+
+.admin-donut-card__legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+
+.admin-donut-card__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.admin-donut-card__legend-label {
+  color: var(--admin-text-secondary);
+  font-weight: 500;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-donut-card__legend-val {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.admin-donut-card__legend-pct {
+  color: var(--admin-text-muted);
+  font-weight: 500;
+  font-size: 0.6875rem;
+}
+
+.admin-donut-card__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 0.8125rem;
+  color: var(--admin-text-muted);
+}
+
+/* Skeleton Loaders */
+.admin-donut-card__title-skeleton {
+  width: 130px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.admin-donut-card__filter-skeleton {
+  width: 90px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.admin-donut-card__pie-skeleton {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.admin-donut-card__legend-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  padding-left: 1.5rem;
+}
+
+.admin-donut-card__legend-skeleton-item {
+  width: 100%;
+  height: 16px;
+  border-radius: 4px;
+}
+
+@media (max-width: 430px) {
+  .admin-donut-card {
+    height: auto;
+  }
+  
+  .admin-donut-card__body {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem 0;
+  }
+  
+  .admin-donut-card__legend {
+    padding-left: 0;
+    width: 100%;
+  }
+}

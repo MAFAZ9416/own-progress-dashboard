@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'tasks',
     'streaks',
     'analytics',
+    'admin_dashboard',
 ]
 
 MIDDLEWARE = [

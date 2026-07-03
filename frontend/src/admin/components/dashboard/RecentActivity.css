@@ -1,0 +1,112 @@
+@import '../../styles/admin-theme.css';
+
+/* Activity Row Layout */
+.admin-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: var(--admin-transition);
+}
+
+.admin-activity-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.admin-activity-row__icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.02);
+}
+
+/* Category Accent colors */
+.admin-activity-item__icon--blue {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.15);
+}
+
+.admin-activity-item__icon--green {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+}
+
+.admin-activity-item__icon--purple {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+}
+
+.admin-activity-item__icon--orange {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+}
+
+.admin-activity-item__icon--cyan {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.15);
+}
+
+.admin-activity-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-activity-row__text {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-activity-row__time {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+/* Skeleton Loaders */
+.admin-activity-row--skeleton {
+  pointer-events: none;
+}
+
+.admin-activity-row__dot-skeleton {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.admin-activity-row__text-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.admin-activity-row__title-skeleton {
+  width: 60%;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.admin-activity-row__time-skeleton {
+  width: 25%;
+  height: 10px;
+  border-radius: 3px;
+}

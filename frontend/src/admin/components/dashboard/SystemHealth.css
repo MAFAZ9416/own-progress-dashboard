@@ -1,0 +1,176 @@
+@import '../../styles/admin-theme.css';
+
+.admin-health-header__overall {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--admin-border-color);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.admin-health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+}
+
+.admin-health-dot--active {
+  background-color: var(--admin-status-success);
+  box-shadow: 0 0 8px var(--admin-status-success);
+  animation: healthPulse 2s infinite ease-in-out;
+}
+
+.admin-health-dot--warning {
+  background-color: var(--admin-status-warning);
+  box-shadow: 0 0 8px var(--admin-status-warning);
+  animation: healthPulse 2s infinite ease-in-out;
+}
+
+.admin-health-dot--error {
+  background-color: var(--admin-status-danger);
+  box-shadow: 0 0 8px var(--admin-status-danger);
+  animation: healthPulse 2s infinite ease-in-out;
+}
+
+@keyframes healthPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+}
+
+.admin-health-header__overall-text {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+}
+
+.admin-health-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-health-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: var(--admin-transition);
+}
+
+.admin-health-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.admin-health-row__icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.admin-health-row__icon-container--success {
+  color: var(--admin-status-success);
+  background: var(--admin-status-success-bg);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.admin-health-row__icon-container--warning {
+  color: var(--admin-status-warning);
+  background: var(--admin-status-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.admin-health-row__icon-container--error {
+  color: var(--admin-status-danger);
+  background: var(--admin-status-danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.admin-health-row__info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-health-row__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+.admin-health-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.admin-health-badge--success {
+  color: var(--admin-status-success);
+  background: var(--admin-status-success-bg);
+}
+
+.admin-health-badge--warning {
+  color: var(--admin-status-warning);
+  background: var(--admin-status-warning-bg);
+}
+
+.admin-health-badge--error {
+  color: var(--admin-status-danger);
+  background: var(--admin-status-danger-bg);
+}
+
+.admin-health-meta-value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+}
+
+/* Skeleton loader support */
+.admin-health-row--skeleton {
+  pointer-events: none;
+}
+
+.admin-health-row__icon-skeleton {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.admin-health-row__info-skeleton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.admin-health-row__title-skeleton {
+  width: 40%;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.admin-health-row__value-skeleton {
+  width: 60px;
+  height: 16px;
+  border-radius: 4px;
+}

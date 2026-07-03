@@ -1,0 +1,152 @@
+@import '../styles/admin-theme.css';
+
+.admin-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding-bottom: 2rem;
+}
+
+/* Row 3: Charts grid */
+.admin-dashboard-charts-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Row 4: lists & status metrics */
+.admin-dashboard-metrics-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Row 5: skills, reviews, actions */
+.admin-dashboard-metrics-row-5 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Error Boundary styling */
+.admin-error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.admin-error-boundary__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem;
+  max-width: 420px;
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(15, 16, 33, 0.75);
+}
+
+.admin-error-boundary__icon {
+  color: var(--admin-status-danger);
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.25));
+}
+
+.admin-error-boundary__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.admin-error-boundary__message {
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 1.5rem 0;
+}
+
+.admin-error-boundary__retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--admin-accent-purple);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--admin-transition);
+}
+
+.admin-error-boundary__retry-btn:hover {
+  background: var(--admin-accent-indigo);
+  transform: translateY(-1px);
+}
+
+.admin-error-boundary__retry-icon {
+  animation: none;
+}
+
+.admin-error-boundary__retry-btn:active .admin-error-boundary__retry-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Responsiveness breakpoints to ensure no overlapping, clipping or horizontal scroll */
+
+/* Large desktops / laptops */
+@media (max-width: 1440px) {
+  .admin-dashboard-metrics-row-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-dashboard-metrics-row-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tablet (Landscape and Portrait) */
+@media (max-width: 1024px) {
+  .admin-dashboard-charts-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Force first chart (growth) to span 2 columns to give it more breathing room */
+  .admin-dashboard-charts-row > :first-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-dashboard-content {
+    gap: 1rem;
+  }
+  .admin-dashboard-charts-row {
+    grid-template-columns: 1fr;
+  }
+  .admin-dashboard-charts-row > :first-child {
+    grid-column: span 1;
+  }
+  .admin-dashboard-metrics-row-4 {
+    grid-template-columns: 1fr;
+  }
+  .admin-dashboard-metrics-row-5 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile (430px, 390px, 375px, 360px, 320px) */
+@media (max-width: 480px) {
+  .admin-dashboard-content {
+    gap: 0.75rem;
+  }
+}

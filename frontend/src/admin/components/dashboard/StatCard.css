@@ -1,0 +1,186 @@
+@import '../../styles/admin-theme.css';
+
+/* Stat Card Container */
+.admin-stat-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+  background: var(--admin-surface-translucent);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: var(--admin-transition);
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Card Header: Icon & Title */
+.admin-stat-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  z-index: 2;
+}
+
+.admin-stat-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: var(--admin-transition);
+}
+
+.admin-stat-card:hover .admin-stat-card__icon-wrap {
+  transform: scale(1.08);
+}
+
+.admin-stat-card__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card Body: Metric & Trend */
+.admin-stat-card__body {
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+  margin-bottom: 0.25rem;
+}
+
+.admin-stat-card__value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.admin-stat-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Trend Badges */
+.admin-stat-card__trend {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.admin-stat-card__trend--up {
+  color: var(--admin-status-success);
+  background: var(--admin-status-success-bg);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.05);
+}
+
+.admin-stat-card__trend--down {
+  color: var(--admin-status-danger);
+  background: var(--admin-status-danger-bg);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.05);
+}
+
+.admin-stat-card__trend-subtitle {
+  font-size: 0.6875rem;
+  color: var(--admin-text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Sparkline placement */
+.admin-stat-card__sparkline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.admin-stat-card__no-spark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 0.625rem;
+  color: var(--admin-text-muted);
+}
+
+/* ══════════════════════════════════════════
+   SKELETON SHIMMER SHADINGS
+   ══════════════════════════════════════════ */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.admin-stat-card--loading {
+  pointer-events: none;
+}
+
+.admin-stat-card__icon-skeleton {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.admin-stat-card__title-skeleton {
+  width: 80px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.admin-stat-card__value-skeleton {
+  width: 90px;
+  height: 24px;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
+.admin-stat-card__trend-skeleton {
+  width: 45px;
+  height: 14px;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+}
+
+.admin-stat-card__spark-skeleton {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+}
