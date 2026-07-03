@@ -16,6 +16,21 @@ export const adminDashboardService = {
     return response.data
   },
 
+  getUserGrowthChart: async (period = 'month') => {
+    const response = await apiClient.get(`/admin/dashboard/charts/user-growth/?period=${period}`)
+    return response.data
+  },
+
+  getTaskCompletionChart: async (period = 'month') => {
+    const response = await apiClient.get(`/admin/dashboard/charts/tasks/?period=${period}`)
+    return response.data
+  },
+
+  getActivityChart: async (period = 'month') => {
+    const response = await apiClient.get(`/admin/dashboard/charts/activity/?period=${period}`)
+    return response.data
+  },
+
   /**
    * POST /api/admin/action/
    * Triggers an administrative quick action (backup, report, announcement).

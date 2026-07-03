@@ -147,38 +147,22 @@ def get_statistics(period='month'):
         'active_streaks': {'value': active_streaks, 'trend': streaks_trend, 'sparkline': streaks_sparkline},
     }
 
-def get_charts_data(period='month'):
-    """
-    Returns filtered, period-aware datasets for charts dynamically querying the database.
-    """
+def get_user_growth(period='month'):
     now = timezone.now()
     today = timezone.localdate()
     year = today.year
     
-    # 1. Resolve period boundaries
     if period == 'week':
-        start_of_week = today - timedelta(days=today.weekday())
-        start_dt = timezone.make_aware(datetime(start_of_week.year, start_of_week.month, start_of_week.day, 0, 0, 0))
-        end_dt = timezone.make_aware(datetime(today.year, today.month, today.day, 23, 59, 59))
         days_limit = 7
     elif period == 'year':
-        start_dt = timezone.make_aware(datetime(year, 1, 1, 0, 0, 0))
-        end_dt = timezone.make_aware(datetime(year, 12, 31, 23, 59, 59))
         days_limit = 365
-    else: # month
-        start_dt = timezone.make_aware(datetime(year, today.month, 1, 0, 0, 0))
-        if today.month == 12:
-            last_day = 31
-        else:
-            last_day = (datetime(year, today.month + 1, 1) - timedelta(days=1)).day
-        end_dt = timezone.make_aware(datetime(year, today.month, last_day, 23, 59, 59))
+    else:
         days_limit = 30
-
+        
     day_limit_ago = now - timedelta(days=days_limit)
     total_users = User.objects.count()
     recent_events = list(UserLifecycleEvent.objects.filter(timestamp__gte=day_limit_ago))
     
-    # 2. User Growth Chart
     user_growth = []
     if period == 'week':
         weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -230,20 +214,45 @@ def get_charts_data(period='month'):
             deletions_after = sum(1 for e in recent_events if e.event_type == 'delete' and e.timestamp > end_date)
             count_at_w = total_users - creations_after + deletions_after
             user_growth.append({'name': name, 'value': count_at_w})
+            
+    return user_growth
 
-    # 3. Task Completion splits (filtered by period)
+
+def get_task_completion(period='month'):
+    today = timezone.localdate()
+    year = today.year
+    
+    if period == 'week':
+        start_of_week = today - timedelta(days=today.weekday())
+        start_dt = timezone.make_aware(datetime(start_of_week.year, start_of_week.month, start_of_week.day, 0, 0, 0))
+        end_dt = timezone.make_aware(datetime(today.year, today.month, today.day, 23, 59, 59))
+    elif period == 'year':
+        start_dt = timezone.make_aware(datetime(year, 1, 1, 0, 0, 0))
+        end_dt = timezone.make_aware(datetime(year, 12, 31, 23, 59, 59))
+    else: # month
+        start_dt = timezone.make_aware(datetime(year, today.month, 1, 0, 0, 0))
+        if today.month == 12:
+            last_day = 31
+        else:
+            last_day = (datetime(year, today.month + 1, 1) - timedelta(days=1)).day
+        end_dt = timezone.make_aware(datetime(year, today.month, last_day, 23, 59, 59))
+
     task_splits = Task.objects.filter(created_at__range=[start_dt, end_dt]).aggregate(
         completed=Count('id', filter=Q(status='completed')),
         in_progress=Count('id', filter=Q(status='pending', activities__isnull=False), distinct=True),
         pending=Count('id', filter=Q(status='pending', activities__isnull=True), distinct=True)
     )
-    task_completion = [
+    return [
         {'name': 'Completed', 'value': task_splits['completed']},
         {'name': 'In Progress', 'value': task_splits['in_progress']},
         {'name': 'Pending', 'value': task_splits['pending']},
     ]
 
-    # 4. Activity Chart Data (Weekly / Monthly / Yearly Activity)
+
+def get_activity(period='month'):
+    today = timezone.localdate()
+    year = today.year
+    
     activity_data = []
     if period == 'week':
         weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -286,10 +295,17 @@ def get_charts_data(period='month'):
             count = TaskActivity.objects.filter(created_at__range=[w_start, w_end]).count()
             activity_data.append({'name': name, 'value': count})
             
+    return activity_data
+
+
+def get_charts_data(period='month'):
+    """
+    Unified fallback compatibility helper for dashboard summary.
+    """
     return {
-        'user_growth': user_growth,
-        'task_completion': task_completion,
-        'weekly_activity': activity_data
+        'user_growth': get_user_growth(period),
+        'task_completion': get_task_completion(period),
+        'weekly_activity': get_activity(period)
     }
 
 def get_recent_users():

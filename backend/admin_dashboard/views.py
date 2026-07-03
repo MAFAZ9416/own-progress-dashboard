@@ -56,3 +56,39 @@ class AdminQuickActionView(APIView):
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminUserGrowthChartView(APIView):
+    """
+    API View to retrieve User Growth statistics filtered by period.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'month')
+        data = selectors.get_user_growth(period=period)
+        return Response({'user_growth': data}, status=status.HTTP_200_OK)
+
+
+class AdminTaskCompletionChartView(APIView):
+    """
+    API View to retrieve Task Completion statistics filtered by period.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'month')
+        data = selectors.get_task_completion(period=period)
+        return Response({'task_completion': data}, status=status.HTTP_200_OK)
+
+
+class AdminActivityChartView(APIView):
+    """
+    API View to retrieve Weekly/Monthly/Yearly Activity stats filtered by period.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'month')
+        data = selectors.get_activity(period=period)
+        return Response({'weekly_activity': data}, status=status.HTTP_200_OK)

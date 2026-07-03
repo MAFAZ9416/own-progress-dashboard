@@ -21,40 +21,126 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [responseTimeMs, setResponseTimeMs] = useState(0)
-  const [period, setPeriod] = useState('month')
-  const [isFirstLoad, setIsFirstLoad] = useState(true)
 
-  const fetchDashboardData = useCallback(async (isInitial = false) => {
+  // Chart Independent Period States
+  const [userGrowthPeriod, setUserGrowthPeriod] = useState('month')
+  const [taskPeriod, setTaskPeriod] = useState('month')
+  const [activityPeriod, setActivityPeriod] = useState('month')
+
+  // Chart Independent Data States
+  const [userGrowthData, setUserGrowthData] = useState([])
+  const [taskData, setTaskData] = useState([])
+  const [activityData, setActivityData] = useState([])
+
+  // Chart Independent Loading States
+  const [isUserGrowthLoading, setIsUserGrowthLoading] = useState(false)
+  const [isTaskLoading, setIsTaskLoading] = useState(false)
+  const [isActivityLoading, setIsActivityLoading] = useState(false)
+
+  const fetchDashboardData = useCallback(async (isInitial = true) => {
     setIsLoading(isInitial)
     setError(null)
     const startTime = performance.now()
 
     try {
-      const result = await adminDashboardService.getDashboardSummary(period, isInitial)
+      const result = await adminDashboardService.getDashboardSummary('month', isInitial)
       const endTime = performance.now()
       setResponseTimeMs(Math.round(endTime - startTime))
-      setData(prev => {
-        if (!prev || isInitial) return result
-        return {
-          ...prev,
-          stats: result.stats,
-          charts: result.charts
-        }
-      })
-      if (isInitial) {
-        setIsFirstLoad(false)
-      }
+      setData(result)
+      setUserGrowthData(result.charts?.user_growth || [])
+      setTaskData(result.charts?.task_completion || [])
+      setActivityData(result.charts?.weekly_activity || [])
+      
+      // Reset period state selections back to default
+      setUserGrowthPeriod('month')
+      setTaskPeriod('month')
+      setActivityPeriod('month')
     } catch (err) {
       console.error('Error fetching dashboard summary:', err)
       setError(err.response?.data?.message || err.message || 'Failed to connect to administrative server.')
     } finally {
       setIsLoading(false)
     }
-  }, [period])
+  }, [])
 
   useEffect(() => {
-    fetchDashboardData(isFirstLoad)
-  }, [period, fetchDashboardData, isFirstLoad])
+    fetchDashboardData(true)
+  }, [fetchDashboardData])
+
+  // 1. Fetch User Growth Chart when userGrowthPeriod changes
+  useEffect(() => {
+    if (!data) return
+    
+    let active = true
+    const fetchUserGrowth = async () => {
+      setIsUserGrowthLoading(true)
+      try {
+        const res = await adminDashboardService.getUserGrowthChart(userGrowthPeriod)
+        if (active) {
+          setUserGrowthData(res.user_growth || [])
+        }
+      } catch (err) {
+        console.error('Error fetching user growth chart:', err)
+      } finally {
+        if (active) {
+          setIsUserGrowthLoading(false)
+        }
+      }
+    }
+    
+    fetchUserGrowth()
+    return () => { active = false }
+  }, [userGrowthPeriod])
+
+  // 2. Fetch Task Completion Chart when taskPeriod changes
+  useEffect(() => {
+    if (!data) return
+    
+    let active = true
+    const fetchTaskCompletion = async () => {
+      setIsTaskLoading(true)
+      try {
+        const res = await adminDashboardService.getTaskCompletionChart(taskPeriod)
+        if (active) {
+          setTaskData(res.task_completion || [])
+        }
+      } catch (err) {
+        console.error('Error fetching task completion chart:', err)
+      } finally {
+        if (active) {
+          setIsTaskLoading(false)
+        }
+      }
+    }
+    
+    fetchTaskCompletion()
+    return () => { active = false }
+  }, [taskPeriod])
+
+  // 3. Fetch Activity Chart when activityPeriod changes
+  useEffect(() => {
+    if (!data) return
+    
+    let active = true
+    const fetchActivity = async () => {
+      setIsActivityLoading(true)
+      try {
+        const res = await adminDashboardService.getActivityChart(activityPeriod)
+        if (active) {
+          setActivityData(res.weekly_activity || [])
+        }
+      } catch (err) {
+        console.error('Error fetching activity chart:', err)
+      } finally {
+        if (active) {
+          setIsActivityLoading(false)
+        }
+      }
+    }
+    
+    fetchActivity()
+    return () => { active = false }
+  }, [activityPeriod])
 
   // Handles export CSV/JSON from the hero banner
   const handleExportData = () => {
@@ -97,7 +183,6 @@ export default function Dashboard() {
 
   // Destructure dynamic database payload (or use empty objects for skeleton support)
   const stats = data?.stats || {}
-  const charts = data?.charts || {}
   const recentUsers = data?.recent_users || []
   const recentActivity = data?.recent_activity || []
   const systemHealth = data?.system_health || {}
@@ -121,24 +206,24 @@ export default function Dashboard() {
       {/* Row 3: Charts Group (Growth, Completion, Activity) */}
       <div className="admin-dashboard-charts-row">
         <UserGrowthChart 
-          data={charts.user_growth} 
+          data={userGrowthData} 
           totalValue={totalUsersValue}
           trend={totalUsersTrend}
-          isLoading={isLoading} 
-          period={period}
-          onPeriodChange={setPeriod}
+          isLoading={isLoading || isUserGrowthLoading} 
+          period={userGrowthPeriod}
+          onPeriodChange={setUserGrowthPeriod}
         />
         <TaskCompletionChart 
-          data={charts.task_completion} 
-          isLoading={isLoading} 
-          period={period}
-          onPeriodChange={setPeriod}
+          data={taskData} 
+          isLoading={isLoading || isTaskLoading} 
+          period={taskPeriod}
+          onPeriodChange={setTaskPeriod}
         />
         <WeeklyActivityChart 
-          data={charts.weekly_activity} 
-          isLoading={isLoading} 
-          period={period}
-          onPeriodChange={setPeriod}
+          data={activityData} 
+          isLoading={isLoading || isActivityLoading} 
+          period={activityPeriod}
+          onPeriodChange={setActivityPeriod}
         />
       </div>
 
