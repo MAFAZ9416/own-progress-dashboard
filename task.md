@@ -1,9 +1,5 @@
-- [x] Phase 2.5D — Top Skills Ranking & Real User Feedback Integration
-  - [x] Group and rank Skills by distinct user counts descending directly in the Django ORM query inside `get_top_skills()`
-  - [x] Overwrite `FeedbackView.post()` in `users/views.py` to store user messages in `AdminFeedback` records
-  - [x] Remove star-ratings and review UI logic from `LatestFeedback.jsx`
-  - [x] Append `.admin-feedback-row__identity` and `.admin-feedback-row__email` style classes to `LatestFeedback.css`
-  - [x] Bind message, email, date, and status fields to feedback card layout
+- [x] Phase 2.5E — Top Skills Advanced Ranking Logic
+  - [x] Implement multi-level advanced top skills ranking in selectors.py by learners DESC, progress/completion DESC, and completed tasks DESC.
 - [x] Verification & Validation
   - [x] Run `python manage.py check`
   - [x] Run `python manage.py test`

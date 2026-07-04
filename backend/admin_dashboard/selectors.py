@@ -654,9 +654,18 @@ def get_top_skills():
             'progress': progress,
             'color': color,
             'learners': learners,
-            'trend': trend
+            'trend': trend,
+            'completed_tasks': completed_t
         })
         
+    skills_progress.sort(
+        key=lambda x: (
+            x['learners'],
+            x['progress'],
+            x['completed_tasks']
+        ),
+        reverse=True
+    )
     return skills_progress[:5]
 
 def get_feedback():
