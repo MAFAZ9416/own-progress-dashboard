@@ -141,6 +141,18 @@ const authService = {
   logout: () => {
     delete apiClient.defaults.headers.common['Authorization']
   },
+
+  /**
+   * Refresh JWT token pair.
+   *
+   * POST /api/token/refresh/
+   * Body: { refresh }
+   * Returns { access, refresh }
+   */
+  refreshToken: async (refresh) => {
+    const { data } = await apiClient.post('/token/refresh/', { refresh })
+    return data
+  },
 }
 
 export default authService
