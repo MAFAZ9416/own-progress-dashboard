@@ -53,6 +53,7 @@ export default function StatsGrid({ stats, isLoading }) {
             title={item.title}
             value={data.value}
             trend={data.trend}
+            trendDirection={data.trend_direction}
             sparkline={data.sparkline}
             color={item.color}
             icon={item.icon}

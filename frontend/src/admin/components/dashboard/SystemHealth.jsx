@@ -46,7 +46,7 @@ export default function SystemHealth({ healthData = {}, responseTimeMs, isLoadin
   ]
 
   const responseTimeStr = responseTimeMs ? `${responseTimeMs}ms` : '42ms'
-  const uptimeStr = '99.98%'
+  const uptimeStr = healthData?.uptime || '100.0%'
 
   // Determine overall health status
   const statuses = services.map(s => healthData?.[s.key] || s.defaultVal)

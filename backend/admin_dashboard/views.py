@@ -35,6 +35,16 @@ class AdminDashboardSummaryView(APIView):
                 'notifications': selectors.get_notifications()
             })
             
+        print("--- DEBUG BACKEND RESPONSE DATA ---")
+        print(f"Stats keys: {list(data.get('stats', {}).keys())}")
+        for k, v in data.get('stats', {}).items():
+            print(f"  Stat {k}: value={v.get('value')}, trend={v.get('trend')}, direction={v.get('trend_direction')}, sparkline_len={len(v.get('sparkline', []))}")
+        print(f"Charts keys: {list(data.get('charts', {}).keys())}")
+        if is_full:
+            print(f"Database overview total size: {data.get('database', {}).get('total_size')}")
+            print(f"Latest feedback records count: {len(data.get('feedback', []))}")
+        print("-----------------------------------")
+            
         return Response(data, status=status.HTTP_200_OK)
 
 

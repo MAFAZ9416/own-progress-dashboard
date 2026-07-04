@@ -101,6 +101,12 @@
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.05);
 }
 
+.admin-stat-card__trend--neutral {
+  color: var(--admin-text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
 .admin-stat-card__trend-subtitle {
   font-size: 0.6875rem;
   color: var(--admin-text-muted);

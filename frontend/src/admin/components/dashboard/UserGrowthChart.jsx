@@ -113,7 +113,11 @@ export default function UserGrowthChart({ data = [], totalValue, trend, isLoadin
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="admin-chart-card__empty">No user acquisition data available.</div>
+          <div className="admin-chart-card__empty">
+            {period === 'week' && 'No user acquisition data logged this week.'}
+            {period === 'month' && 'No user acquisition data logged this month.'}
+            {period === 'year' && 'No user acquisition data logged this year.'}
+          </div>
         )}
       </div>
     </div>

@@ -115,7 +115,11 @@ export default function WeeklyActivityChart({ data = [], isLoading, period = 'mo
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="admin-bar-card__empty">No activities logged this week.</div>
+          <div className="admin-bar-card__empty">
+            {period === 'week' && 'No activities logged this week.'}
+            {period === 'month' && 'No activities logged this month.'}
+            {period === 'year' && 'No activities logged this year.'}
+          </div>
         )}
       </div>
     </div>

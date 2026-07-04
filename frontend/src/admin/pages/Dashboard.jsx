@@ -46,6 +46,7 @@ export default function Dashboard() {
       const result = await adminDashboardService.getDashboardSummary('month', isInitial)
       const endTime = performance.now()
       setResponseTimeMs(Math.round(endTime - startTime))
+      console.log('--- DEBUG FRONTEND DASHBOARD SUMMARY RESPONSE ---', result)
       setData(result)
       setUserGrowthData(result.charts?.user_growth || [])
       setTaskData(result.charts?.task_completion || [])
@@ -76,6 +77,7 @@ export default function Dashboard() {
       setIsUserGrowthLoading(true)
       try {
         const res = await adminDashboardService.getUserGrowthChart(userGrowthPeriod)
+        console.log('--- DEBUG USER GROWTH CHART FETCH ---', res)
         if (active) {
           setUserGrowthData(res.user_growth || [])
         }
@@ -101,6 +103,7 @@ export default function Dashboard() {
       setIsTaskLoading(true)
       try {
         const res = await adminDashboardService.getTaskCompletionChart(taskPeriod)
+        console.log('--- DEBUG TASK COMPLETION CHART FETCH ---', res)
         if (active) {
           setTaskData(res.task_completion || [])
         }
@@ -126,6 +129,7 @@ export default function Dashboard() {
       setIsActivityLoading(true)
       try {
         const res = await adminDashboardService.getActivityChart(activityPeriod)
+        console.log('--- DEBUG ACTIVITY CHART FETCH ---', res)
         if (active) {
           setActivityData(res.weekly_activity || [])
         }

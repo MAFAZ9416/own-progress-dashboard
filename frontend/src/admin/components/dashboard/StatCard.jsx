@@ -7,6 +7,7 @@ export default function StatCard({
   title, 
   value, 
   trend, 
+  trendDirection,
   sparkline = [], 
   color = 'purple', 
   icon: Icon, 
@@ -47,8 +48,11 @@ export default function StatCard({
   const chartData = sparkline.map((val, idx) => ({ id: idx, value: val }))
   
   // Determine trend state
-  const isPositive = trend >= 0
-  const trendText = trend !== undefined ? `${isPositive ? '+' : ''}${trend}%` : '0%'
+  // Determine trend state
+  const direction = trendDirection || (trend > 0 ? 'up' : trend < 0 ? 'down' : 'neutral')
+  const isUp = direction === 'up'
+  const isDown = direction === 'down'
+  const trendText = trend !== undefined ? `${isUp ? '+' : ''}${trend}%` : '0%'
 
   // Map color strings to active hex colors and gradients
   const colorMap = {
@@ -77,8 +81,9 @@ export default function StatCard({
             {formatValue(value)}
           </span>
           
-          <div className={`admin-stat-card__trend admin-stat-card__trend--${isPositive ? 'up' : 'down'}`}>
-            {isPositive ? <ArrowUpRight size={13} strokeWidth={2.5} /> : <ArrowDownRight size={13} strokeWidth={2.5} />}
+          <div className={`admin-stat-card__trend admin-stat-card__trend--${direction}`}>
+            {isUp && <ArrowUpRight size={13} strokeWidth={2.5} />}
+            {isDown && <ArrowDownRight size={13} strokeWidth={2.5} />}
             <span>{trendText}</span>
           </div>
         </div>

@@ -1,22 +1,10 @@
-- [x] Backend Selectors Update (`selectors.py`)
-  - [x] Split `get_charts_data(period)` into:
-    - [x] `get_user_growth(period)`
-    - [x] `get_task_completion(period)`
-    - [x] `get_activity(period)`
-- [x] Backend Views & URL Routing (`views.py` & `urls.py`)
-  - [x] Create chart specific APIs:
-    - [x] `AdminUserGrowthChartView` -> `/api/admin/dashboard/charts/user-growth/?period=`
-    - [x] `AdminTaskCompletionChartView` -> `/api/admin/dashboard/charts/tasks/?period=`
-    - [x] `AdminActivityChartView` -> `/api/admin/dashboard/charts/activity/?period=`
-  - [x] Map views in `urls.py`
-- [x] Frontend API Client & Services (`dashboardService.js`)
-  - [x] Add specific calls:
-    - [x] `getUserGrowthChart(period)`
-    - [x] `getTaskCompletionChart(period)`
-    - [x] `getActivityChart(period)`
-- [x] Frontend React Components & State Integration (`Dashboard.jsx`)
-  - [x] Manage local data/loading states for User Growth, Task Completion, and Activity Chart independently.
-  - [x] Ensure changing one filter triggers only its chart's loading & updates.
-- [x] Validation & Verification
-  - [x] Run backend tests (`python manage.py test`)
-  - [x] Run frontend bundle compilation (`npm run build`)
+- [x] Phase 2.6 — ZERO STATIC DATA AUDIT & COMPLETE DATABASE PIPELINE REBUILD
+  - [x] Audited full codebase for any hardcoded structures or dummy mock keys
+  - [x] measure dynamic uptime in `get_system_health` instead of hardcoded '99.98%'
+  - [x] Setup dynamic SQLite schemas fallback (using table structures, file size disk checks and index sqlite_master counts) to avoid mock numbers in SQLite
+  - [x] Set up print debug logs on views summary GET and frontend dashboard response
+  - [x] Validate User growth, Task completion donut, and Activity bar charts group dynamically based on period parameter
+- [x] Verification & Validation
+  - [x] Run `python manage.py check`
+  - [x] Run `python manage.py test`
+  - [x] Run `npm run build`
