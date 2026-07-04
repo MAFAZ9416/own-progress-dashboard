@@ -1,8 +1,10 @@
-- [x] Progressly Phase 2.5F — Authenticated Auto-Filled Feedback System
-  - [x] Auto-populate Name and Email inputs in the settings feedback form using the logged-in user profile
-  - [x] Disable Name and Email fields and make them read-only, adding cursor: not-allowed styles
-  - [x] Secure backend views.py to populate AdminFeedback name/email strictly from request.user
-  - [x] Dispatch custom thank-you plain-text email with Progressly signature to user's registered email
+- [x] Progressly Phase 2.5G — Global Branded Email Template System
+  - [x] Create base_email.html branded template (SaaS Enterprise look, purple target icon, footer etc)
+  - [x] Store official logo in `static/images/progressly-logo.png`
+  - [x] Generate absolute URL matching `settings.FRONTEND_URL` + static path
+  - [x] Re-architect `email_service.py` to route all HTML mails via `send_progressly_email()`
+  - [x] Ensure plain-text extraction is attached for fallback deliveries
+  - [x] Catch any email failures in try/except blocks to prevent app crashes
 - [x] Verification & Validation
   - [x] Run `python manage.py check`
   - [x] Run `python manage.py test`

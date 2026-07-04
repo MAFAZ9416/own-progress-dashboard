@@ -63,7 +63,7 @@ class UserProfileTests(APITestCase):
         from django.core import mail
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertEqual(email.subject, "Welcome to Own Progress Dashboard")
+        self.assertEqual(email.subject, "🚀 Welcome to Progressly")
         self.assertEqual(email.to, ["testuser@example.com"])
         self.assertIn("Hello Test User,", email.body)
 
@@ -296,7 +296,7 @@ class DeleteAccountTests(APITestCase):
         from django.core import mail
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertEqual(email.subject, "Your Own Progress Dashboard account has been deleted")
+        self.assertEqual(email.subject, "Account Deleted - Progressly")
         self.assertEqual(email.to, [self.username])
         self.assertIn("Hello To Delete,", email.body)
 
@@ -341,7 +341,7 @@ class FeedbackTests(APITestCase):
         # Check that email was sent (2 emails: feedback_received to sender and feedback_admin to admin)
         self.assertEqual(len(mail.outbox), 2)
         email_client = mail.outbox[0]
-        self.assertEqual(email_client.subject, "Thank you for your feedback")
+        self.assertEqual(email_client.subject, "💜 Thanks for your feedback - Progressly")
         self.assertEqual(email_client.to, ["janedoe@example.com"])
         
         email_admin = mail.outbox[1]
@@ -427,7 +427,7 @@ class PasswordResetTests(APITestCase):
         # Check email sent
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertEqual(email.subject, "Reset Your Password")
+        self.assertEqual(email.subject, "Reset Your Password - Progressly")
         self.assertEqual(email.to, [self.username])
         self.assertIn("Hello Recovery User,", email.body)
         html_body = email.alternatives[0][0]
@@ -472,7 +472,7 @@ class PasswordResetTests(APITestCase):
         # Check safety email sent
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertEqual(email.subject, "Password Changed Successfully")
+        self.assertEqual(email.subject, "Password Changed Successfully - Progressly")
         self.assertEqual(email.to, [self.username])
         self.assertIn("Hello Recovery User,", email.body)
 

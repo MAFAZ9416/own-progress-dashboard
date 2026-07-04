@@ -163,13 +163,13 @@ class FeedbackView(generics.GenericAPIView):
                     if user_obj:
                         Thread(
                             target=send_authenticated_feedback_thankyou,
-                            args=(target_email, full_name),
+                            args=(target_email, full_name, message),
                             daemon=True,
                         ).start()
                     else:
                         Thread(
                             target=send_feedback_confirmation,
-                            args=(target_email, full_name),
+                            args=(target_email, full_name, message),
                             daemon=True,
                         ).start()
                 Thread(
