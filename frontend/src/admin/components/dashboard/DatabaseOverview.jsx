@@ -30,11 +30,11 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
   }
 
   const tables = databaseData?.tables || []
-  const totalSize = databaseData?.total_size || '0 MB'
-  const totalRows = databaseData?.total_rows || 0
-  const activeConnections = databaseData?.connections || 1
-  const indexCount = databaseData?.indexes || 0
-  const dbName = databaseData?.database_name || 'PostgreSQL'
+  const totalSize = databaseData?.total_size || 'Unavailable'
+  const totalRows = databaseData?.total_rows !== undefined ? databaseData.total_rows : 'Unavailable'
+  const activeConnections = databaseData?.connections !== undefined ? databaseData.connections : 'Unavailable'
+  const indexCount = databaseData?.indexes !== undefined ? databaseData.indexes : 'Unavailable'
+  const dbName = databaseData?.database_name || 'Unavailable'
 
   const hasTables = tables.length > 0
 
@@ -70,7 +70,9 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
             </div>
             <div className="admin-db-metric-box__info">
               <span className="admin-db-metric-box__label">Rows</span>
-              <span className="admin-db-metric-box__value">{totalRows.toLocaleString()}</span>
+              <span className="admin-db-metric-box__value">
+                {typeof totalRows === 'number' ? totalRows.toLocaleString() : totalRows}
+              </span>
             </div>
           </div>
 
@@ -80,7 +82,9 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
             </div>
             <div className="admin-db-metric-box__info">
               <span className="admin-db-metric-box__label">Conns</span>
-              <span className="admin-db-metric-box__value">{activeConnections} Active</span>
+              <span className="admin-db-metric-box__value">
+                {typeof activeConnections === 'number' ? `${activeConnections} Active` : activeConnections}
+              </span>
             </div>
           </div>
 
@@ -104,7 +108,9 @@ export default function DatabaseOverview({ databaseData = {}, isLoading }) {
                 <div key={table.name} className="admin-db-table-row">
                   <div className="admin-db-table-info">
                     <span className="admin-db-table-name">{table.name}</span>
-                    <span className="admin-db-table-rows-count">{table.rows.toLocaleString()} rows</span>
+                    <span className="admin-db-table-rows-count">
+                      {typeof table.rows === 'number' ? table.rows.toLocaleString() : table.rows} rows
+                    </span>
                   </div>
                   <span className="admin-db-table-size">{table.size}</span>
                 </div>

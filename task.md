@@ -1,9 +1,9 @@
-- [x] Phase 2.6 — ZERO STATIC DATA AUDIT & COMPLETE DATABASE PIPELINE REBUILD
-  - [x] Audited full codebase for any hardcoded structures or dummy mock keys
-  - [x] measure dynamic uptime in `get_system_health` instead of hardcoded '99.98%'
-  - [x] Setup dynamic SQLite schemas fallback (using table structures, file size disk checks and index sqlite_master counts) to avoid mock numbers in SQLite
-  - [x] Set up print debug logs on views summary GET and frontend dashboard response
-  - [x] Validate User growth, Task completion donut, and Activity bar charts group dynamically based on period parameter
+- [x] Phase 2.5D — Top Skills Ranking & Real User Feedback Integration
+  - [x] Group and rank Skills by distinct user counts descending directly in the Django ORM query inside `get_top_skills()`
+  - [x] Overwrite `FeedbackView.post()` in `users/views.py` to store user messages in `AdminFeedback` records
+  - [x] Remove star-ratings and review UI logic from `LatestFeedback.jsx`
+  - [x] Append `.admin-feedback-row__identity` and `.admin-feedback-row__email` style classes to `LatestFeedback.css`
+  - [x] Bind message, email, date, and status fields to feedback card layout
 - [x] Verification & Validation
   - [x] Run `python manage.py check`
   - [x] Run `python manage.py test`

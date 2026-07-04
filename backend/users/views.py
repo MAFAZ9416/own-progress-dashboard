@@ -129,6 +129,26 @@ class FeedbackView(generics.GenericAPIView):
             name = serializer.validated_data.get("name", "")
             email = serializer.validated_data.get("email", "")
             message = serializer.validated_data.get("message", "")
+            
+            try:
+                from admin_dashboard.models import AdminFeedback
+                user_obj = request.user if request.user.is_authenticated else None
+                full_name = name
+                if not full_name and user_obj:
+                    try:
+                        full_name = user_obj.profile.full_name or user_obj.username
+                    except Exception:
+                        full_name = user_obj.username
+                if not email and user_obj:
+                    email = user_obj.email
+                
+                AdminFeedback.objects.create(
+                    user=user_obj,
+                    name=full_name or "Anonymous",
+                    comment=message
+                )
+            except Exception:
+                logger.exception("Failed to store feedback in database.")
 
             # Trigger email sends
             from django.utils import timezone
@@ -151,8 +171,6 @@ class FeedbackView(generics.GenericAPIView):
                 ).start()
             except Exception:
                 logger.exception("Failed to start email thread.")
-
-
 
             return Response(
                 {"message": "Feedback sent successfully."},

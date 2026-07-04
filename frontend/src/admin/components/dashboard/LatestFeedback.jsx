@@ -1,5 +1,5 @@
 import React from 'react'
-import { Star, MessageSquare } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 import './LatestFeedback.css'
 
 export default function LatestFeedback({ feedbackData = [], isLoading }) {
@@ -10,22 +10,6 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
       return (parts[0][0] + parts[1][0]).toUpperCase()
     }
     return name[0].toUpperCase()
-  }
-
-  const renderStars = (rating = 5) => {
-    const stars = []
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Star 
-          key={i} 
-          size={11} 
-          fill={i <= rating ? '#fbbf24' : 'none'} 
-          stroke={i <= rating ? '#fbbf24' : 'var(--admin-text-muted)'} 
-          className="admin-feedback-row__star"
-        />
-      )
-    }
-    return stars
   }
 
   if (isLoading) {
@@ -42,7 +26,6 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
               <div className="admin-feedback-row__content-skeleton">
                 <div className="admin-feedback-row__header-skeleton">
                   <div className="admin-feedback-row__name-skeleton skeleton-shimmer" />
-                  <div className="admin-feedback-row__stars-skeleton skeleton-shimmer" />
                 </div>
                 <div className="admin-feedback-row__text-skeleton skeleton-shimmer" />
               </div>
@@ -60,7 +43,7 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
       <div className="admin-list-card__header">
         <div className="admin-list-card__title-group">
           <h3 className="admin-list-card__title">Latest Feedback</h3>
-          <span className="admin-list-card__subtitle">User reviews & ratings</span>
+          <span className="admin-list-card__subtitle">User suggestions & contact submissions</span>
         </div>
         <MessageSquare size={16} className="admin-feedback-header-icon" />
       </div>
@@ -87,24 +70,24 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
 
                 <div className="admin-feedback-row__content">
                   <div className="admin-feedback-row__header-info">
-                    <span className="admin-feedback-row__name">{item.name}</span>
-                    <div className="admin-feedback-row__stars-wrap">
-                      {renderStars(item.rating)}
+                    <div className="admin-feedback-row__identity">
+                      <span className="admin-feedback-row__name">{item.name}</span>
+                      {item.email && <span className="admin-feedback-row__email">{item.email}</span>}
                     </div>
                   </div>
 
-                  <span className="admin-feedback-row__comment">"{item.comment}"</span>
+                  <span className="admin-feedback-row__comment">"{item.message}"</span>
 
                   <div className="admin-feedback-row__footer">
-                    <span className="admin-feedback-row__date">{item.time}</span>
-                    <span className="admin-feedback-row__badge">Approved</span>
+                    <span className="admin-feedback-row__date">{item.created_at}</span>
+                    <span className="admin-feedback-row__badge">{item.status || 'Submitted'}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="admin-list-card__empty">No customer feedback logs available.</div>
+          <div className="admin-list-card__empty">No feedback received</div>
         )}
       </div>
     </div>

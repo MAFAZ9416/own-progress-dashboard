@@ -466,66 +466,114 @@ def get_database_overview():
     is_postgres = connection.settings_dict['ENGINE'].endswith('postgresql')
     
     total_size = 'Unavailable'
-    connections_count = 1
-    indexes_count = 0
-    table_sizes = {}
+    connections_count = 'Unavailable'
+    indexes_count = 'Unavailable'
+    table_data = []
+    total_rows = 0
+
+    # Map core Django models for exact count audits
+    table_model_map = {
+        'users_user': User,
+        'skills_skill': Skill,
+        'tasks_task': Task,
+        'admin_dashboard_adminfeedback': AdminFeedback,
+        'admin_dashboard_adminactivitylog': AdminActivityLog,
+        'admin_dashboard_adminnotification': AdminNotification,
+        'admin_dashboard_userlifecycleevent': UserLifecycleEvent,
+        'streaks_streak': Streak,
+        'auth_user': User
+    }
     
     if is_postgres:
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT current_database();")
-                db_name = cursor.fetchone()[0]
+                # 1. Database name
+                try:
+                    cursor.execute("SELECT current_database();")
+                    db_name = cursor.fetchone()[0]
+                except Exception:
+                    db_name = 'Unavailable'
                 
-                cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
-                total_size = cursor.fetchone()[0]
+                # 2. Database size
+                try:
+                    cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
+                    total_size = cursor.fetchone()[0]
+                except Exception:
+                    total_size = 'Unavailable'
                 
-                cursor.execute("SELECT count(*) FROM pg_stat_activity;")
-                connections_count = cursor.fetchone()[0]
+                # 3. Active connections count
+                try:
+                    cursor.execute("SELECT count(*) FROM pg_stat_activity;")
+                    connections_count = cursor.fetchone()[0]
+                except Exception:
+                    connections_count = 'Unavailable'
                 
-                cursor.execute("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public';")
-                indexes_count = cursor.fetchone()[0]
+                # 4. Public Indexes count
+                try:
+                    cursor.execute("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public';")
+                    indexes_count = cursor.fetchone()[0]
+                except Exception:
+                    indexes_count = 'Unavailable'
                 
-                cursor.execute("""
-                    SELECT relname, pg_size_pretty(pg_total_relation_size(relid))
-                    FROM pg_catalog.pg_statio_user_tables;
-                """)
-                for row in cursor.fetchall():
-                    table_sizes[row[0]] = row[1]
+                # 5. User tables detail stats (live tup count, table size, index size, total size, bytes size for sort)
+                try:
+                    cursor.execute("""
+                        SELECT
+                            relname AS table_name,
+                            n_live_tup AS row_count,
+                            pg_relation_size(relid) AS table_size_bytes,
+                            pg_indexes_size(relid) AS index_size_bytes,
+                            pg_total_relation_size(relid) AS total_size_bytes,
+                            pg_size_pretty(pg_relation_size(relid)) AS table_size_str,
+                            pg_size_pretty(pg_indexes_size(relid)) AS index_size_str,
+                            pg_size_pretty(pg_total_relation_size(relid)) AS total_size_str
+                        FROM pg_stat_user_tables;
+                    """)
+                    rows = cursor.fetchall()
+                    
+                    # Convert to list of dicts
+                    temp_tables = []
+                    for row in rows:
+                        relname = row[0]
+                        n_live_tup = row[1]
+                        total_bytes = row[4]
+                        
+                        # exact count for important models if available
+                        if relname in table_model_map:
+                            try:
+                                count = table_model_map[relname].objects.count()
+                            except Exception:
+                                count = n_live_tup
+                        else:
+                            count = n_live_tup
+                            
+                        total_rows += count
+                        temp_tables.append({
+                            'name': relname,
+                            'rows': count,
+                            'table_size': row[5],
+                            'index_size': row[6],
+                            'total_size': row[7],
+                            'size': row[7], # backwards compatibility with size field
+                            'total_size_bytes': total_bytes or 0
+                        })
+                    
+                    # Sort tables: largest total size bytes first
+                    temp_tables.sort(key=lambda x: x['total_size_bytes'], reverse=True)
+                    table_data = temp_tables
+                except Exception as e:
+                    logger.error(f"Error querying table details: {e}")
+                    table_data = []
         except Exception as e:
             logger.error(f"Error querying PostgreSQL database statistics: {e}")
-            db_name = 'PostgreSQL'
+            db_name = 'Unavailable'
             total_size = 'Unavailable'
+            connections_count = 'Unavailable'
+            indexes_count = 'Unavailable'
+            table_data = []
             
-    tables_config = [
-        {'table_name': 'users_user', 'model': User},
-        {'table_name': 'skills_skill', 'model': Skill},
-        {'table_name': 'tasks_task', 'model': Task},
-        {'table_name': 'streaks_streak', 'model': Streak},
-        {'table_name': 'auth_user', 'model': User},
-    ]
-    
-    table_data = []
-    total_rows = 0
-    
-    for t in tables_config:
-        count = t['model'].objects.count()
-        total_rows += count
-        
-        size_str = table_sizes.get(t['table_name'])
-        if not size_str:
-            if is_postgres:
-                size_str = '0 kB'
-            else:
-                size_mb = round(count * 0.0035, 2)
-                size_str = f"{size_mb} MB" if size_mb > 0 else "0 kB"
-                
-        table_data.append({
-            'name': t['table_name'],
-            'rows': count,
-            'size': size_str
-        })
-        
-    if not is_postgres:
+    else:
+        # SQLite dynamic backup query layer for testing/dev environments
         db_name = 'SQLite'
         total_size = '0 kB'
         db_path = connection.settings_dict.get('NAME')
@@ -539,7 +587,28 @@ def get_database_overview():
                 indexes_count = cursor.fetchone()[0]
         except Exception:
             indexes_count = 0
+            
         connections_count = 1
+        
+        # Pull core app tables in SQLite
+        temp_tables = []
+        for relname, model in table_model_map.items():
+            try:
+                count = model.objects.count()
+                total_rows += count
+                temp_tables.append({
+                    'name': relname,
+                    'rows': count,
+                    'table_size': '0 kB',
+                    'index_size': '0 kB',
+                    'total_size': '0 kB',
+                    'size': '0 kB',
+                    'total_size_bytes': count * 100 # mock sorting
+                })
+            except Exception:
+                pass
+        temp_tables.sort(key=lambda x: x['total_size_bytes'], reverse=True)
+        table_data = temp_tables
         
     return {
         'database_name': db_name,
@@ -558,7 +627,7 @@ def get_top_skills():
         learners=Count('user', distinct=True),
         total_tasks=Count('tasks'),
         completed_tasks=Count('tasks', filter=Q(tasks__status='completed')),
-    )
+    ).order_by('-learners')
     
     skills_progress = []
     for g in grouped:
@@ -588,7 +657,6 @@ def get_top_skills():
             'trend': trend
         })
         
-    skills_progress.sort(key=lambda x: x['progress'], reverse=True)
     return skills_progress[:5]
 
 def get_feedback():
@@ -600,10 +668,12 @@ def get_feedback():
     for f in feedback:
         name = f.name
         avatar = None
+        email = ""
         
         try:
             if f.user:
                 name = f.user.profile.full_name or f.user.username
+                email = f.user.email
                 avatar = f.user.profile.avatar.url if f.user.profile.avatar else None
         except Exception:
             pass
@@ -615,11 +685,13 @@ def get_feedback():
 
         result.append({
             'id': f.id,
+            'user': f.user.username if f.user else None,
             'name': name,
-            'rating': f.rating,
-            'comment': f.comment,
+            'email': email,
             'avatar': avatar,
-            'time': f.created_at.strftime("%b %d, %Y")
+            'message': f.comment,
+            'created_at': f.created_at.strftime("%b %d, %Y"),
+            'status': 'Submitted'
         })
     return result
 
