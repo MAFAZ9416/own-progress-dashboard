@@ -164,7 +164,14 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CORS_ALLOW_ORIGINS = os.getenv("FRONTEND_URL")
+CORS_ALLOWED_ORIGINS = [
+    "https://own-progress-dashboard.vercel.app"
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://own-progress-dashboard.vercel.app"
+    "https://progressly.onrender.com"
+]
 
 
 AUTH_USER_MODEL = 'users.User'
@@ -240,8 +247,8 @@ STORAGES = {
 }
 
 ALLOWED_HOSTS = [
+    "progressly.onrender.com",
     ".onrender.com",
-    ".vercel.app",
     "localhost",
-    "127.0.0.1"
+    "127.0.0.1",
 ]
