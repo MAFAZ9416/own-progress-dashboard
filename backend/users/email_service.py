@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 def send_progressly_email(to_email, subject, title, message_html, button_text=None, button_url=None):
     """
     Centralized Progressly HTML email dispatcher.
-    Uses base_email.html, attaches text fallback, and generates absolute logo URL.
+    Uses base_email.html, attaches text fallback, and attaches the logo inline as CID.
     """
     try:
-        logo_url = f"{settings.FRONTEND_URL.rstrip('/')}/static/images/progressly-logo.png"
+        from django.templatetags.static import static
+        logo_url = settings.SITE_URL.rstrip('/') + static("email/logo.png")
         
         context = {
             'subject': subject,
@@ -41,14 +42,16 @@ def send_progressly_email(to_email, subject, title, message_html, button_text=No
         )
         msg.attach_alternative(html_content, "text/html")
         
-        # Attach logo inline as fallback attachment
-        logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'progressly-logo.png')
+        # Attach the logo inline as a CID attachment
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'email', 'logo.png')
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
-                msg_image = MIMEImage(f.read())
-                msg_image.add_header('Content-ID', '<logo>')
-                msg_image.add_header('Content-Disposition', 'inline', filename='progressly-logo.png')
-                msg.attach(msg_image)
+                logo = MIMEImage(f.read())
+                logo.add_header("Content-ID", "<progressly_logo>")
+                logo.add_header("Content-Disposition", "inline")
+                msg.attach(logo)
+        else:
+            logger.warning(f"Static email logo not found at {logo_path}")
         
         start = time.time()
         msg.send(fail_silently=False)
@@ -96,7 +99,8 @@ def send_authenticated_feedback_thankyou(email, name, message=""):
 def send_admin_feedback(name, email, feedback_type, date, message):
     message_html = (
         f"<p>A new feedback has been submitted on Progressly.</p>"
-        f"<p><strong>From:</strong> {name} ({email})</p>"
+        f"<p><strong>Name:</strong> {name}</p>"
+        f"<p><strong>Email:</strong> {email}</p>"
         f"<p><strong>Type:</strong> {feedback_type}</p>"
         f"<p><strong>Date:</strong> {date}</p>"
         f"<p><strong>Message:</strong></p>"
@@ -104,7 +108,7 @@ def send_admin_feedback(name, email, feedback_type, date, message):
     )
     return send_progressly_email(
         to_email="mafaz9416@gmail.com",
-        subject="[Feedback] Own Progress Dashboard",
+        subject="[Feedback] Progressly",
         title="New System Feedback Received",
         message_html=message_html
     )

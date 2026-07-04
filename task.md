@@ -1,11 +1,6 @@
-- [x] Progressly Phase 2.5G — Global Branded Email Template System
-  - [x] Create base_email.html branded template (SaaS Enterprise look, purple target icon, footer etc)
-  - [x] Store official logo in `static/images/progressly-logo.png`
-  - [x] Generate absolute URL matching `settings.FRONTEND_URL` + static path
-  - [x] Re-architect `email_service.py` to route all HTML mails via `send_progressly_email()`
-  - [x] Ensure plain-text extraction is attached for fallback deliveries
-  - [x] Catch any email failures in try/except blocks to prevent app crashes
-- [x] Verification & Validation
-  - [x] Run `python manage.py check`
-  - [x] Run `python manage.py test`
-  - [x] Run `npm run build`
+- [x] Progressly Phase 2.5L — Permanent Email Logo Fix For All Email Clients
+  - [x] Render HTML templates using base_email.html as fallback central layout
+  - [x] Centralize load logic in users/email_service.py to load static/email/logo.png
+  - [x] Construct MIMEImage, assign Content-ID <progressly_logo> and Content-Disposition inline, then attach to email
+  - [x] Replace img tags in all email template files with <img src="cid:progressly_logo" alt="Progressly" width="64" />
+  - [x] Run python manage.py check & python manage.py test to ensure zero regressions

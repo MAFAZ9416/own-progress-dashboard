@@ -31,7 +31,7 @@ class AdminDashboardSummaryView(APIView):
                 'system_health': selectors.get_system_health(),
                 'database': selectors.get_database_overview(),
                 'top_skills': selectors.get_top_skills(),
-                'feedback': selectors.get_feedback(),
+                'feedback': selectors.get_feedback(request=request),
                 'notifications': selectors.get_notifications()
             })
             

@@ -668,7 +668,7 @@ def get_top_skills():
     )
     return skills_progress[:5]
 
-def get_feedback():
+def get_feedback(request=None):
     """
     Returns latest 3 feedback logs, select-relating real users.
     """
@@ -683,14 +683,19 @@ def get_feedback():
             if f.user:
                 name = f.user.profile.full_name or f.user.username
                 email = f.user.email
-                avatar = f.user.profile.avatar.url if f.user.profile.avatar else None
+                if f.user.profile.avatar:
+                    avatar = f.user.profile.avatar.url
+                    if request and avatar:
+                        avatar = request.build_absolute_uri(avatar)
         except Exception:
             pass
             
         if not name:
             name = "Anonymous"
-        if not avatar:
+        if not avatar and f.avatar_url:
             avatar = f.avatar_url
+            if request and avatar and avatar.startswith('/'):
+                avatar = request.build_absolute_uri(avatar)
 
         result.append({
             'id': f.id,

@@ -153,7 +153,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
@@ -191,6 +192,9 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", 20))
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+SITE_URL = os.getenv("SITE_URL", BACKEND_URL)
+
 
 if DEBUG:
     print("=" * 50)
@@ -202,6 +206,7 @@ if DEBUG:
         bool(EMAIL_HOST_PASSWORD)
     )
     print("FRONTEND_URL:", FRONTEND_URL)
+    print("BACKEND_URL:", BACKEND_URL)
     print("=" * 50)
 
 if not DEBUG:

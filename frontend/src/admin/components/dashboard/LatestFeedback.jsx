@@ -3,6 +3,12 @@ import { MessageSquare } from 'lucide-react'
 import './LatestFeedback.css'
 
 export default function LatestFeedback({ feedbackData = [], isLoading }) {
+  const [failedAvatars, setFailedAvatars] = React.useState({})
+
+  const handleAvatarError = (id) => {
+    setFailedAvatars((prev) => ({ ...prev, [id]: true }))
+  }
+
   const getInitials = (name) => {
     if (!name) return '?'
     const parts = name.split(' ')
@@ -51,22 +57,24 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
       <div className="admin-list-card__body">
         {hasFeedback ? (
           <div className="admin-feedback-rows">
-            {feedbackData.slice(0, 3).map((item) => (
-              <div key={item.id} className="admin-feedback-row">
-                <div className="admin-feedback-row__avatar-container">
-                  {item.avatar ? (
-                    <img 
-                      src={item.avatar} 
-                      alt={item.name} 
-                      className="admin-feedback-row__avatar"
-                      onError={(e) => { e.target.style.display = 'none' }}
-                    />
-                  ) : (
-                    <div className="admin-feedback-row__avatar-fallback">
-                      {getInitials(item.name)}
-                    </div>
-                  )}
-                </div>
+            {feedbackData.slice(0, 3).map((item) => {
+              const showFallback = !item.avatar || failedAvatars[item.id]
+              return (
+                <div key={item.id} className="admin-feedback-row">
+                  <div className="admin-feedback-row__avatar-container">
+                    {showFallback ? (
+                      <div className="admin-feedback-row__avatar-fallback">
+                        {getInitials(item.name)}
+                      </div>
+                    ) : (
+                      <img 
+                        src={item.avatar} 
+                        alt={item.name} 
+                        className="admin-feedback-row__avatar"
+                        onError={() => handleAvatarError(item.id)}
+                      />
+                    )}
+                  </div>
 
                 <div className="admin-feedback-row__content">
                   <div className="admin-feedback-row__header-info">
@@ -84,8 +92,9 @@ export default function LatestFeedback({ feedbackData = [], isLoading }) {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
+        </div>
         ) : (
           <div className="admin-list-card__empty">No feedback received</div>
         )}

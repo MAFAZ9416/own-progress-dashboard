@@ -65,7 +65,7 @@ class UserProfileTests(APITestCase):
         email = mail.outbox[0]
         self.assertEqual(email.subject, "🚀 Welcome to Progressly")
         self.assertEqual(email.to, ["testuser@example.com"])
-        self.assertIn("Hello Test User,", email.body)
+        self.assertIn("Hi Test User,", email.body)
 
     def test_get_profile(self):
         """Verify that an authenticated user can fetch their profile."""
@@ -298,7 +298,7 @@ class DeleteAccountTests(APITestCase):
         email = mail.outbox[0]
         self.assertEqual(email.subject, "Account Deleted - Progressly")
         self.assertEqual(email.to, [self.username])
-        self.assertIn("Hello To Delete,", email.body)
+        self.assertIn("Hi To Delete,", email.body)
 
     def test_wrong_confirm_text(self):
         """Verify wrong confirm text is blocked."""
@@ -345,7 +345,7 @@ class FeedbackTests(APITestCase):
         self.assertEqual(email_client.to, ["janedoe@example.com"])
         
         email_admin = mail.outbox[1]
-        self.assertEqual(email_admin.subject, "[Feedback] Own Progress Dashboard")
+        self.assertEqual(email_admin.subject, "[Feedback] Progressly")
         self.assertEqual(email_admin.to, ["mafaz9416@gmail.com"])
         self.assertIn("Name:", email_admin.body)
         self.assertIn("Jane Doe", email_admin.body)
@@ -369,7 +369,7 @@ class FeedbackTests(APITestCase):
         # Only admin receives feedback since email is blank
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertEqual(email.subject, "[Feedback] Own Progress Dashboard")
+        self.assertEqual(email.subject, "[Feedback] Progressly")
         self.assertEqual(email.to, ["mafaz9416@gmail.com"])
         self.assertIn("Anonymous feedback containing at least ten characters.", email.body)
 
@@ -429,7 +429,7 @@ class PasswordResetTests(APITestCase):
         email = mail.outbox[0]
         self.assertEqual(email.subject, "Reset Your Password - Progressly")
         self.assertEqual(email.to, [self.username])
-        self.assertIn("Hello Recovery User,", email.body)
+        self.assertIn("Hi Recovery User,", email.body)
         html_body = email.alternatives[0][0]
         self.assertIn(f"/reset-password/{token.token}", html_body)
 
@@ -474,7 +474,7 @@ class PasswordResetTests(APITestCase):
         email = mail.outbox[0]
         self.assertEqual(email.subject, "Password Changed Successfully - Progressly")
         self.assertEqual(email.to, [self.username])
-        self.assertIn("Hello Recovery User,", email.body)
+        self.assertIn("Hi Recovery User,", email.body)
 
     def test_reset_password_used_token_rejected(self):
         """Verify already used tokens are rejected."""
