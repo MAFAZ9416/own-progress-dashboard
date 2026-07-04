@@ -240,6 +240,7 @@ STORAGES = {
 
 ALLOWED_HOSTS = [
     ".onrender.com",
+    ".vercel.app",
     "localhost",
     "127.0.0.1"
 ]
