@@ -16,9 +16,21 @@ class QuickActionInputSerializer(serializers.Serializer):
 
 
 class AdminUserProfileSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
         fields = ['full_name', 'avatar', 'bio', 'country']
+
+    def get_avatar(self, obj):
+        if not obj.avatar:
+            return None
+        request = self.context.get('request')
+        if request is not None:
+            return request.build_absolute_uri(obj.avatar.url)
+        from django.conf import settings
+        site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
+        return f"{site_url.rstrip('/')}{obj.avatar.url}"
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
@@ -47,10 +59,10 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
-    full_name = serializers.CharField(source='profile.full_name', required=False, allow_blank=True)
-    bio = serializers.CharField(source='profile.bio', required=False, allow_blank=True)
-    country = serializers.CharField(source='profile.country', required=False, allow_blank=True)
-    avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
+    full_name = serializers.CharField(required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    country = serializers.CharField(required=False, allow_blank=True)
+    avatar = serializers.ImageField(required=False, allow_null=True)
     role = serializers.CharField(write_only=True, required=False)
     
     class Meta:
@@ -58,7 +70,10 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'is_active', 'full_name', 'bio', 'country', 'avatar', 'role']
         
     def update(self, instance, validated_data):
-        profile_data = validated_data.pop('profile', {})
+        full_name = validated_data.pop('full_name', None)
+        bio = validated_data.pop('bio', None)
+        country = validated_data.pop('country', None)
+        avatar = validated_data.pop('avatar', None)
         role = validated_data.pop('role', None)
         
         # Check permissions for target superuser modification
@@ -95,8 +110,15 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         profile = getattr(instance, 'profile', None)
         if not profile:
             profile = UserProfile.objects.create(user=instance)
-        for attr, value in profile_data.items():
-            setattr(profile, attr, value)
+            
+        if full_name is not None:
+            profile.full_name = full_name
+        if bio is not None:
+            profile.bio = bio
+        if country is not None:
+            profile.country = country
+        if avatar is not None:
+            profile.avatar = avatar
         profile.save()
         
         return instance

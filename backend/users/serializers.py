@@ -93,6 +93,19 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "is_staff", "is_superuser"]
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        avatar_val = ret.get('avatar')
+        if avatar_val and not avatar_val.startswith('http'):
+            request = self.context.get('request')
+            if request is not None:
+                ret['avatar'] = request.build_absolute_uri(avatar_val)
+            else:
+                from django.conf import settings
+                site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
+                ret['avatar'] = f"{site_url.rstrip('/')}{avatar_val}"
+        return ret
+
     def validate_email(self, value):
         user = self.context['request'].user
         if User.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():

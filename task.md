@@ -10,4 +10,8 @@
   - [x] Create Users.css stylesheet matching enterprise layout/colors
   - [x] Replace Users.jsx placeholder with fully interactive Users module (table, cards, detail drawer, tabbed panel, confirm modal)
   - [x] Fix missing ChevronRight icon import in Users.jsx
+  - [x] Fix user details editing save payload mapping in serializers and Users.jsx
+  - [x] Ensure absolute avatar URLs are output by both ProfileSerializer and AdminUserProfileSerializer
+  - [x] Remove country editing field from the frontend view form while keeping it optional in backend models
+  - [x] Create logging activity when admin updates profile
   - [x] Build frontend assets using npm run build successfully

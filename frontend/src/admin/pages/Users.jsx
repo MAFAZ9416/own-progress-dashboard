@@ -188,12 +188,11 @@ export default function Users() {
       formData.append('email', editForm.email)
       formData.append('is_active', editForm.is_active)
       formData.append('role', editForm.role)
-      formData.append('profile.full_name', editForm.full_name)
-      formData.append('profile.bio', editForm.bio)
-      formData.append('profile.country', editForm.country)
+      formData.append('full_name', editForm.full_name)
+      formData.append('bio', editForm.bio)
 
       if (editAvatarFile) {
-        formData.append('profile.avatar', editAvatarFile)
+        formData.append('avatar', editAvatarFile)
       }
 
       const updatedUser = await adminUsersService.updateUser(selectedUserId, formData)
@@ -209,6 +208,7 @@ export default function Users() {
 
       setEditAvatarFile(null)
       alert('Profile updated successfully.')
+      fetchUsers(page, false)
     } catch (err) {
       console.error(err)
       alert(err.response?.data?.detail || 'Failed to update user profile details.')
@@ -776,15 +776,7 @@ export default function Users() {
                         />
                       </div>
 
-                      <div className="admin-users-form-group">
-                        <label className="admin-users-form-label">Country</label>
-                        <input 
-                          type="text" 
-                          className="admin-users-form-input"
-                          value={editForm.country}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, country: e.target.value }))}
-                        />
-                      </div>
+
 
                       <div className="admin-users-form-group">
                         <label className="admin-users-form-label">Bio / About</label>

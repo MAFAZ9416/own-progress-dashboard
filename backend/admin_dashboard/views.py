@@ -293,8 +293,8 @@ class AdminUserDetailView(APIView):
         if serializer.is_valid():
             serializer.save()
             AdminActivityLog.objects.create(
-                username=request.user.username,
-                action=f"Admin updated user profile: {user.username}"
+                username=user.username,
+                action=f"Admin updated profile for {user.username}"
             )
             # Re-read and return updated detail
             return Response(AdminUserSerializer(user, context={'request': request}).data, status=status.HTTP_200_OK)

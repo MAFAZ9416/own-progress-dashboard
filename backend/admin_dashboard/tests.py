@@ -196,3 +196,34 @@ class AdminUserManagementTests(APITestCase):
         self.assertFalse(Task.objects.filter(pk=self.task.pk).exists())
         self.assertTrue(AdminActivityLog.objects.filter(action__icontains="deleted task: Updated Title").exists())
 
+    def test_admin_profile_update_and_sync(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        detail_url = reverse('admin-user-detail', kwargs={'pk': self.regular_user.pk})
+        
+        payload = {
+            'username': 'newjohn',
+            'email': 'newjohn@example.com',
+            'full_name': 'New John Name',
+            'bio': 'New Bio Text',
+            'country': 'UK',
+            'is_active': False
+        }
+        response = self.client.patch(detail_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify database update
+        self.regular_user.refresh_from_db()
+        self.regular_profile.refresh_from_db()
+        self.assertEqual(self.regular_user.username, 'newjohn')
+        self.assertEqual(self.regular_user.email, 'newjohn@example.com')
+        self.assertEqual(self.regular_user.is_active, False)
+        self.assertEqual(self.regular_profile.full_name, 'New John Name')
+        self.assertEqual(self.regular_profile.bio, 'New Bio Text')
+        self.assertEqual(self.regular_profile.country, 'UK')
+        
+        # Verify activity log creation
+        self.assertTrue(AdminActivityLog.objects.filter(
+            username='newjohn',
+            action='Admin updated profile for newjohn'
+        ).exists())
+
