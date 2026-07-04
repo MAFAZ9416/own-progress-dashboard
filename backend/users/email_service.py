@@ -122,3 +122,22 @@ def send_account_deleted_email(email, full_name):
         context=context,
         to_email=email
     )
+
+def send_authenticated_feedback_thankyou(email, name):
+    try:
+        from django.core.mail import send_mail
+        subject = "Thank you for your feedback - Progressly"
+        message = (
+            f"Hi {name},\n\n"
+            "Thank you for sharing your feedback.\n\n"
+            "We received your message successfully.\n\n"
+            "Your suggestions help us improve Progressly.\n\n"
+            "Regards,\n"
+            "Progressly Team"
+        )
+        from_email = settings.EMAIL_HOST_USER
+        send_mail(subject, message, from_email, [email], fail_silently=False)
+        return True
+    except Exception as e:
+        logger.exception(f"Failed to send feedback thank you to {email}: {e}")
+        return False

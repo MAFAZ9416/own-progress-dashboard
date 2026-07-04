@@ -130,21 +130,22 @@ class FeedbackView(generics.GenericAPIView):
             email = serializer.validated_data.get("email", "")
             message = serializer.validated_data.get("message", "")
             
+            user_obj = request.user if request.user.is_authenticated else None
+            if user_obj:
+                try:
+                    full_name = user_obj.profile.full_name or user_obj.username
+                except Exception:
+                    full_name = user_obj.username
+                target_email = user_obj.email
+            else:
+                full_name = name or "Anonymous"
+                target_email = email
+            
             try:
                 from admin_dashboard.models import AdminFeedback
-                user_obj = request.user if request.user.is_authenticated else None
-                full_name = name
-                if not full_name and user_obj:
-                    try:
-                        full_name = user_obj.profile.full_name or user_obj.username
-                    except Exception:
-                        full_name = user_obj.username
-                if not email and user_obj:
-                    email = user_obj.email
-                
                 AdminFeedback.objects.create(
                     user=user_obj,
-                    name=full_name or "Anonymous",
+                    name=full_name,
                     comment=message
                 )
             except Exception:
@@ -152,21 +153,28 @@ class FeedbackView(generics.GenericAPIView):
 
             # Trigger email sends
             from django.utils import timezone
-            from .email_service import send_feedback_confirmation, send_admin_feedback
+            from .email_service import send_feedback_confirmation, send_admin_feedback, send_authenticated_feedback_thankyou
             
             date_str = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
             feedback_type = request.data.get("type", "General Feedback")
             
             try:
-                if email:
-                    Thread(
-                        target=send_feedback_confirmation,
-                        args=(email, name),
-                        daemon=True,
-                    ).start()
+                if target_email:
+                    if user_obj:
+                        Thread(
+                            target=send_authenticated_feedback_thankyou,
+                            args=(target_email, full_name),
+                            daemon=True,
+                        ).start()
+                    else:
+                        Thread(
+                            target=send_feedback_confirmation,
+                            args=(target_email, full_name),
+                            daemon=True,
+                        ).start()
                 Thread(
                     target=send_admin_feedback,
-                    args=(name, email, feedback_type, date_str, message),
+                    args=(full_name, target_email, feedback_type, date_str, message),
                     daemon=True,
                 ).start()
             except Exception:

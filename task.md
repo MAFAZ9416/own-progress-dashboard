@@ -1,5 +1,8 @@
-- [x] Phase 2.5E — Top Skills Advanced Ranking Logic
-  - [x] Implement multi-level advanced top skills ranking in selectors.py by learners DESC, progress/completion DESC, and completed tasks DESC.
+- [x] Progressly Phase 2.5F — Authenticated Auto-Filled Feedback System
+  - [x] Auto-populate Name and Email inputs in the settings feedback form using the logged-in user profile
+  - [x] Disable Name and Email fields and make them read-only, adding cursor: not-allowed styles
+  - [x] Secure backend views.py to populate AdminFeedback name/email strictly from request.user
+  - [x] Dispatch custom thank-you plain-text email with Progressly signature to user's registered email
 - [x] Verification & Validation
   - [x] Run `python manage.py check`
   - [x] Run `python manage.py test`

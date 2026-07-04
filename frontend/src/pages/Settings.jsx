@@ -78,17 +78,20 @@ export default function Settings() {
 
     setIsSendingFeedback(true)
 
+    const authenticatedName = user?.full_name || user?.username || ''
+    const authenticatedEmail = user?.email || ''
+
     console.log("API URL:", import.meta.env.VITE_API_URL);
     console.log("Sending feedback:", {
-      name: feedbackData.name.trim(),
-      email: feedbackData.email.trim(),
+      name: authenticatedName,
+      email: authenticatedEmail,
       message: feedbackData.message.trim(),
     });
 
     try {
       await feedbackService.sendFeedback({
-        name: feedbackData.name.trim(),
-        email: feedbackData.email.trim(),
+        name: authenticatedName,
+        email: authenticatedEmail,
         message: feedbackData.message.trim(),
       })
       showFeedbackToast('✓ Feedback sent successfully.', 'success')
@@ -389,29 +392,27 @@ export default function Settings() {
         <form onSubmit={handleFeedbackSubmit} className="feedback-form">
           <div className="feedback-form-grid">
             <div className="feedback-form-group">
-              <label htmlFor="feedback-name" className="feedback-label">Name (optional)</label>
+              <label htmlFor="feedback-name" className="feedback-label">Name</label>
               <input
                 id="feedback-name"
                 type="text"
                 name="name"
                 className="feedback-input"
-                placeholder="Your name"
-                value={feedbackData.name}
-                onChange={handleFeedbackChange}
-                disabled={isSendingFeedback}
+                value={user?.full_name || user?.username || ''}
+                disabled={true}
+                readOnly={true}
               />
             </div>
             <div className="feedback-form-group">
-              <label htmlFor="feedback-email" className="feedback-label">Email (optional)</label>
+              <label htmlFor="feedback-email" className="feedback-label">Email</label>
               <input
                 id="feedback-email"
                 type="email"
                 name="email"
                 className="feedback-input"
-                placeholder="Your email address"
-                value={feedbackData.email}
-                onChange={handleFeedbackChange}
-                disabled={isSendingFeedback}
+                value={user?.email || ''}
+                disabled={true}
+                readOnly={true}
               />
             </div>
           </div>
