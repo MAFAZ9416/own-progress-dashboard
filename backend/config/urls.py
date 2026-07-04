@@ -6,9 +6,21 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
+
+from django.http import JsonResponse
+
 from users.views import EmailTokenObtainPairView
 
+def health(request):
+    return JsonResponse({
+        "status": "online",
+        "app": "Progressly API",
+        "version": "1.0"
+    })
+
 urlpatterns = [
+    path("", health),
+    path("api/", include(...)),
     path("admin/", admin.site.urls),
     path("api/users/", include("users.urls")),
     path("api/token/", EmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -20,4 +32,4 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
