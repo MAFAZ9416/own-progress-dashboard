@@ -20,7 +20,6 @@ def health(request):
 
 urlpatterns = [
     path("", health),
-    path("api/", include(...)),
     path("admin/", admin.site.urls),
     path("api/users/", include("users.urls")),
     path("api/token/", EmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
