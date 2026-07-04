@@ -123,3 +123,17 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         
         return instance
 
+
+class AdminSkillGlobalUpdateSerializer(serializers.Serializer):
+    old_name = serializers.CharField(max_length=100)
+    new_name = serializers.CharField(max_length=100)
+    color = serializers.CharField(max_length=7, default='#3B82F6')
+
+
+class AdminSkillCreateSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    name = serializers.CharField(max_length=100)
+    color = serializers.CharField(max_length=7, required=False, default='#3B82F6')
+    target_tasks = serializers.IntegerField(default=10, min_value=1)
+
+

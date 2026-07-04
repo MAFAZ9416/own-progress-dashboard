@@ -444,3 +444,238 @@ class AdminTaskDetailView(APIView):
         task.delete()
         return Response({'detail': 'Task deleted successfully.'}, status=status.HTTP_200_OK)
 
+
+from .serializers import AdminSkillGlobalUpdateSerializer, AdminSkillCreateSerializer
+
+class AdminSkillListView(APIView):
+    """
+    Unified API view to retrieve grouped skills summary list and stats.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+
+        # Dynamic totals
+        total_skills = Skill.objects.values('name').distinct().count()
+        active_learners = Skill.objects.values('user').distinct().count()
+        total_tasks = Task.objects.count()
+        completed_tasks_total = Task.objects.filter(status='completed').count()
+        completion_rate = int(completed_tasks_total / total_tasks * 100) if total_tasks > 0 else 0
+
+        # Grouped listing query
+        queryset = Skill.objects.values('name').annotate(
+            total_users=Count('user', distinct=True),
+            total_tasks=Count('tasks'),
+            completed_tasks=Count('tasks', filter=Q(tasks__status='completed'))
+        )
+
+        if search:
+            queryset = queryset.filter(name__icontains=search)
+
+        skills_data = []
+        for item in queryset:
+            name = item['name']
+            total_users = item['total_users']
+            total_tasks = item['total_tasks']
+            completed_tasks = item['completed_tasks']
+            completion_pct = int(completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            
+            # Fetch color and default info from the first matching record
+            first_skill = Skill.objects.filter(name__iexact=name).first()
+            color = first_skill.color if first_skill else '#3B82F6'
+            
+            skills_data.append({
+                'name': name,
+                'color': color,
+                'total_users': total_users,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'completion_rate': completion_pct
+            })
+
+        # Order priority:
+        # 1. total_users DESC
+        # 2. completion_rate DESC
+        # 3. completed_tasks DESC
+        skills_data.sort(key=lambda x: (x['total_users'], x['completion_rate'], x['completed_tasks']), reverse=True)
+
+        return Response({
+            'skills': skills_data,
+            'stats': {
+                'total_skills': total_skills,
+                'active_learners': active_learners,
+                'total_tasks': total_tasks,
+                'completion_rate': completion_rate
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class AdminSkillGroupDetailView(APIView):
+    """
+    API view to load the detailed panel configuration of a single skill group by name.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        name = request.query_params.get('name', '').strip()
+        if not name:
+            return Response({'detail': 'Skill name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        skills = Skill.objects.filter(name__iexact=name).select_related('user', 'user__profile').annotate(
+            total_tasks_count=Count('tasks'),
+            completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed'))
+        )
+
+        if not skills.exists():
+            return Response({'detail': 'Skill group not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        total_learners = skills.count()
+        total_tasks = sum(s.total_tasks_count for s in skills)
+        completed_tasks = sum(s.completed_tasks_count for s in skills)
+        avg_completion = int(completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        first_created = skills.order_by('created_at').first().created_at
+        created_date_str = first_created.strftime('%Y-%m-%d') if first_created else None
+        color = skills.first().color
+
+        # Users learning this skill name ordered by progress DESC, then completed tasks DESC
+        learners_data = []
+        for s in skills:
+            progress_pct = int(s.completed_tasks_count / s.total_tasks_count * 100) if s.total_tasks_count > 0 else 0
+            
+            # Absolute avatar path serialization helper
+            avatar_url = None
+            if hasattr(s.user, 'profile') and s.user.profile.avatar:
+                avatar_url = request.build_absolute_uri(s.user.profile.avatar.url)
+
+            learners_data.append({
+                'user_id': s.user.id,
+                'username': s.user.username,
+                'full_name': s.user.profile.full_name if hasattr(s.user, 'profile') else '',
+                'avatar': avatar_url,
+                'progress': progress_pct,
+                'completed_tasks': s.completed_tasks_count,
+                'total_tasks': s.total_tasks_count,
+                'skill_id': s.id,
+                'target_tasks': s.target_tasks
+            })
+
+        learners_data.sort(key=lambda x: (x['progress'], x['completed_tasks']), reverse=True)
+
+        return Response({
+            'name': name,
+            'color': color,
+            'total_learners': total_learners,
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'avg_completion': avg_completion,
+            'created_date': created_date_str,
+            'learners': learners_data
+        }, status=status.HTTP_200_OK)
+
+
+class AdminSkillGlobalEditView(APIView):
+    """
+    API view to rename or recolor a skill group globally.
+    """
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request):
+        serializer = AdminSkillGlobalUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        old_name = serializer.validated_data['old_name']
+        new_name = serializer.validated_data['new_name']
+        color = serializer.validated_data['color']
+
+        skills = Skill.objects.filter(name__iexact=old_name)
+        if not skills.exists():
+            return Response({'detail': 'Skill group not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check unique constraint collision for each user before updating
+        # If user already has new_name, we delete the duplicate and merge?
+        # Or simply prevent if collision exists, or standard Django integrity handler.
+        # Let's perform a safe bulk update:
+        for s in skills:
+            if Skill.objects.filter(user=s.user, name=new_name).exclude(pk=s.pk).exists():
+                # Collision: User already has the new skill name, skip or merge
+                continue
+            s.name = new_name
+            s.color = color
+            s.save()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin renamed {old_name} to {new_name}"
+        )
+
+        return Response({'detail': 'Skill group updated globally.'}, status=status.HTTP_200_OK)
+
+
+class AdminSkillGlobalDeleteView(APIView):
+    """
+    API view to delete a skill group globally.
+    """
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request):
+        name = request.query_params.get('name', '').strip()
+        if not name:
+            return Response({'detail': 'Skill name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        skills = Skill.objects.filter(name__iexact=name)
+        if not skills.exists():
+            return Response({'detail': 'Skill group not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        skills.delete()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin deleted {name} group"
+        )
+
+        return Response({'detail': 'Skill group deleted successfully.'}, status=status.HTTP_200_OK)
+
+
+class AdminSkillCreateView(APIView):
+    """
+    API view to add a skill to a specific user.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminSkillCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = serializer.validated_data['user_id']
+        name = serializer.validated_data['name'].strip()
+        color = serializer.validated_data.get('color', '#3B82F6')
+        target_tasks = serializer.validated_data['target_tasks']
+
+        try:
+            target_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': f"User with ID '{user_id}' not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if Skill.objects.filter(user=target_user, name__iexact=name).exists():
+            return Response({'detail': "User already has this skill"}, status=status.HTTP_400_BAD_REQUEST)
+
+        skill = Skill.objects.create(
+            user=target_user,
+            name=name,
+            color=color,
+            target_tasks=target_tasks
+        )
+
+        # Trigger activity log
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin assigned {name} skill to {target_user.username}"
+        )
+
+        return Response({'detail': 'Skill created successfully.', 'id': skill.id}, status=status.HTTP_201_CREATED)
+
+

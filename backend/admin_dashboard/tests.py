@@ -227,3 +227,114 @@ class AdminUserManagementTests(APITestCase):
             action='Admin updated profile for newjohn'
         ).exists())
 
+    def test_skills_list(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        
+        # Add another user with the Python skill to test sorting priority
+        other_user = User.objects.create_user(username='otheruser', email='other@example.com', password='password')
+        other_profile = other_user.profile
+        other_profile.full_name = "Other User Name"
+        other_profile.save()
+        Skill.objects.create(user=other_user, name="Python", color="#123456", target_tasks=5)
+
+        # Create another skill group with 1 user
+        Skill.objects.create(user=self.regular_user, name="Java", color="#999999", target_tasks=10)
+
+        list_url = reverse('admin-skills-list-summary')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify stats
+        self.assertEqual(response.data['stats']['total_skills'], 2)  # Python, Java
+        self.assertEqual(response.data['stats']['active_learners'], 2)  # regular_user, other_user
+        
+        # Verify python is first because total_users=2, java is second because total_users=1
+        self.assertEqual(response.data['skills'][0]['name'], 'Python')
+        self.assertEqual(response.data['skills'][0]['total_users'], 2)
+        self.assertEqual(response.data['skills'][1]['name'], 'Java')
+        self.assertEqual(response.data['skills'][1]['total_users'], 1)
+
+    def test_skill_group_detail(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        
+        detail_url = reverse('admin-skills-group-detail')
+        response = self.client.get(detail_url, {'name': 'Python'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Python')
+        self.assertEqual(response.data['total_learners'], 1)
+        self.assertEqual(response.data['total_tasks'], 1)
+        self.assertEqual(response.data['learners'][0]['username'], 'johndoe')
+
+    def test_skill_global_edit(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        edit_url = reverse('admin-skills-global-edit')
+        
+        payload = {
+            'old_name': 'Python',
+            'new_name': 'Python Programming',
+            'color': '#ff00ff'
+        }
+        response = self.client.patch(edit_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.skill.refresh_from_db()
+        self.assertEqual(self.skill.name, 'Python Programming')
+        self.assertEqual(self.skill.color, '#ff00ff')
+        
+        # Verify activity log
+        self.assertTrue(AdminActivityLog.objects.filter(
+            username=self.staff_admin.username,
+            action='Admin renamed Python to Python Programming'
+        ).exists())
+
+    def test_skill_global_delete(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        delete_url = reverse('admin-skills-global-delete')
+        
+        response = self.client.delete(delete_url + '?name=Python')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.assertFalse(Skill.objects.filter(name='Python').exists())
+        
+        # Verify activity log
+        self.assertTrue(AdminActivityLog.objects.filter(
+            username=self.staff_admin.username,
+            action='Admin deleted Python group'
+        ).exists())
+
+    def test_skill_create(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        create_url = reverse('admin-skills-create')
+        
+        payload = {
+            'user_id': self.inactive_user.id,
+            'name': 'Golang',
+            'color': '#00ff00',
+            'target_tasks': 15
+        }
+        response = self.client.post(create_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        self.assertTrue(Skill.objects.filter(user=self.inactive_user, name='Golang').exists())
+        # Verify activity log
+        self.assertTrue(AdminActivityLog.objects.filter(
+            username=self.staff_admin.username,
+            action='Admin assigned Golang skill to janedoe'
+        ).exists())
+
+    def test_skill_create_duplicate(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        create_url = reverse('admin-skills-create')
+        
+        # self.skill is Python for self.regular_user
+        payload = {
+            'user_id': self.regular_user.id,
+            'name': 'Python',
+            'color': '#3b82f6',
+            'target_tasks': 10
+        }
+        response = self.client.post(create_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'User already has this skill')
+
+
