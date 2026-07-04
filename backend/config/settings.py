@@ -164,7 +164,8 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CORS_ALLOW_ORIGINS = [os.getenv("FRONTEND_URL"),"http://localhost:5173"]
+CORS_ALLOW_ORIGINS = os.getenv("FRONTEND_URL")
+
 
 AUTH_USER_MODEL = 'users.User'
 
