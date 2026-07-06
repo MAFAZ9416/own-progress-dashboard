@@ -76,6 +76,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='profile.full_name', max_length=100, allow_blank=True, required=False)
     bio = serializers.CharField(source='profile.bio', max_length=150, allow_blank=True, required=False)
     avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
+    notifications_enabled = serializers.BooleanField(source='profile.notifications_enabled', required=False)
     email = serializers.EmailField(required=True)
     date_joined = serializers.DateTimeField(read_only=True, format="%Y-%m-%d")
 
@@ -87,6 +88,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email",
             "bio",
             "avatar",
+            "notifications_enabled",
             "date_joined",
             "is_staff",
             "is_superuser",
@@ -151,6 +153,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             profile.bio = profile_data['bio']
         if 'avatar' in profile_data:
             profile.avatar = profile_data['avatar']
+        if 'notifications_enabled' in profile_data:
+            profile.notifications_enabled = profile_data['notifications_enabled']
         profile.save()
 
         # Refresh instance from database to clear cached relations

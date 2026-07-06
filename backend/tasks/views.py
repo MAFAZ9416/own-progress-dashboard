@@ -21,6 +21,14 @@ def _notify_task_completion(task, user):
         "Task Completed",
         f"You completed {task.title}",
         "success",
+        metadata={
+            'task_id': task.id,
+            'task_name': task.title,
+            'skill_id': task.skill_id,
+            'skill_name': task.skill.name,
+            'status': task.status,
+            'completed_at': timezone.now().isoformat(),
+        },
     )
     create_skill_milestone_notification(user, task.skill)
 

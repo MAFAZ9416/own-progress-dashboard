@@ -30,4 +30,11 @@ class SkillViewSet(viewsets.ModelViewSet):
             "New Skill Added",
             f"You started learning {skill.name} 🚀",
             "info",
+            metadata={
+                'skill_id': skill.id,
+                'skill_name': skill.name,
+                'progress': 0,
+                'completed_tasks': 0,
+                'total_tasks': skill.target_tasks,
+            },
         )

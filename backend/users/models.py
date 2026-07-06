@@ -10,6 +10,7 @@ class UserProfile(models.Model):
     avatar = models.ImageField(upload_to='profiles/', blank=True, null=True)
     bio = models.TextField(blank=True, max_length=150)
     country = models.CharField(max_length=100, blank=True, null=True)
+    notifications_enabled = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -37,4 +38,4 @@ class PasswordResetToken(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timedelta(minutes=30)
-
+

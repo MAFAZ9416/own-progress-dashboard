@@ -676,6 +676,13 @@ class AdminSkillCreateView(APIView):
             "New Skill Added",
             f"You started learning {name} 🚀",
             "info",
+            metadata={
+                'skill_id': skill.id,
+                'skill_name': skill.name,
+                'progress': 0,
+                'completed_tasks': 0,
+                'total_tasks': skill.target_tasks,
+            },
         )
 
         # Trigger activity log
@@ -704,6 +711,9 @@ class AdminUserCreateView(APIView):
                 "Welcome to Progressly 🎉",
                 "Your account is ready. Start building your learning path.",
                 "success",
+                metadata={
+                    'source': 'admin_created_user',
+                },
             )
 
             # Send welcome email using a daemon thread safely

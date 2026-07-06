@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Bell, CheckCheck, Trash2, Info, AlertTriangle, Award, Settings2, CheckCircle2, Inbox } from 'lucide-react'
 import notificationService from '../services/notificationService'
+import NotificationDetailModal from '../components/notifications/NotificationDetailModal'
 
 const FILTERS = [
   { label: 'All', value: 'all' },
@@ -57,6 +58,7 @@ export default function Notifications() {
   const [filter, setFilter] = useState('all')
   const [busyId, setBusyId] = useState(null)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState(null)
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true)
@@ -147,6 +149,12 @@ export default function Notifications() {
     }
   }, [])
 
+  const handleNotificationUpdated = useCallback((updatedNotification) => {
+    setNotifications((prev) => prev.map((item) => (
+      item.id === updatedNotification.id ? updatedNotification : item
+    )))
+  }, [])
+
   return (
     <div id="page-notifications" className="notif-page animate-fade-in">
       <div className="notif-header">
@@ -200,16 +208,17 @@ export default function Notifications() {
         <div className="notif-list">
           {filteredNotifications.map((notification) => {
             const isBusy = busyId === notification.id
+            const type = notification.type ?? notification.notification_type
             return (
               <article
                 key={notification.id}
                 className={`notif-card ${!notification.is_read ? 'notif-card--unread' : ''}`}
-                onClick={() => handleMarkAsRead(notification)}
+                onClick={() => setSelectedNotification(notification)}
                 role="button"
                 tabIndex={0}
               >
-                <div className={`notif-card__icon notif-card__icon--${notification.notification_type}`}>
-                  <NotificationIcon type={notification.notification_type} />
+                <div className={`notif-card__icon notif-card__icon--${type}`}>
+                  <NotificationIcon type={type} />
                 </div>
 
                 <div className="notif-card__body">
@@ -242,6 +251,13 @@ export default function Notifications() {
           })}
         </div>
       )}
+
+      <NotificationDetailModal
+        isOpen={!!selectedNotification}
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        onUpdated={handleNotificationUpdated}
+      />
     </div>
   )
 }

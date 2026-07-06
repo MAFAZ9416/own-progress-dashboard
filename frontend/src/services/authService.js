@@ -76,6 +76,14 @@ const authService = {
   },
 
   /**
+   * Update the authenticated user's profile.
+   */
+  updateProfile: async (payload) => {
+    const { data } = await apiClient.put('/users/profile/', payload)
+    return data.profile ?? data
+  },
+
+  /**
    * Change password for the authenticated user.
    *
    * PUT /api/users/change-password/

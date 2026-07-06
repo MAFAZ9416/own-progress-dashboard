@@ -5,31 +5,47 @@ from .models import Notification
 User = get_user_model()
 
 
-def create_notification(user, title, message, type='system'):
+def _notifications_allowed(user):
+    profile = getattr(user, 'profile', None)
+    return getattr(profile, 'notifications_enabled', True)
+
+
+def create_notification(user, title, message, type='system', metadata=None):
     if user is None:
         return None
 
     if not getattr(user, 'pk', None):
         user = User.objects.get(pk=user)
 
+    if not _notifications_allowed(user):
+        return None
+
     return Notification.objects.create(
         user=user,
         title=title,
         message=message,
         notification_type=type,
+        metadata=metadata or {},
     )
 
 
-def broadcast_notification(title, message, type='system'):
-    notifications = [
-        Notification(
-            user_id=user_id,
-            title=title,
-            message=message,
-            notification_type=type,
+def broadcast_notification(title, message, type='system', metadata=None):
+    notifications = []
+    users = User.objects.select_related('profile').all()
+
+    for user in users:
+        if not _notifications_allowed(user):
+            continue
+
+        notifications.append(
+            Notification(
+                user_id=user.id,
+                title=title,
+                message=message,
+                notification_type=type,
+                metadata=metadata or {},
+            )
         )
-        for user_id in User.objects.values_list('id', flat=True)
-    ]
 
     if notifications:
         Notification.objects.bulk_create(notifications, batch_size=500)
@@ -59,6 +75,14 @@ def create_skill_milestone_notification(user, skill):
 
     title = f"{skill.name} reached {milestone}% mastery 🏆"
     message = f"You have reached {milestone}% progress in {skill.name}."
+    metadata = {
+        'skill_id': skill.id,
+        'skill_name': skill.name,
+        'progress': progress,
+        'completed_tasks': completed_tasks,
+        'total_tasks': skill.target_tasks,
+        'milestone': milestone,
+    }
 
     if Notification.objects.filter(
         user=user,
@@ -67,4 +91,4 @@ def create_skill_milestone_notification(user, skill):
     ).exists():
         return None
 
-    return create_notification(user, title, message, 'achievement')
+    return create_notification(user, title, message, 'achievement', metadata=metadata)

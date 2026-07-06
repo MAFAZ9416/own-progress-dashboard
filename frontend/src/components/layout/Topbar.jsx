@@ -5,6 +5,7 @@ import { Menu, Bell, CheckCircle2, Info, AlertTriangle, Award, Settings2 } from 
 import { getMediaUrl } from '../../api'
 import notificationService from '../../services/notificationService'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import NotificationDetailModal from '../notifications/NotificationDetailModal'
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Dashboard',  sub: 'Overview of your progress' },
@@ -49,6 +50,7 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
   const [notifications, setNotifications] = useState([])
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState(null)
   const panelRef = useRef(null)
 
   const displayName = user?.full_name ?? user?.first_name ?? ''
@@ -103,17 +105,11 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
     setIsNotifOpen((prev) => !prev)
   }
 
-  const handleMarkRead = async (notification) => {
-    if (!notification || notification.is_read) return
-    try {
-      await notificationService.markAsRead(notification.id)
-      setNotifications((prev) => prev.map((item) => (
-        item.id === notification.id ? { ...item, is_read: true } : item
-      )))
-    } catch {
-      // Keep the UI stable; the notifications page offers a fuller retry surface.
-    }
-  }
+  const handleNotificationUpdated = useCallback((updatedNotification) => {
+    setNotifications((prev) => prev.map((item) => (
+      item.id === updatedNotification.id ? updatedNotification : item
+    )))
+  }, [])
 
   return (
     <header id="topbar" className="topbar">
@@ -163,14 +159,18 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
                   <p className="topbar__notif-empty">Loading notifications...</p>
                 ) : visibleNotifications.length > 0 ? (
                   visibleNotifications.map((notification) => {
-                    const Icon = ICONS[notification.notification_type] ?? Bell
+                    const type = notification.type ?? notification.notification_type
+                    const Icon = ICONS[type] ?? Bell
                     return (
                       <button
                         key={notification.id}
                         className={`topbar__notif-item ${!notification.is_read ? 'topbar__notif-item--unread' : ''}`}
-                        onClick={() => handleMarkRead(notification)}
+                        onClick={() => {
+                          setSelectedNotification(notification)
+                          setIsNotifOpen(false)
+                        }}
                       >
-                        <span className={`topbar__notif-icon topbar__notif-icon--${notification.notification_type}`}>
+                        <span className={`topbar__notif-icon topbar__notif-icon--${type}`}>
                           <Icon size={14} strokeWidth={2} />
                         </span>
                         <span className="topbar__notif-copy">
@@ -209,6 +209,13 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
           </Link>
         </div>
       </div>
+
+      <NotificationDetailModal
+        isOpen={!!selectedNotification}
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        onUpdated={handleNotificationUpdated}
+      />
     </header>
   )
 })

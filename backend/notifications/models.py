@@ -23,6 +23,7 @@ class Notification(models.Model):
         choices=NOTIFICATION_TYPES,
         default='info',
     )
+    metadata = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

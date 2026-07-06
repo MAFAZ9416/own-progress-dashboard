@@ -15,7 +15,13 @@ class NotificationApiTests(APITestCase):
         self.other_user = User.objects.create_user(username='otheruser', email='other@example.com', password='password123')
         self.client.force_authenticate(user=self.user)
 
-        self.first = create_notification(self.user, 'First', 'First message', 'info')
+        self.first = create_notification(
+            self.user,
+            'First',
+            'First message',
+            'info',
+            metadata={'skill_name': 'Python', 'progress': 80},
+        )
         self.second = create_notification(self.user, 'Second', 'Second message', 'warning')
         create_notification(self.other_user, 'Other', 'Other message', 'info')
 
@@ -24,6 +30,19 @@ class NotificationApiTests(APITestCase):
         response = self.client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+        self.assertIn('type', response.data[0])
+        self.assertIn('metadata', response.data[0])
+        self.assertTrue(
+            any(item['metadata'].get('skill_name') == 'Python' for item in response.data)
+        )
+
+    def test_notifications_respect_user_preference(self):
+        self.user.profile.notifications_enabled = False
+        self.user.profile.save(update_fields=['notifications_enabled'])
+
+        created = create_notification(self.user, 'Muted', 'Muted message', 'info')
+        self.assertIsNone(created)
+        self.assertFalse(Notification.objects.filter(user=self.user, title='Muted').exists())
 
         read_url = reverse('notification-mark-read', args=[self.first.id])
         response = self.client.post(read_url)

@@ -83,3 +83,26 @@ class TaskActivityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # Cascades task deletion, removing activities from database
         self.assertEqual(TaskActivity.objects.filter(task_id=task_id).count(), 0)
+
+    def test_completion_does_not_notify_when_disabled(self):
+        self.user.profile.notifications_enabled = False
+        self.user.profile.save(update_fields=['notifications_enabled'])
+
+        url = reverse("task-list")
+        data = {
+            "title": "Learn DRF Auth",
+            "description": "Understand JWT auth",
+            "skill": self.skill.id,
+            "status": "pending"
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        task_id = response.data["id"]
+
+        url_complete = reverse("task-complete", args=[task_id])
+        response = self.client.post(url_complete)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertFalse(
+            Notification.objects.filter(user=self.user, title="Task Completed").exists()
+        )

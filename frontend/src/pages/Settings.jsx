@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Monitor, Eye, Bell, User, Info, Check, ExternalLink, ChevronRight, Mail, MessageSquare, Loader2 } from 'lucide-react'
 import feedbackService from '../services/feedbackService'
+import authService from '../services/authService'
 import './Settings.css'
 
 export default function Settings() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
 
   // 1. Dashboard Preferences State (Default all enabled)
   const [dbPreferences, setDbPreferences] = useState({
@@ -16,12 +17,36 @@ export default function Settings() {
     showTopSkills: localStorage.getItem('showTopSkills') !== 'false',
   })
 
-  // 2. Notification Preferences State (Default all enabled)
-  const [notifPreferences, setNotifPreferences] = useState({
-    taskReminders: localStorage.getItem('taskReminders') !== 'false',
-    completionNotifications: localStorage.getItem('completionNotifications') !== 'false',
-    achievementNotifications: localStorage.getItem('achievementNotifications') !== 'false',
-  })
+  const [notificationsEnabled, setNotificationsEnabled] = useState(user?.notifications_enabled ?? true)
+  const [notificationSettingLoaded, setNotificationSettingLoaded] = useState(false)
+  const [notificationSettingError, setNotificationSettingError] = useState(null)
+  const [notificationToast, setNotificationToast] = useState(null)
+  const [isSavingNotificationSetting, setIsSavingNotificationSetting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    const loadProfile = async () => {
+      try {
+        const profile = await authService.getProfile()
+        if (!active) return
+        const enabled = profile?.notifications_enabled ?? true
+        setNotificationsEnabled(enabled)
+        updateUser({ notifications_enabled: enabled })
+      } catch {
+        if (!active) return
+        setNotificationsEnabled(user?.notifications_enabled ?? true)
+      } finally {
+        if (active) setNotificationSettingLoaded(true)
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      active = false
+    }
+  }, [updateUser, user?.notifications_enabled])
 
   // Toggle preferences and update localStorage
   const handleDbPrefToggle = (key) => {
@@ -30,10 +55,34 @@ export default function Settings() {
     localStorage.setItem(key, String(nextVal))
   }
 
-  const handleNotifPrefToggle = (key) => {
-    const nextVal = !notifPreferences[key]
-    setNotifPreferences(prev => ({ ...prev, [key]: nextVal }))
-    localStorage.setItem(key, String(nextVal))
+  const showNotificationToast = (text, type = 'success') => {
+    setNotificationToast({ text, type })
+    window.clearTimeout(showNotificationToast._timer)
+    showNotificationToast._timer = window.setTimeout(() => setNotificationToast(null), 2500)
+  }
+
+  const handleNotificationToggle = async () => {
+    const nextVal = !notificationsEnabled
+    setNotificationsEnabled(nextVal)
+    setIsSavingNotificationSetting(true)
+    setNotificationSettingError(null)
+
+    try {
+      const updatedProfile = await authService.updateProfile({ notifications_enabled: nextVal })
+      updateUser(updatedProfile)
+      showNotificationToast('Notification settings updated', 'success')
+    } catch (err) {
+      setNotificationsEnabled(!nextVal)
+      setNotificationSettingError(
+        err?.response?.data?.detail ??
+        err?.response?.data?.message ??
+        err?.message ??
+        'Failed to update notification settings.'
+      )
+      showNotificationToast('Failed to update notification settings', 'error')
+    } finally {
+      setIsSavingNotificationSetting(false)
+    }
   }
 
   // 3. Feedback Form State
@@ -240,54 +289,38 @@ export default function Settings() {
         <h2 className="settings-card-title">
           <Bell size={18} /> Notifications
         </h2>
+        <p className="settings-card-subtitle">
+          Control in-app activity alerts only. Security and account emails remain enabled.
+        </p>
         <div className="settings-list">
-          {/* Task Reminders */}
-          <div className="settings-item">
+          <div className="settings-item settings-item--master">
             <div className="settings-item-info">
-              <span className="settings-item-label">Task Reminders</span>
-              <span className="settings-item-desc">Alerts when pending tasks reach their soft deadline</span>
+              <span className="settings-item-label">Notifications</span>
+              <span className="settings-item-desc">Turn app activity notifications on or off</span>
             </div>
-            <label className="settings-switch">
-              <input 
-                type="checkbox" 
-                checked={notifPreferences.taskReminders}
-                onChange={() => handleNotifPrefToggle('taskReminders')}
-              />
-              <span className="settings-slider"></span>
-            </label>
-          </div>
-
-          {/* Completion Notifications */}
-          <div className="settings-item">
-            <div className="settings-item-info">
-              <span className="settings-item-label">Completion Notifications</span>
-              <span className="settings-item-desc">Alert triggers upon successfully finishing tasks</span>
+            <div className="settings-toggle-group">
+              <span className={`settings-status-pill ${notificationsEnabled ? 'settings-status-pill--on' : 'settings-status-pill--off'}`}>
+                {notificationsEnabled ? 'ON' : 'OFF'}
+              </span>
+              <label className="settings-switch">
+                <input 
+                  type="checkbox" 
+                  checked={notificationsEnabled}
+                  onChange={handleNotificationToggle}
+                  disabled={!notificationSettingLoaded || isSavingNotificationSetting}
+                />
+                <span className="settings-slider"></span>
+              </label>
             </div>
-            <label className="settings-switch">
-              <input 
-                type="checkbox" 
-                checked={notifPreferences.completionNotifications}
-                onChange={() => handleNotifPrefToggle('completionNotifications')}
-              />
-              <span className="settings-slider"></span>
-            </label>
           </div>
-
-          {/* Achievement Notifications */}
-          <div className="settings-item">
-            <div className="settings-item-info">
-              <span className="settings-item-label">Achievement Notifications</span>
-              <span className="settings-item-desc">Receive achievement unlocks and milestone triggers</span>
+          {notificationSettingError && (
+            <div className="settings-inline-error">{notificationSettingError}</div>
+          )}
+          {notificationToast && (
+            <div className={`settings-toast settings-toast--${notificationToast.type}`}>
+              {notificationToast.text}
             </div>
-            <label className="settings-switch">
-              <input 
-                type="checkbox" 
-                checked={notifPreferences.achievementNotifications}
-                onChange={() => handleNotifPrefToggle('achievementNotifications')}
-              />
-              <span className="settings-slider"></span>
-            </label>
-          </div>
+          )}
         </div>
       </div>
 

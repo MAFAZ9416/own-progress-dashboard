@@ -28,6 +28,9 @@ class RegisterView(generics.GenericAPIView):
                     "Welcome to Progressly 🎉",
                     "Your workspace is ready. Start by adding a skill or task.",
                     "success",
+                    metadata={
+                        "source": "registration",
+                    },
                 )
             except Exception:
                 logger.exception("Failed to create welcome notification.")

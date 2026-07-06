@@ -72,6 +72,10 @@ def trigger_quick_action(action_type, username):
             title="Progressly Announcement",
             message=f"An announcement has been posted by {username}.",
             type="system",
+            metadata={
+                'source': 'admin_announcement',
+                'author': username,
+            },
         )
         return {'status': 'success', 'message': "Announcement broadcasted successfully."}
         

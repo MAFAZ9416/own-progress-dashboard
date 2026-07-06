@@ -85,6 +85,7 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.data["email"], "existing@example.com")
         self.assertEqual(response.data["bio"], "")
         self.assertIsNone(response.data["avatar"])
+        self.assertTrue(response.data["notifications_enabled"])
 
     def test_update_profile(self):
         """Verify updating basic user profile details (full_name, email, bio)."""
@@ -104,6 +105,14 @@ class UserProfileTests(APITestCase):
         self.assertEqual(self.user.email, "updatedemail@example.com")
         self.assertEqual(self.user.profile.full_name, "Updated User Name")
         self.assertEqual(self.user.profile.bio, "Software developer specialized in backend.")
+
+    def test_update_notification_preference(self):
+        response = self.client.put(self.profile_url, {"notifications_enabled": False})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["notifications_enabled"])
+
+        self.user.profile.refresh_from_db()
+        self.assertFalse(self.user.profile.notifications_enabled)
 
     def test_email_uniqueness(self):
         """Verify that an email already in use cannot be claimed by another user."""
