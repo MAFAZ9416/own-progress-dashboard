@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'tasks',
     'streaks',
     'analytics',
+    'notifications.apps.NotificationsConfig',
     'admin_dashboard',
 ]
 

@@ -3,6 +3,7 @@ from rest_framework import permissions, viewsets
 
 from .models import Skill
 from .serializers import SkillSerializer
+from notifications.notification_service import create_notification
 
 
 class SkillViewSet(viewsets.ModelViewSet):
@@ -23,4 +24,10 @@ class SkillViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        skill = serializer.save(user=self.request.user)
+        create_notification(
+            self.request.user,
+            "New Skill Added",
+            f"You started learning {skill.name} 🚀",
+            "info",
+        )

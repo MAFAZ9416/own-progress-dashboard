@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 from users.models import UserProfile
+from notifications.models import Notification
 from io import BytesIO
 from PIL import Image
 
@@ -66,6 +67,15 @@ class UserProfileTests(APITestCase):
         self.assertEqual(email.subject, "🚀 Welcome to Progressly")
         self.assertEqual(email.to, ["testuser@example.com"])
         self.assertIn("Hi Test User,", email.body)
+
+        self.assertTrue(
+            Notification.objects.filter(
+                user=new_user,
+                title="Welcome to Progressly 🎉",
+                notification_type="success",
+                is_read=False,
+            ).exists()
+        )
 
     def test_get_profile(self):
         """Verify that an authenticated user can fetch their profile."""
@@ -418,7 +428,7 @@ class PasswordResetTests(APITestCase):
         data = {"email": self.username}
         response = self.client.post(self.forgot_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["message"], "Reset link sent.")
+        self.assertEqual(response.data["message"], "If this email exists, reset instructions were sent.")
 
         # Check token created
         self.assertTrue(PasswordResetToken.objects.filter(user=self.user, is_used=False).exists())
@@ -434,11 +444,15 @@ class PasswordResetTests(APITestCase):
         self.assertIn(f"/reset-password/{token.token}", html_body)
 
     def test_forgot_password_user_not_found(self):
-        """Verify that requesting a reset for an unregistered email returns 400 validation error."""
+        """Verify that requesting a reset for an unregistered email returns 200 success without sending email."""
+        from django.core import mail
         data = {"email": "notfound@example.com"}
         response = self.client.post(self.forgot_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("email", response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "If this email exists, reset instructions were sent.")
+        
+        # Check no email was sent
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_reset_password_success(self):
         """Verify resetting password updates credentials, invalidates tokens, and sends success email."""

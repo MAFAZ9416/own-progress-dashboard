@@ -15,6 +15,7 @@ const Skills = lazy(() => import('../pages/Skills'))
 const Tasks = lazy(() => import('../pages/Tasks'))
 const Profile = lazy(() => import('../pages/Profile'))
 const Settings = lazy(() => import('../pages/Settings'))
+const Notifications = lazy(() => import('../pages/Notifications'))
 
 // Admin Protected Pages
 const AdminDashboard = lazy(() => import('../admin/pages/AdminDashboard'))
@@ -68,6 +69,7 @@ export default function AppRoutes() {
           <Route path="/tasks" element={<LazyPage><Tasks /></LazyPage>} />
           <Route path="/profile" element={<LazyPage><Profile /></LazyPage>} />
           <Route path="/settings" element={<LazyPage><Settings /></LazyPage>} />
+          <Route path="/notifications" element={<LazyPage><Notifications /></LazyPage>} />
         </Route>
       </Route>
 

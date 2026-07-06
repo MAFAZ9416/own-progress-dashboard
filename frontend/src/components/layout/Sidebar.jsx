@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle, Settings } from 'lucide-react'
+import { LayoutDashboard, Brain, ClipboardList, LogOut, Settings, Bell } from 'lucide-react'
 import { getMediaUrl } from '../../api'
 
 const NAV_ITEMS = [
@@ -19,6 +19,11 @@ const NAV_ITEMS = [
     label: 'Tasks',
     to: '/tasks',
     icon: <ClipboardList size={18} strokeWidth={1.8} />,
+  },
+  {
+    label: 'Notifications',
+    to: '/notifications',
+    icon: <Bell size={18} strokeWidth={1.8} />,
   },
   {
     label: 'Settings',

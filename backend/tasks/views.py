@@ -12,6 +12,17 @@ from .models import Task, TaskCompletion, TaskActivity
 from .serializers import TaskCompletionSerializer, TaskSerializer, TaskActivitySerializer
 from streaks.models import Streak
 from streaks.services import update_user_streak
+from notifications.notification_service import create_notification, create_skill_milestone_notification
+
+
+def _notify_task_completion(task, user):
+    create_notification(
+        user,
+        "Task Completed",
+        f"You completed {task.title}",
+        "success",
+    )
+    create_skill_milestone_notification(user, task.skill)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -60,6 +71,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                     skill=task.skill
                 )
                 TaskActivity.objects.create(task=task, user=self.request.user, action="completed")
+                _notify_task_completion(task, self.request.user)
 
                 # Update streak
                 update_user_streak(self.request.user)
@@ -102,6 +114,8 @@ class CompleteTaskView(APIView):
             user=request.user,
             skill=task.skill,
         )
+
+        _notify_task_completion(task, request.user)
 
         update_user_streak(request.user)
 

@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from skills.models import Skill
+from notifications.models import Notification
 from .models import Task, TaskActivity
 
 User = get_user_model()
@@ -13,7 +14,7 @@ class TaskActivityTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpassword123")
         self.client.force_authenticate(user=self.user)
-        self.skill = Skill.objects.create(user=self.user, name="Python Programming", target_tasks=10)
+        self.skill = Skill.objects.create(user=self.user, name="Python Programming", target_tasks=1)
 
     def test_task_activity_lifecycle(self):
         # 1. Test Task Creation Activity Log
@@ -43,6 +44,20 @@ class TaskActivityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertTrue(TaskActivity.objects.filter(task_id=task_id, action="completed").exists())
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user,
+                title="Task Completed",
+                notification_type="success",
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user,
+                title="Python Programming reached 100% mastery 🏆",
+                notification_type="achievement",
+            ).exists()
+        )
 
         # 4. Test Task Reopen Activity Log
         url_reopen = reverse("task-reopen", args=[task_id])

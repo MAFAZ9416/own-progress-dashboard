@@ -20,6 +20,17 @@ class RegisterView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+
+            from notifications.notification_service import create_notification
+            try:
+                create_notification(
+                    user,
+                    "Welcome to Progressly 🎉",
+                    "Your workspace is ready. Start by adding a skill or task.",
+                    "success",
+                )
+            except Exception:
+                logger.exception("Failed to create welcome notification.")
             
             # Send welcome email
             from .email_service import send_welcome_email

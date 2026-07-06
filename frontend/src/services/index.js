@@ -4,4 +4,5 @@ export { default as skillsService }    from './skillsService'
 export { default as tasksService }     from './tasksService'
 export { default as dashboardService } from './dashboardService'
 export { default as feedbackService }  from './feedbackService'
+export { default as notificationService } from './notificationService'
 

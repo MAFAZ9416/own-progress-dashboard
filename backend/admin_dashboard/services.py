@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from .models import AdminFeedback, AdminNotification, AdminActivityLog
+from notifications.notification_service import broadcast_notification
 
 User = get_user_model()
 
@@ -66,6 +67,11 @@ def trigger_quick_action(action_type, username):
             title="Broadcast Announcement",
             message=f"Active alert: Maintenance schedule notice sent to all users by {username}.",
             level="warning"
+        )
+        broadcast_notification(
+            title="Progressly Announcement",
+            message=f"An announcement has been posted by {username}.",
+            type="system",
         )
         return {'status': 'success', 'message': "Announcement broadcasted successfully."}
         

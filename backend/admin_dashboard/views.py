@@ -670,6 +670,14 @@ class AdminSkillCreateView(APIView):
             target_tasks=target_tasks
         )
 
+        from notifications.notification_service import create_notification
+        create_notification(
+            target_user,
+            "New Skill Added",
+            f"You started learning {name} 🚀",
+            "info",
+        )
+
         # Trigger activity log
         AdminActivityLog.objects.create(
             username=request.user.username,
@@ -690,6 +698,14 @@ class AdminUserCreateView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
+            from notifications.notification_service import create_notification
+            create_notification(
+                user,
+                "Welcome to Progressly 🎉",
+                "Your account is ready. Start building your learning path.",
+                "success",
+            )
+
             # Send welcome email using a daemon thread safely
             from users.email_service import send_welcome_email
             from threading import Thread
