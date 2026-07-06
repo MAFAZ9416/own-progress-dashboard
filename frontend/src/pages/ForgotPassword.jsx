@@ -22,8 +22,8 @@ export default function ForgotPassword() {
     setSuccessMsg('')
 
     try {
-      await authService.forgotPassword(email)
-      setSuccessMsg('Reset link sent.')
+      const res = await authService.forgotPassword(email)
+      setSuccessMsg(res.message || 'If this email exists, reset instructions were sent.')
       setEmail('')
     } catch (err) {
       console.error(err)

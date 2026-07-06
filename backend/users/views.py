@@ -194,24 +194,24 @@ class ForgotPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.context['reset_user']
-            
-            from .models import PasswordResetToken
-            reset_token = PasswordResetToken.generate_token(user)
-            
-            from .email_service import send_password_reset_email
-            try:
-                full_name = getattr(user, 'profile', None) and user.profile.full_name or user.first_name or user.username
-                Thread(
-                    target=send_password_reset_email,
-                    args=(user.email, full_name, reset_token.token),
-                    daemon=True,
-                ).start()
-            except Exception:
-                logger.exception("Failed to start email thread.")
+            user = serializer.context.get('reset_user')
+            if user:
+                from .models import PasswordResetToken
+                reset_token = PasswordResetToken.generate_token(user)
+                
+                from .email_service import send_password_reset_email
+                try:
+                    full_name = getattr(user, 'profile', None) and user.profile.full_name or user.first_name or user.username
+                    Thread(
+                        target=send_password_reset_email,
+                        args=(user.email, full_name, reset_token.token),
+                        daemon=True,
+                    ).start()
+                except Exception:
+                    logger.exception("Failed to start email thread.")
             
             return Response(
-                {"message": "Reset link sent."},
+                {"message": "If this email exists, reset instructions were sent."},
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

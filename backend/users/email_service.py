@@ -203,43 +203,71 @@ def send_password_reset_email(email, full_name, token):
     )
 
 def send_password_changed_email(email, full_name):
-    message_html = (
-        f"<p>Hi {full_name},</p>"
-        "<p>This is a confirmation that the password for your Progressly account has been successfully changed.</p>"
-        "<p>If you did not make this change, please contact support immediately to secure your account.</p>"
-    )
+    from django.utils import timezone
+    context = {
+        "user_name": full_name,
+        "frontend_url": settings.FRONTEND_URL,
+        "support_email": settings.ADMIN_EMAIL,
+        "year": timezone.now().year,
+        "subject": "Password Changed Successfully - Progressly"
+    }
+
+    try:
+        html_message = render_to_string("emails/password_changed_email.html", context)
+    except Exception as e:
+        logger.error(f"Failed to render password_changed_email.html: {e}")
+        html_message = f"<p>Hi {full_name},</p><p>Your password was changed successfully.</p>"
+
     return send_progressly_email(
         to_email=email,
         subject="Password Changed Successfully - Progressly",
         title="Password Updated",
-        message_html=message_html
+        html_content=html_message
     )
 
 def send_account_deleted_email(email, full_name):
-    message_html = (
-        f"<p>Hi {full_name or 'User'},</p>"
-        "<p>As requested, your Progressly account has been deleted, and all your records have been removed from our system.</p>"
-        "<p>We're sorry to see you go! If you ever decide to return, you can register a new account anytime.</p>"
-    )
+    from django.utils import timezone
+    context = {
+        "user_name": full_name or 'User',
+        "frontend_url": settings.FRONTEND_URL,
+        "support_email": settings.ADMIN_EMAIL,
+        "year": timezone.now().year,
+        "subject": "Account Deleted - Progressly"
+    }
+
+    try:
+        html_message = render_to_string("emails/account_deleted_email.html", context)
+    except Exception as e:
+        logger.error(f"Failed to render account_deleted_email.html: {e}")
+        html_message = f"<p>Hi {full_name or 'User'},</p><p>Your account was deleted.</p>"
+
     return send_progressly_email(
         to_email=email,
         subject="Account Deleted - Progressly",
         title="Account Deleted",
-        message_html=message_html
+        html_content=html_message
     )
 
 def send_admin_reset_password_email(email, full_name):
-    message_html = (
-        f"<p>Hi {full_name},</p>"
-        "<p>Your Progressly password was updated by an administrator.</p>"
-        "<p>If you did not expect this or have any concerns, please contact your systems administrator.</p>"
-    )
+    from django.utils import timezone
+    context = {
+        "user_name": full_name,
+        "frontend_url": settings.FRONTEND_URL,
+        "support_email": settings.ADMIN_EMAIL,
+        "year": timezone.now().year,
+        "subject": "Password Reset - Progressly Admin"
+    }
+
+    try:
+        html_message = render_to_string("emails/admin_reset_password_email.html", context)
+    except Exception as e:
+        logger.error(f"Failed to render admin_reset_password_email.html: {e}")
+        html_message = f"<p>Hi {full_name},</p><p>Your password was reset by an admin.</p>"
+
     return send_progressly_email(
         to_email=email,
         subject="Password Reset - Progressly Admin",
         title="Password Reset by Admin",
-        message_html=message_html,
-        button_text="Go to Dashboard",
-        button_url=f"{settings.FRONTEND_URL.rstrip('/')}/dashboard"
+        html_content=html_message
     )
 

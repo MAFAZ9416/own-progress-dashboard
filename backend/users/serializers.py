@@ -304,9 +304,9 @@ class ForgotPasswordSerializer(serializers.Serializer):
     def validate_email(self, value):
         try:
             user = User.objects.select_related('profile').get(email__iexact=value)
+            self.context['reset_user'] = user
         except User.DoesNotExist:
-            raise serializers.ValidationError("No user is registered with this email address.")
-        self.context['reset_user'] = user
+            self.context['reset_user'] = None
         return value
 
 

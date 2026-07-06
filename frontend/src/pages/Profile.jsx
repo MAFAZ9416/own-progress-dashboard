@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProfileStats } from '../hooks/useProfileStats'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle } from 'lucide-react'
+import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle, X } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
 import { getMediaUrl } from '../api'
 import './Profile.css'
@@ -103,6 +103,7 @@ export default function Profile() {
   })
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deleteErrors, setDeleteErrors] = useState({})
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   const handleDeleteAccountChange = (e) => {
     const { name, value } = e.target
@@ -457,75 +458,129 @@ export default function Profile() {
         {/* Delete Account Card */}
         <div className="profile-danger-card profile-delete-account">
           <h3 className="profile-danger-card-title">Delete Account</h3>
-          <p className="profile-danger-card-warning">
+          <p className="profile-danger-card-warning" style={{ marginBottom: '1.25rem' }}>
             Once you delete your account, there is no going back. All your data will be permanently removed.
           </p>
-          
-          <form onSubmit={handleDeleteAccountSubmit} className="profile-delete-form">
-            {deleteErrors.general && (
-              <div className="profile-delete-error-banner">
-                <AlertCircle size={14} />
-                <span>{deleteErrors.general}</span>
-              </div>
-            )}
-
-            <div className="profile-delete-field-group">
-              <label className="profile-delete-label">
-                Type <span className="delete-keyword-highlight">DELETE</span>
-              </label>
-              <input
-                type="text"
-                name="confirm_text"
-                className={`profile-delete-input ${deleteErrors.confirm_text ? 'profile-delete-input--error' : ''}`}
-                value={deleteData.confirm_text}
-                onChange={handleDeleteAccountChange}
-                placeholder="Type DELETE"
-                disabled={isDeletingAccount}
-              />
-              {deleteErrors.confirm_text && (
-                <div className="profile-delete-field-error">
-                  <AlertCircle size={12} />
-                  <span>{deleteErrors.confirm_text}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="profile-delete-field-group">
-              <label className="profile-delete-label">Enter Password</label>
-              <input
-                type="password"
-                name="password"
-                className={`profile-delete-input ${deleteErrors.password ? 'profile-delete-input--error' : ''}`}
-                value={deleteData.password}
-                onChange={handleDeleteAccountChange}
-                placeholder="Enter password"
-                disabled={isDeletingAccount}
-              />
-              {deleteErrors.password && (
-                <div className="profile-delete-field-error">
-                  <AlertCircle size={12} />
-                  <span>{deleteErrors.password}</span>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="profile-delete-btn"
-              disabled={isDeletingAccount}
-            >
-              {isDeletingAccount ? (
-                <>
-                  <Loader2 size={14} className="profile-delete-spinner animate-spin" />
-                  <span>Deleting Account...</span>
-                </>
-              ) : (
-                <span>Delete Account</span>
-              )}
-            </button>
-          </form>
+          <button
+            type="button"
+            className="profile-delete-btn"
+            style={{ width: 'auto', alignSelf: 'flex-start', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#ef4444' }}
+            onClick={() => {
+              setIsDeleteModalOpen(true)
+              setDeleteData({ confirm_text: '', password: '' })
+              setDeleteErrors({})
+            }}
+          >
+            Delete Account...
+          </button>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="ep-modal-overlay">
+          <div className="ep-modal" style={{ maxWidth: '450px' }}>
+            <div className="ep-modal-header">
+              <h3 className="ep-modal-title" style={{ color: '#ef4444' }}>Delete Your Account</h3>
+              <button 
+                type="button" 
+                className="ep-close-btn" 
+                onClick={() => setIsDeleteModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleDeleteAccountSubmit} className="ep-form" style={{ marginTop: '1rem' }}>
+              <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.875rem', borderRadius: '8px', color: '#fca5a5', fontSize: '0.875rem', marginBottom: '1.25rem', display: 'flex', gap: '0.5rem' }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '0.125rem' }} />
+                <span>
+                  <strong>Warning:</strong> This action is irreversible. All your recorded skills, tasks, daily habits, streaks, and analytics logs will be permanently deleted from Progressly.
+                </span>
+              </div>
+
+              {deleteErrors.general && (
+                <div className="profile-delete-error-banner" style={{ marginBottom: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                  <AlertCircle size={14} />
+                  <span>{deleteErrors.general}</span>
+                </div>
+              )}
+
+              <div className="profile-delete-field-group" style={{ marginBottom: '1rem' }}>
+                <label className="profile-delete-label" style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                  Type <span className="delete-keyword-highlight" style={{ color: '#ef4444', fontWeight: 'bold' }}>DELETE</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  name="confirm_text"
+                  className={`profile-delete-input ${deleteErrors.confirm_text ? 'profile-delete-input--error' : ''}`}
+                  value={deleteData.confirm_text}
+                  onChange={handleDeleteAccountChange}
+                  placeholder="Type DELETE"
+                  disabled={isDeletingAccount}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', padding: '0.625rem 0.75rem', color: '#ffffff' }}
+                />
+                {deleteErrors.confirm_text && (
+                  <div className="profile-delete-field-error" style={{ color: '#f87171', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.375rem' }}>
+                    <AlertCircle size={12} />
+                    <span>{deleteErrors.confirm_text}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="profile-delete-field-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="profile-delete-label" style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                  Enter Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  className={`profile-delete-input ${deleteErrors.password ? 'profile-delete-input--error' : ''}`}
+                  value={deleteData.password}
+                  onChange={handleDeleteAccountChange}
+                  placeholder="Enter password"
+                  disabled={isDeletingAccount}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', padding: '0.625rem 0.75rem', color: '#ffffff' }}
+                />
+                {deleteErrors.password && (
+                  <div className="profile-delete-field-error" style={{ color: '#f87171', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.375rem' }}>
+                    <AlertCircle size={12} />
+                    <span>{deleteErrors.password}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="ep-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button 
+                  type="button" 
+                  className="ep-btn-cancel" 
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeletingAccount}
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94a3b8', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="profile-delete-btn" 
+                  disabled={isDeletingAccount}
+                  style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {isDeletingAccount ? (
+                    <>
+                      <Loader2 size={14} className="profile-delete-spinner animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Permanently Delete</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <EditProfileModal 
         isOpen={isModalOpen} 
