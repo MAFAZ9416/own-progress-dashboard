@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { NAVIGATION_ITEMS } from '../config/navigation'
 import { LogOut } from 'lucide-react'
+import { getMediaUrl } from '../../api'
 import './Sidebar.css'
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -15,7 +16,7 @@ export default function Sidebar({ isOpen, onClose }) {
   // Fallback for avatar image
   const defaultAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
   const avatarSrc = user?.avatar
-    ? (user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`)
+    ? getMediaUrl(user.avatar)
     : defaultAvatar
 
   return (

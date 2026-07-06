@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { LayoutDashboard, Brain, ClipboardList, LogOut, UserCircle, Settings } from 'lucide-react'
+import { getMediaUrl } from '../../api'
 
 const NAV_ITEMS = [
   {
@@ -80,7 +81,7 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
         <div className="sidebar__user-card">
           <div className="sidebar__avatar">
             {user?.avatar ? (
-              <img src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} alt={displayName} />
+              <img src={getMediaUrl(user.avatar)} alt={displayName} />
             ) : (
               initials
             )}

@@ -14,8 +14,7 @@ from users.views import EmailTokenObtainPairView
 def health(request):
     return JsonResponse({
         "status": "online",
-        "app": "Progressly API",
-        "version": "1.0"
+        "app": "Progressly API"
     })
 
 urlpatterns = [

@@ -4,6 +4,20 @@ import { apiClient } from '../../api'
  * Admin User Management Services
  */
 export const adminUsersService = {
+  createUser: async (data) => {
+    const config = {}
+    if (data instanceof FormData) {
+      config.headers = { 'Content-Type': 'multipart/form-data' }
+    }
+    const response = await apiClient.post('/admin/users/create/', data, config)
+    return response.data
+  },
+
+  changeUserPassword: async (id, data) => {
+    const response = await apiClient.post(`/admin/users/${id}/change-password/`, data)
+    return response.data
+  },
+
   getUsersList: async (params) => {
     const response = await apiClient.get('/admin/users/', { params })
     return response.data

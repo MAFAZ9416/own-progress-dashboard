@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Menu, Bell } from 'lucide-react'
+import { getMediaUrl } from '../../api'
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Dashboard',  sub: 'Overview of your progress' },
@@ -55,7 +56,7 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
           </div>
           <Link to="/profile" className="topbar__avatar hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition-all cursor-pointer" aria-label="Go to profile">
             {user?.avatar ? (
-              <img src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} alt={displayName} />
+              <img src={getMediaUrl(user.avatar)} alt={displayName} />
             ) : (
               initials
             )}

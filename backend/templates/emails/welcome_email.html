@@ -1,0 +1,20 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<p style="margin: 0 0 16px 0; font-size: 17px; font-weight: 600; color: #ffffff;">Hi {{ user_name }},</p>
+<p style="margin: 0 0 16px 0;">Welcome to Progressly 🎉</p>
+<p style="margin: 0 0 16px 0;">We are absolutely thrilled to have you join our learning and tracking community.</p>
+<p style="margin: 0 0 16px 0;">Progressly is built to help you track your learning journey step-by-step:</p>
+
+<ul style="margin: 0 0 24px 0; padding-left: 20px; color: #cbd5e1;">
+  <li style="margin-bottom: 8px;"><strong>Create Skills:</strong> Set up custom skills you want to learn or master.</li>
+  <li style="margin-bottom: 8px;"><strong>Track Tasks:</strong> Log your daily assignments, reading logs, and practice.</li>
+  <li style="margin-bottom: 8px;"><strong>Monitor Progress:</strong> Keep track of your execution metrics, streaks, and charts.</li>
+</ul>
+
+<div style="text-align: center; margin: 28px 0;">
+  <a href="{{ frontend_url }}/dashboard" style="display: inline-block; padding: 12px 28px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 10px; color: #ffffff !important; font-weight: 600; text-decoration: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+    View Dashboard
+  </a>
+</div>
+{% endblock %}

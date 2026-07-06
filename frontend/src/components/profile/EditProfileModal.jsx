@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { X, Upload, User, Mail, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { getMediaUrl } from '../../api'
 import './EditProfileModal.css'
 
 export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
@@ -32,7 +33,10 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
         setGeneralError(null)
         try {
           const token = localStorage.getItem('accessToken')
-          const response = await fetch('http://127.0.0.1:8000/api/users/profile/', {
+          const baseApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+          const profileEndpoint = `${baseApiUrl.replace(/\/+$/, '')}/users/profile/`;
+          
+          const response = await fetch(profileEndpoint, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -46,7 +50,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
               bio: data.bio || ''
             })
             if (data.avatar) {
-              setAvatarPreview(data.avatar.startsWith('http') ? data.avatar : `http://127.0.0.1:8000${data.avatar}`)
+              setAvatarPreview(getMediaUrl(data.avatar))
               setHasExistingAvatar(true)
             } else {
               setAvatarPreview(null)
@@ -60,7 +64,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
                 email: user.email || '',
                 bio: user.bio || ''
               })
-              setAvatarPreview(user.avatar ? `http://127.0.0.1:8000${user.avatar}` : null)
+              setAvatarPreview(user.avatar ? getMediaUrl(user.avatar) : null)
               setHasExistingAvatar(!!user.avatar)
             }
           }
@@ -72,7 +76,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
               email: user.email || '',
               bio: user.bio || ''
             })
-            setAvatarPreview(user.avatar ? `http://127.0.0.1:8000${user.avatar}` : null)
+            setAvatarPreview(user.avatar ? getMediaUrl(user.avatar) : null)
             setHasExistingAvatar(!!user.avatar)
           }
         } finally {
@@ -171,7 +175,10 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
         submitData.append('avatar', '')
       }
 
-      const response = await fetch('http://127.0.0.1:8000/api/users/profile/', {
+      const baseApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+      const profileEndpoint = `${baseApiUrl.replace(/\/+$/, '')}/users/profile/`;
+
+      const response = await fetch(profileEndpoint, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

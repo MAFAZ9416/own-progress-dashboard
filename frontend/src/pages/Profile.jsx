@@ -4,7 +4,7 @@ import { useProfileStats } from '../hooks/useProfileStats'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
-import authService from '../services/authService'
+import { getMediaUrl } from '../api'
 import './Profile.css'
 
 export default function Profile() {
@@ -193,7 +193,7 @@ export default function Profile() {
           <div className="profile-avatar-container">
             {user?.avatar ? (
               <img 
-                src={user.avatar.startsWith('http') ? user.avatar : `http://127.0.0.1:8000${user.avatar}`} 
+                src={getMediaUrl(user.avatar)} 
                 alt={displayName} 
                 className="profile-avatar-img" 
               />

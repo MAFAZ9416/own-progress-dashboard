@@ -13,7 +13,9 @@ from .views import (
     AdminSkillGroupDetailView,
     AdminSkillGlobalEditView,
     AdminSkillGlobalDeleteView,
-    AdminSkillCreateView
+    AdminSkillCreateView,
+    AdminUserCreateView,
+    AdminUserPasswordChangeView
 )
 
 urlpatterns = [
@@ -23,7 +25,9 @@ urlpatterns = [
     path('dashboard/charts/activity/', AdminActivityChartView.as_view(), name='admin-activity-chart'),
     path('action/', AdminQuickActionView.as_view(), name='admin-quick-action'),
     path('users/', AdminUsersListView.as_view(), name='admin-users-list'),
+    path('users/create/', AdminUserCreateView.as_view(), name='admin-users-create'),
     path('users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+    path('users/<int:pk>/change-password/', AdminUserPasswordChangeView.as_view(), name='admin-user-change-password'),
     path('skills/<int:pk>/', AdminSkillDetailView.as_view(), name='admin-skill-detail'),
     path('tasks/<int:pk>/', AdminTaskDetailView.as_view(), name='admin-task-detail'),
     

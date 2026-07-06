@@ -337,4 +337,108 @@ class AdminUserManagementTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['detail'], 'User already has this skill')
 
+    def test_admin_create_user_success(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        url = reverse('admin-users-create')
+        data = {
+            'email': 'newuser@progressly.com',
+            'full_name': 'New Progressly User',
+            'password': 'validpassword123',
+            'password_confirm': 'validpassword123',
+            'bio': 'A new developer',
+            'country': 'Germany'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['email'], 'newuser@progressly.com')
+        self.assertEqual(response.data['profile']['full_name'], 'New Progressly User')
+        
+        # Verify DB records
+        user = User.objects.get(email='newuser@progressly.com')
+        self.assertTrue(user.check_password('validpassword123'))
+        self.assertEqual(user.profile.bio, 'A new developer')
+        self.assertEqual(user.profile.country, 'Germany')
+
+    def test_admin_create_user_validation_error(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        url = reverse('admin-users-create')
+        
+        # Passwords mismatch
+        data = {
+            'email': 'newuser2@progressly.com',
+            'full_name': 'New Progressly User 2',
+            'password': 'validpassword123',
+            'password_confirm': 'differentpassword',
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password_confirm', response.data)
+
+        # Existing email
+        data = {
+            'email': 'john@example.com',
+            'full_name': 'New Progressly User',
+            'password': 'validpassword123',
+            'password_confirm': 'validpassword123',
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
+    def test_admin_change_user_password_success(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        url = reverse('admin-user-change-password', kwargs={'pk': self.regular_user.id})
+        
+        data = {
+            'new_password': 'newsecurepassword123',
+            'confirm_password': 'newsecurepassword123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify password changed
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.check_password('newsecurepassword123'))
+        
+        # Verify log
+        self.assertTrue(AdminActivityLog.objects.filter(
+            username=self.staff_admin.username,
+            action=f"Admin changed password for user: {self.regular_user.email}"
+        ).exists())
+
+    def test_admin_change_user_password_validation_error(self):
+        self.client.force_authenticate(user=self.staff_admin)
+        url = reverse('admin-user-change-password', kwargs={'pk': self.regular_user.id})
+        
+        # Mismatch
+        data = {
+            'new_password': 'newsecurepassword123',
+            'confirm_password': 'differentpassword'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('confirm_password', response.data)
+        
+        # Weak password
+        data = {
+            'new_password': '123',
+            'confirm_password': '123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
+
+    def test_regular_user_cannot_change_password(self):
+        self.client.force_authenticate(user=self.regular_user)
+        url = reverse('admin-user-change-password', kwargs={'pk': self.inactive_user.id})
+        
+        data = {
+            'new_password': 'newsecurepassword123',
+            'confirm_password': 'newsecurepassword123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+
 

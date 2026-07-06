@@ -111,7 +111,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from skills.models import Skill
 from tasks.models import Task
 from .models import AdminActivityLog, UserLifecycleEvent
-from .serializers import AdminUserSerializer, AdminUserUpdateSerializer
+from .serializers import AdminUserSerializer, AdminUserUpdateSerializer, AdminUserCreateSerializer, AdminUserPasswordChangeSerializer
 
 User = get_user_model()
 
@@ -677,5 +677,96 @@ class AdminSkillCreateView(APIView):
         )
 
         return Response({'detail': 'Skill created successfully.', 'id': skill.id}, status=status.HTTP_201_CREATED)
+
+
+class AdminUserCreateView(APIView):
+    """
+    API view for admin to create a new user account, profile, and trigger welcome email.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminUserCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # Send welcome email using a daemon thread safely
+            from users.email_service import send_welcome_email
+            from threading import Thread
+            import logging
+            logger = logging.getLogger(__name__)
+            try:
+                full_name = getattr(user, 'profile', None) and user.profile.full_name or user.first_name or user.username
+                Thread(
+                    target=send_welcome_email,
+                    args=(user.email, full_name),
+                    daemon=True
+                ).start()
+            except Exception:
+                logger.exception("Failed to start welcome email thread.")
+
+            # Record activity log for action
+            AdminActivityLog.objects.create(
+                username=request.user.username,
+                action=f"Admin created user account for {user.username}"
+            )
+
+            # Return serialized representation of the created user
+            return Response(
+                AdminUserSerializer(user, context={'request': request}).data, 
+                status=status.HTTP_201_CREATED
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminUserPasswordChangeView(APIView):
+    """
+    API view for admin to change a user's password.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            user = User.objects.select_related('profile').get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Protect Super Admin accounts: non-super admin requesting users cannot modify a super admin
+        if user.is_superuser and not request.user.is_superuser:
+            raise PermissionDenied("Only super admins can change a super admin account's password.")
+
+        serializer = AdminUserPasswordChangeSerializer(data=request.data)
+        if serializer.is_valid():
+            new_password = serializer.validated_data['new_password']
+            user.set_password(new_password)
+            user.save()
+
+            # Record activity log for action
+            AdminActivityLog.objects.create(
+                username=request.user.username,
+                action=f"Admin changed password for user: {user.email}"
+            )
+
+            # Send email notification safely in background thread
+            from users.email_service import send_admin_reset_password_email
+            from threading import Thread
+            import logging
+            logger = logging.getLogger(__name__)
+            try:
+                full_name = getattr(user, 'profile', None) and user.profile.full_name or user.first_name or user.username
+                Thread(
+                    target=send_admin_reset_password_email,
+                    args=(user.email, full_name),
+                    daemon=True
+                ).start()
+            except Exception:
+                logger.exception("Failed to start password reset email thread.")
+
+            return Response({'detail': 'Password updated successfully.'}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 

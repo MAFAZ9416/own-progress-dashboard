@@ -18,7 +18,10 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+# Use python-dotenv only for local development
+env_path = BASE_DIR / '.env'
+if os.path.exists(env_path):
+    load_dotenv(env_path)
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,9 +30,13 @@ load_dotenv(BASE_DIR / '.env')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -101,12 +108,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # }
 
 
-# Connect the database to the neon server using the DATABASE_URL environment variable
+# Connect the database dynamically depending on the environment
 import dj_database_url
-
 import sys
 
-if 'test' in sys.argv:
+if 'test' in sys.argv or not os.getenv("DATABASE_URL"):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -165,12 +171,21 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 CORS_ALLOWED_ORIGINS = [
-    "https://own-progress-dashboard.vercel.app"
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,https://own-progress-dashboard.vercel.app"
+    ).split(",")
+    if origin.strip()
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://own-progress-dashboard.vercel.app"
-    "https://progressly.onrender.com"
+    origin.strip()
+    for origin in os.getenv(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:5173,https://own-progress-dashboard.vercel.app,https://progressly.onrender.com"
+    ).split(",")
+    if origin.strip()
 ]
 
 
@@ -194,61 +209,95 @@ SIMPLE_JWT = {
 }
 
 # Email Configurations
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", 20))
+# ==========================
+# Email Configuration
+# ==========================
+import os
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+)
+
+EMAIL_HOST = os.getenv(
+    "EMAIL_HOST",
+    "smtp.gmail.com"
+)
+
+EMAIL_PORT = int(
+    os.getenv(
+        "EMAIL_PORT",
+        587
+    )
+)
+
+EMAIL_USE_TLS = (
+    os.getenv(
+        "EMAIL_USE_TLS",
+        "True"
+    )
+    == "True"
+)
+
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER"
+)
+
+EMAIL_HOST_PASSWORD = os.getenv(
+    "EMAIL_HOST_PASSWORD"
+)
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER
+)
+
+ADMIN_EMAIL = os.getenv(
+    "ADMIN_EMAIL"
+)
+
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 SITE_URL = os.getenv("SITE_URL", BACKEND_URL)
 
 
 if DEBUG:
     print("=" * 50)
-    print("EMAIL_HOST:", EMAIL_HOST)
-    print("EMAIL_PORT:", EMAIL_PORT)
-    print("EMAIL_USER:", EMAIL_HOST_USER)
-    print(
-        "EMAIL_PASSWORD_LOADED:",
-        bool(EMAIL_HOST_PASSWORD)
-    )
     print("FRONTEND_URL:", FRONTEND_URL)
     print("BACKEND_URL:", BACKEND_URL)
+    print("EMAIL CONFIG:")
+    print("SMTP USER loaded:", bool(EMAIL_HOST_USER))
+    print("SMTP PASSWORD loaded:", bool(EMAIL_HOST_PASSWORD))
     print("=" * 50)
 
-if not DEBUG:
-    if "localhost" in FRONTEND_URL:
-        print(
-            "WARNING: FRONTEND_URL still points to localhost."
-        )
 
-
-import cloudinary
-
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-    secure=True,
-)
-
-STORAGES = {
-    "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-    },
-
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-ALLOWED_HOSTS = [
-    "progressly.onrender.com",
-    ".onrender.com",
-    "localhost",
-    "127.0.0.1",
-]
+# Cloudinary Configuration
+if os.getenv("CLOUDINARY_URL"):
+    import cloudinary
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_NAME") or os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        secure=True,
+    )
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { adminUsersService } from '../services/usersService'
 import { useAuth } from '../../contexts/AuthContext'
+import { getMediaUrl } from '../../api'
 import './Users.css'
 
 export default function Users() {
@@ -83,6 +84,27 @@ export default function Users() {
   const [editingTask, setEditingTask] = useState(null)
   const [taskForm, setTaskForm] = useState({ title: '', description: '', status: 'pending' })
   const [isSavingTask, setIsSavingTask] = useState(false)
+
+  // Add User Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [addForm, setAddForm] = useState({
+    email: '',
+    full_name: '',
+    password: '',
+    password_confirm: '',
+    bio: '',
+    country: ''
+  })
+  const [addAvatarFile, setAddAvatarFile] = useState(null)
+  const [isSavingNewUser, setIsSavingNewUser] = useState(false)
+  const [addFormErrors, setAddFormErrors] = useState(null)
+
+  // Change Password Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ new_password: '', confirm_password: '' })
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [passwordFormErrors, setPasswordFormErrors] = useState(null)
+  const [showPasswords, setShowPasswords] = useState(false)
 
   const scrollContainerRef = useRef(null)
 
@@ -328,13 +350,116 @@ export default function Users() {
     }
   }
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault()
+    if (isSavingNewUser) return
+    setAddFormErrors(null)
+
+    // Form client-side check
+    if (!addForm.email || !addForm.full_name || !addForm.password || !addForm.password_confirm) {
+      setAddFormErrors({ detail: 'Please fill in all required fields.' })
+      return
+    }
+
+    if (addForm.password !== addForm.password_confirm) {
+      setAddFormErrors({ password_confirm: 'Passwords do not match.' })
+      return
+    }
+
+    setIsSavingNewUser(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('email', addForm.email)
+      formData.append('full_name', addForm.full_name)
+      formData.append('password', addForm.password)
+      formData.append('password_confirm', addForm.password_confirm)
+      
+      if (addForm.bio) {
+        formData.append('bio', addForm.bio)
+      }
+      if (addForm.country) {
+        formData.append('country', addForm.country)
+      }
+      if (addAvatarFile) {
+        formData.append('avatar', addAvatarFile)
+      }
+
+      await adminUsersService.createUser(formData)
+      
+      // Reset form states
+      setAddForm({
+        email: '',
+        full_name: '',
+        password: '',
+        password_confirm: '',
+        bio: '',
+        country: ''
+      })
+      setAddAvatarFile(null)
+      setIsAddModalOpen(false)
+
+      alert('User created successfully')
+
+      // Refresh list dynamically
+      fetchUsers(1, false)
+    } catch (err) {
+      console.error(err)
+      if (err.response && err.response.data) {
+        setAddFormErrors(err.response.data)
+      } else {
+        setAddFormErrors({ detail: 'Failed to create user. Please try again.' })
+      }
+    } finally {
+      setIsSavingNewUser(false)
+    }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    if (!selectedUserId || isSavingPassword) return
+    setPasswordFormErrors(null)
+
+    if (!passwordForm.new_password || !passwordForm.confirm_password) {
+      setPasswordFormErrors({ detail: 'Please fill in all fields.' })
+      return
+    }
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordFormErrors({ confirm_password: 'Passwords do not match.' })
+      return
+    }
+
+    setIsSavingPassword(true)
+
+    try {
+      await adminUsersService.changeUserPassword(selectedUserId, {
+        new_password: passwordForm.new_password,
+        confirm_password: passwordForm.confirm_password
+      })
+
+      setIsPasswordModalOpen(false)
+      setPasswordForm({ new_password: '', confirm_password: '' })
+      alert('Password updated successfully')
+    } catch (err) {
+      console.error(err)
+      if (err.response && err.response.data) {
+        setPasswordFormErrors(err.response.data)
+      } else {
+        setPasswordFormErrors({ detail: 'Failed to update user password. Please try again.' })
+      }
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
   // Fallback for avatar image
   const defaultAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
   
   const getAvatarUrl = (userObj) => {
     const avatar = userObj?.profile?.avatar
     if (!avatar) return null
-    return avatar.startsWith('http') ? avatar : `http://127.0.0.1:8000${avatar}`
+    return getMediaUrl(avatar)
   }
 
   const renderAvatar = (userObj) => {
@@ -456,6 +581,18 @@ export default function Users() {
                 <option value="recently_active">Recently Active</option>
               </select>
             </div>
+            
+            <button 
+              type="button" 
+              className="admin-users-add-btn desktop-only-btn"
+              onClick={() => {
+                setIsAddModalOpen(true);
+                setAddFormErrors(null);
+              }}
+            >
+              <Plus size={16} />
+              <span>Add User</span>
+            </button>
             
             <button type="submit" style={{ display: 'none' }}>Submit</button>
           </form>
@@ -587,6 +724,18 @@ export default function Users() {
 
           {/* Mobile Optimized Cards List View */}
           <div className="admin-users-mobile-list">
+            <button 
+              type="button" 
+              className="admin-users-add-btn mobile-only-btn"
+              style={{ width: '100%', marginBottom: '0.75rem', justifyContent: 'center' }}
+              onClick={() => {
+                setIsAddModalOpen(true);
+                setAddFormErrors(null);
+              }}
+            >
+              <Plus size={16} />
+              <span>Add User</span>
+            </button>
             {isLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', gap: '0.5rem' }}>
                 <div className="admin-users-spinner" />
@@ -974,7 +1123,10 @@ export default function Users() {
                     borderTop: '1px solid var(--admin-border-color)', 
                     padding: '1rem 1.5rem', 
                     background: 'rgba(7, 8, 14, 0.3)',
-                    marginTop: 'auto'
+                    marginTop: 'auto',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}
                 >
                   <button 
@@ -988,12 +1140,32 @@ export default function Users() {
                     className="admin-users-btn-secondary"
                     style={{ 
                       borderColor: 'rgba(239, 68, 68, 0.4)', 
-                      color: 'var(--admin-status-danger)',
-                      marginRight: 'auto'
+                      color: 'var(--admin-status-danger)'
                     }}
                     disabled={userDetail.user.is_superuser && !currentUser?.is_superuser}
                   >
                     Delete Account
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      if (userDetail.user.is_superuser && !currentUser?.is_superuser) {
+                        alert("Only super admins can change super admin passwords.");
+                        return
+                      }
+                      setIsPasswordModalOpen(true);
+                      setPasswordForm({ new_password: '', confirm_password: '' });
+                      setPasswordFormErrors(null);
+                      setShowPasswords(false);
+                    }}
+                    className="admin-users-btn-primary"
+                    style={{ 
+                      background: 'var(--admin-grad-purple)',
+                      border: 'none'
+                    }}
+                    disabled={userDetail.user.is_superuser && !currentUser?.is_superuser}
+                  >
+                    Change Password
                   </button>
                 </div>
               </>
@@ -1166,6 +1338,258 @@ export default function Users() {
         </div>
       )}
 
+      {/* 5. Add New User Modal */}
+      {isAddModalOpen && (
+        <div className="admin-users-modal-overlay">
+          <div className="admin-users-modal admin-glow-card">
+            <div className="admin-users-modal__header">
+              <h3 className="admin-users-modal__title">Add New User</h3>
+              <button 
+                onClick={() => setIsAddModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateUser}>
+              <div className="admin-users-modal__content" style={{ maxHeight: '60vh', overflowY: 'auto', gap: '1rem' }}>
+                {addFormErrors?.detail && (
+                  <div className="admin-users-error-alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--admin-status-danger)', fontSize: '0.8125rem' }}>
+                    {addFormErrors.detail}
+                  </div>
+                )}
+                {addFormErrors?.non_field_errors && (
+                  <div className="admin-users-error-alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--admin-status-danger)', fontSize: '0.8125rem' }}>
+                    {Array.isArray(addFormErrors.non_field_errors) ? addFormErrors.non_field_errors.join(' ') : addFormErrors.non_field_errors}
+                  </div>
+                )}
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Full Name *</label>
+                  <input 
+                    type="text" 
+                    className="admin-users-form-input"
+                    required
+                    value={addForm.full_name}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  />
+                  {addFormErrors?.full_name && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.full_name) ? addFormErrors.full_name.join(' ') : addFormErrors.full_name}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Email Address *</label>
+                  <input 
+                    type="email" 
+                    className="admin-users-form-input"
+                    required
+                    value={addForm.email}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                  {addFormErrors?.email && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.email) ? addFormErrors.email.join(' ') : addFormErrors.email}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Password *</label>
+                  <input 
+                    type="password" 
+                    className="admin-users-form-input"
+                    required
+                    value={addForm.password}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, password: e.target.value }))}
+                  />
+                  {addFormErrors?.password && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.password) ? addFormErrors.password.join(' ') : addFormErrors.password}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Confirm Password *</label>
+                  <input 
+                    type="password" 
+                    className="admin-users-form-input"
+                    required
+                    value={addForm.password_confirm}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, password_confirm: e.target.value }))}
+                  />
+                  {addFormErrors?.password_confirm && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.password_confirm) ? addFormErrors.password_confirm.join(' ') : addFormErrors.password_confirm}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Bio (Optional)</label>
+                  <textarea 
+                    className="admin-users-form-textarea"
+                    value={addForm.bio}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, bio: e.target.value }))}
+                  />
+                  {addFormErrors?.bio && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.bio) ? addFormErrors.bio.join(' ') : addFormErrors.bio}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Country (Optional)</label>
+                  <input 
+                    type="text" 
+                    className="admin-users-form-input"
+                    value={addForm.country}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, country: e.target.value }))}
+                  />
+                  {addFormErrors?.country && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(addFormErrors.country) ? addFormErrors.country.join(' ') : addFormErrors.country}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Avatar (Optional)</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="admin-users-form-input"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setAddAvatarFile(e.target.files[0])
+                      }
+                    }}
+                  />
+                  {addAvatarFile && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--admin-status-success)', marginTop: '0.25rem', display: 'block' }}>
+                      Selected: {addAvatarFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="admin-users-modal__footer">
+                <button 
+                  type="button" 
+                  className="admin-users-btn-secondary" 
+                  onClick={() => setIsAddModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="admin-users-btn-primary" 
+                  disabled={isSavingNewUser}
+                >
+                  {isSavingNewUser ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="admin-users-modal-overlay">
+          <div className="admin-users-modal admin-glow-card">
+            <div className="admin-users-modal__header">
+              <h3 className="admin-users-modal__title">Change Password</h3>
+              <button 
+                onClick={() => setIsPasswordModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="admin-users-modal__content" style={{ gap: '1.25rem' }}>
+                {passwordFormErrors?.detail && (
+                  <div className="admin-users-error-alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--admin-status-danger)', fontSize: '0.8125rem' }}>
+                    {passwordFormErrors.detail}
+                  </div>
+                )}
+                {passwordFormErrors?.non_field_errors && (
+                  <div className="admin-users-error-alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--admin-status-danger)', fontSize: '0.8125rem' }}>
+                    {Array.isArray(passwordFormErrors.non_field_errors) ? passwordFormErrors.non_field_errors.join(' ') : passwordFormErrors.non_field_errors}
+                  </div>
+                )}
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">New Password *</label>
+                  <input 
+                    type={showPasswords ? 'text' : 'password'} 
+                    className="admin-users-form-input"
+                    required
+                    value={passwordForm.new_password}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, new_password: e.target.value }))}
+                  />
+                  {passwordFormErrors?.new_password && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(passwordFormErrors.new_password) ? passwordFormErrors.new_password.join(' ') : passwordFormErrors.new_password}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-users-form-group">
+                  <label className="admin-users-form-label">Confirm Password *</label>
+                  <input 
+                    type={showPasswords ? 'text' : 'password'} 
+                    className="admin-users-form-input"
+                    required
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirm_password: e.target.value }))}
+                  />
+                  {passwordFormErrors?.confirm_password && (
+                    <span style={{ color: 'var(--admin-status-danger)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      {Array.isArray(passwordFormErrors.confirm_password) ? passwordFormErrors.confirm_password.join(' ') : passwordFormErrors.confirm_password}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '-0.25rem' }}>
+                  <input 
+                    type="checkbox" 
+                    id="show-passwords-checkbox"
+                    checked={showPasswords}
+                    onChange={(e) => setShowPasswords(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <label htmlFor="show-passwords-checkbox" style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                    Show Passwords
+                  </label>
+                </div>
+              </div>
+              <div className="admin-users-modal__footer">
+                <button 
+                  type="button" 
+                  className="admin-users-btn-secondary" 
+                  onClick={() => setIsPasswordModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="admin-users-btn-primary" 
+                  disabled={isSavingPassword}
+                >
+                  {isSavingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+

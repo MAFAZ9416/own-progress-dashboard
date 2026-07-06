@@ -1,9 +1,8 @@
-- [x] Emergency Fix — Phase 4A Assign Skill Failure
-  - [x] Remove generic frontend alert error string and replace with dynamic parser displaying precise backend response details
-  - [x] Correct double /api endpoint prefix in frontend skillsService.js createSkill call
-  - [x] Standardize AdminSkillCreateView response strings to exact validation values ('User already has this skill')
-  - [x] Update test cases and assertions to match the new activity log and error response strings
-  - [x] Re-run test suite successfully (50 tests ran, all passed)
-  - [x] Re-run python manage.py check (system checks passed, no issues)
-  - [x] Compile frontend production assets (Vite build compiled successfully)
+- [x] Fix Progressly production API endpoint configuration
+  - [x] Modify frontend/.env.production to set VITE_API_URL to backend base API url ('https://progressly.onrender.com/api')
+  - [x] Add refreshToken endpoint call to authService.js
+  - [x] Audit all other frontend service endpoints and verify no duplicated paths exist
+  - [x] Run npm run build successfully to verify production bundle build compiles cleanly
+  - [x] Run backend test suite successfully (50/50 test cases passed)
+  - [x] Commit and push fixes to GitHub origin main repository (automatically triggering Vercel redeployment)
   - [x] Overwrite walkthrough.md with updated verification details

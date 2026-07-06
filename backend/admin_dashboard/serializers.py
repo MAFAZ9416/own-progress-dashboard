@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from users.models import UserProfile
 from skills.models import Skill
 from tasks.models import Task
@@ -135,5 +137,79 @@ class AdminSkillCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     color = serializers.CharField(max_length=7, required=False, default='#3B82F6')
     target_tasks = serializers.IntegerField(default=10, min_value=1)
+
+
+class AdminUserCreateSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(max_length=100, required=True)
+    password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+    bio = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    country = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'password_confirm', 'full_name', 'bio', 'country', 'avatar']
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email address already exists.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.get('password') != attrs.get('password_confirm'):
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+        
+        try:
+            validate_password(attrs.get('password'))
+        except ValidationError as e:
+            raise serializers.ValidationError({"password": list(e.messages)})
+        return attrs
+
+    def create(self, validated_data):
+        email = validated_data.get('email')
+        password = validated_data.get('password')
+        full_name = validated_data.get('full_name')
+        bio = validated_data.get('bio', '')
+        country = validated_data.get('country', '')
+        avatar = validated_data.get('avatar', None)
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password
+        )
+
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.full_name = full_name
+        if bio:
+            profile.bio = bio
+        if country:
+            profile.country = country
+        if avatar:
+            profile.avatar = avatar
+        profile.save()
+
+        # Update cache in memory so serializing user returns populated profile
+        user.profile = profile
+
+        return user
+
+
+class AdminUserPasswordChangeSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+    confirm_password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+
+    def validate(self, attrs):
+        if attrs.get('new_password') != attrs.get('confirm_password'):
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        
+        try:
+            validate_password(attrs.get('new_password'))
+        except ValidationError as e:
+            raise serializers.ValidationError({"new_password": list(e.messages)})
+        return attrs
+
+
 
 

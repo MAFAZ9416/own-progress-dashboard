@@ -44,4 +44,16 @@ apiClient.interceptors.response.use(
   },
 )
 
+export const getMediaUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const apiBase = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api';
+  const backendBase = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : (apiBase.endsWith('/api/') ? apiBase.slice(0, -5) : apiBase);
+  const cleanBackendBase = backendBase.replace(/\/+$/, '');
+  const cleanPath = path.replace(/^\/+/, '');
+  return `${cleanBackendBase}/${cleanPath}`;
+};
+
 export default apiClient
