@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react'
+import React, { useState, memo, useMemo } from 'react'
 import { Check, History, Pencil, Trash2, Calendar } from 'lucide-react'
 
 /**
@@ -29,12 +29,26 @@ export default memo(function TaskCard({ task, skills, onEdit, onDelete, onToggle
   const skillColor = skillObj?.color ?? '#4f46e5'
 
   const isCompleted = task.status === 'completed'
+  const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'in_progress' ? 'In Progress' : 'Todo'
+  const statusClass = task.status === 'completed' ? 'tc-card__badge--completed' : task.status === 'in_progress' ? 'tc-card__badge--pending' : 'tc-card__badge--pending'
+  const priorityLabel = task.priority ? task.priority.replace('_', ' ') : 'medium'
+  const priorityClass = task.priority === 'high' ? 'text-rose-400 border-rose-500/20 bg-rose-500/10' : task.priority === 'low' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10'
 
   const formattedDate = new Date(task.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
+  const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+
+  const isOverdue = useMemo(() => {
+    if (!task.due_date || isCompleted) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(task.due_date)
+    due.setHours(0, 0, 0, 0)
+    return due < today
+  }, [task.due_date, isCompleted])
 
   const handleToggle = async () => {
     if (isToggling) return
@@ -72,7 +86,7 @@ export default memo(function TaskCard({ task, skills, onEdit, onDelete, onToggle
           disabled={isToggling}
           className={`tc-card__check ${isCompleted ? 'tc-card__check--done' : 'tc-card__check--pending'}`}
           title={isCompleted ? 'Reopen Task' : 'Mark as Complete'}
-          aria-label={isCompleted ? 'Mark task as pending' : 'Mark task as completed'}
+          aria-label={isCompleted ? 'Mark task as todo' : 'Mark task as completed'}
         >
           {isCompleted ? (
             <Check size={18} strokeWidth={3} className="tc-card__check-icon" />
@@ -132,17 +146,19 @@ export default memo(function TaskCard({ task, skills, onEdit, onDelete, onToggle
 
         {/* Status Badge */}
         <span
-          className={`tc-card__badge ${
-            isCompleted ? 'tc-card__badge--completed' : 'tc-card__badge--pending'
-          }`}
+          className={`tc-card__badge ${statusClass}`}
         >
-          {isCompleted ? 'Completed' : 'Pending'}
+          {statusLabel}
+        </span>
+
+        <span className={`tc-card__badge border ${priorityClass}`}>
+          {priorityLabel}
         </span>
 
         {/* Due Date */}
-        <span className="tc-card__date">
+        <span className={`tc-card__date ${isOverdue ? 'text-rose-400 font-semibold' : ''}`}>
           <Calendar size={12} className="inline-block mr-1 opacity-60" />
-          {formattedDate}
+          {dueDate ? (isOverdue ? `${dueDate} (Overdue)` : dueDate) : formattedDate}
         </span>
       </div>
     </div>

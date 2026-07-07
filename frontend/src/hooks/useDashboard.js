@@ -53,6 +53,12 @@ export function useDashboard() {
   const [pendingTasks,   setPendingTasks]   = useState([])
   const [skills,         setSkills]         = useState([])
   const [topSkills,      setTopSkills]      = useState([])
+  const [recentAchievements, setRecentAchievements] = useState([])
+  const [achievements,   setAchievements]   = useState([])
+  const [recentActivities, setRecentActivities] = useState([])
+  const [profileCompletion, setProfileCompletion] = useState(0)
+  const [profileSuggestions, setProfileSuggestions] = useState([])
+  const [streakHistory,   setStreakHistory]   = useState([])
   const [isLoading,      setIsLoading]      = useState(true)
   const [error,          setError]          = useState(null)
 
@@ -73,7 +79,7 @@ export function useDashboard() {
           dashboardService.getSkills(),
         ])
 
-      const pendingTasksData = (tasksData || []).filter(task => task?.status?.toLowerCase() === 'pending' || task?.status === 'pending')
+      const pendingTasksData = (tasksData || []).filter(task => task?.status?.toLowerCase() !== 'completed')
 
       // 1. Transform Weekly Data (ensure all 7 days of the current week exist)
       const daysOfWeekShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -177,9 +183,15 @@ export function useDashboard() {
       setRecent(transformedRecent)
       setHeatmap(transformedHeatmap)
       setTasks(tasksData || [])
-      setPendingTasks(pendingTasksData || [])
+      setPendingTasks((tasksData || []).filter(task => task.status !== 'completed'))
       setSkills(transformedSkills)
       setTopSkills(sortedSkills)
+      setRecentAchievements(summaryData?.recent_achievements ?? [])
+      setAchievements(summaryData?.achievements ?? [])
+      setRecentActivities(summaryData?.recent_activities ?? [])
+      setProfileCompletion(summaryData?.profile_completion ?? 0)
+      setProfileSuggestions(summaryData?.profile_suggestions ?? [])
+      setStreakHistory(summaryData?.streak_history ?? [])
     } catch (err) {
       // Extract the most useful error message available
       const msg =
@@ -233,6 +245,12 @@ export function useDashboard() {
     pendingTasks,
     skills,
     topSkills,
+    recentAchievements,
+    achievements,
+    recentActivities,
+    profileCompletion,
+    profileSuggestions,
+    streakHistory,
     isLoading,
     error,
     refetch: fetchAll

@@ -21,7 +21,9 @@ export default function TaskModal({ isOpen, onClose, onSaveSuccess, editTask, sk
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [skillId, setSkillId] = useState('')
-  const [status, setStatus] = useState('pending')
+  const [status, setStatus] = useState('todo')
+  const [priority, setPriority] = useState('medium')
+  const [dueDate, setDueDate] = useState('')
 
   // API states
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,13 +36,17 @@ export default function TaskModal({ isOpen, onClose, onSaveSuccess, editTask, sk
         setTitle(editTask.title)
         setDescription(editTask.description || '')
         setSkillId(editTask.skill.toString())
-        setStatus(editTask.status || 'pending')
+        setStatus(editTask.status || 'todo')
+        setPriority(editTask.priority || 'medium')
+        setDueDate(editTask.due_date || '')
       } else {
         setTitle('')
         setDescription('')
         // Default to first skill if available
         setSkillId(skills.length > 0 ? skills[0].id.toString() : '')
-        setStatus('pending')
+        setStatus('todo')
+        setPriority('medium')
+        setDueDate('')
       }
       setApiError(null)
       setIsSubmitting(false)
@@ -69,6 +75,8 @@ export default function TaskModal({ isOpen, onClose, onSaveSuccess, editTask, sk
       description: description.trim() || null,
       skill: parseInt(skillId, 10),
       status: status,
+      priority,
+      due_date: dueDate || null,
     }
 
     try {
@@ -228,11 +236,41 @@ export default function TaskModal({ isOpen, onClose, onSaveSuccess, editTask, sk
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full bg-slate-950/40 border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
                 >
-                  <option value="pending" className="bg-[#131b2e] text-slate-200">Pending</option>
+                  <option value="todo" className="bg-[#131b2e] text-slate-200">Todo</option>
+                  <option value="in_progress" className="bg-[#131b2e] text-slate-200">In Progress</option>
                   <option value="completed" className="bg-[#131b2e] text-slate-200">Completed</option>
                 </select>
               </div>
             )}
+
+            <div>
+              <label htmlFor="task-priority" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Priority
+              </label>
+              <select
+                id="task-priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="w-full bg-slate-950/40 border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
+              >
+                <option value="low" className="bg-[#131b2e] text-slate-200">Low</option>
+                <option value="medium" className="bg-[#131b2e] text-slate-200">Medium</option>
+                <option value="high" className="bg-[#131b2e] text-slate-200">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="task-due-date" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Due Date
+              </label>
+              <input
+                id="task-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full bg-slate-950/40 border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all focus:ring-1 focus:ring-indigo-500/30"
+              />
+            </div>
 
             {/* Footer Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-800/60 mt-6">

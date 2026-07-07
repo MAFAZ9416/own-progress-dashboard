@@ -5,8 +5,15 @@ from skills.models import Skill
 
 class Task(models.Model):
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
+        ('todo', 'Todo'),
+        ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
+    )
+
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
     )
 
     user = models.ForeignKey(
@@ -27,7 +34,18 @@ class Task(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending'
+        default='todo'
+    )
+
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='medium'
+    )
+
+    due_date = models.DateField(
+        blank=True,
+        null=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,11 +54,17 @@ class Task(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['user', 'status']),
+            models.Index(fields=['user', 'priority']),
             models.Index(fields=['user', '-created_at']),
         ]
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if self.status == 'pending':
+            self.status = 'todo'
+        super().save(*args, **kwargs)
     
     
 class TaskCompletion(models.Model):

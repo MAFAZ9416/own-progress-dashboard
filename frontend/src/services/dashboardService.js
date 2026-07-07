@@ -124,6 +124,19 @@ const dashboardService = {
     const { data } = await apiClient.get('/skills/')
     return data || []
   },
+
+  search: async (query) => {
+    const { data } = await apiClient.get('/dashboard/search/', { params: { q: query } })
+    return data || { results: [] }
+  },
+
+  exportData: async (format = 'json') => {
+    const response = await apiClient.get('/dashboard/export/', {
+      params: { format },
+      responseType: format === 'csv' ? 'blob' : 'json',
+    })
+    return response
+  },
 }
 
 export default dashboardService

@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Monitor, Eye, Bell, User, Info, Check, ExternalLink, ChevronRight, Mail, MessageSquare, Loader2 } from 'lucide-react'
+import { Monitor, Eye, Bell, User, Info, Check, ExternalLink, ChevronRight, Mail, MessageSquare, Loader2, Shield, Monitor as DeviceIcon, Clock } from 'lucide-react'
 import feedbackService from '../services/feedbackService'
 import authService from '../services/authService'
+import dashboardService from '../services/dashboardService'
+import loginHistoryService from '../services/loginHistoryService'
 import './Settings.css'
 
 export default function Settings() {
@@ -85,7 +87,6 @@ export default function Settings() {
     }
   }
 
-  // 3. Feedback Form State
   const [feedbackData, setFeedbackData] = useState({
     name: '',
     email: '',
@@ -94,6 +95,19 @@ export default function Settings() {
   const [isSendingFeedback, setIsSendingFeedback] = useState(false)
   const [feedbackErrors, setFeedbackErrors] = useState({})
   const [feedbackToast, setFeedbackToast] = useState(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
+
+  // Login History State
+  const [loginHistory, setLoginHistory] = useState([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+
+  useEffect(() => {
+    loginHistoryService.getLoginHistory()
+      .then(data => setLoginHistory(data))
+      .catch(() => setLoginHistory([]))
+      .finally(() => setIsLoadingHistory(false))
+  }, [])
 
   const showFeedbackToast = (msg, type = 'success') => {
     setFeedbackToast({ text: msg, type })
@@ -184,6 +198,35 @@ export default function Settings() {
     day: 'numeric',
     year: 'numeric'
   })
+
+  const handleExport = async (format) => {
+    setIsExporting(true)
+    setExportError(null)
+    try {
+      const response = await dashboardService.exportData(format)
+      if (format === 'csv') {
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'progressly-export.csv'
+        link.click()
+        window.URL.revokeObjectURL(url)
+      } else {
+        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'progressly-export.json'
+        link.click()
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      setExportError(err?.response?.data?.detail ?? err?.message ?? 'Failed to export your data.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <div className="settings-page">
@@ -363,7 +406,7 @@ export default function Settings() {
         <div className="app-details-grid">
           <div className="app-detail-row">
             <span className="app-detail-label">Version</span>
-            <span className="app-detail-value">Progressly V1.6</span>
+            <span className="app-detail-value">Progressly V2.0</span>
           </div>
           <div className="app-detail-row">
             <span className="app-detail-label">Developer</span>
@@ -382,6 +425,65 @@ export default function Settings() {
             <span className="app-detail-label">Last Updated</span>
             <span className="app-detail-value">{currentDateStr}</span>
           </div>
+        </div>
+      </div>
+
+      <div className="settings-card">
+        <h2 className="settings-card-title">
+          <Check size={18} /> Export My Data
+        </h2>
+        <p className="settings-card-subtitle">
+          Download your profile, skills, tasks, achievements, and progress snapshot.
+        </p>
+        <div className="account-info-actions">
+          <button className="settings-btn" onClick={() => handleExport('json')} disabled={isExporting}>
+            Export JSON <ExternalLink size={14} />
+          </button>
+          <button className="settings-btn" onClick={() => handleExport('csv')} disabled={isExporting}>
+            Export CSV <ExternalLink size={14} />
+          </button>
+        </div>
+        {exportError && <div className="settings-inline-error">{exportError}</div>}
+      </div>
+
+      {/* ── Section: Security — Login History ── */}
+      <div className="settings-card">
+        <h2 className="settings-card-title">
+          <Shield size={18} /> Security — Login History
+        </h2>
+        <p className="settings-card-subtitle">
+          Recent account access. Showing last 15 sessions.
+        </p>
+        <div className="login-history-list">
+          {isLoadingHistory ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="login-history-item login-history-item--skeleton">
+                <div className="skeleton-shimmer" style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div className="skeleton-shimmer" style={{ height: 13, width: '50%', borderRadius: 5 }} />
+                  <div className="skeleton-shimmer" style={{ height: 11, width: '70%', borderRadius: 5 }} />
+                </div>
+              </div>
+            ))
+          ) : loginHistory.length === 0 ? (
+            <p className="settings-card-subtitle" style={{ marginTop: 8 }}>No login records found.</p>
+          ) : (
+            loginHistory.map(record => (
+              <div key={record.id} className="login-history-item">
+                <div className="login-history-icon">
+                  <DeviceIcon size={16} strokeWidth={1.8} />
+                </div>
+                <div className="login-history-info">
+                  <span className="login-history-device">{record.device} · {record.browser}</span>
+                  <span className="login-history-meta">
+                    {record.ip_address && <span>{record.ip_address} · </span>}
+                    <Clock size={11} style={{ display: 'inline', marginRight: 3 }} />
+                    {new Date(record.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

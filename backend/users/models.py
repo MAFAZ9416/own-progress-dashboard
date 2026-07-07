@@ -39,3 +39,23 @@ class PasswordResetToken(models.Model):
     def is_expired(self):
         return timezone.now() > self.created_at + timedelta(minutes=30)
 
+
+class LoginHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_history')
+    device = models.CharField(max_length=120, blank=True, default='Unknown device')
+    browser = models.CharField(max_length=120, blank=True, default='Unknown browser')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} login at {self.created_at:%Y-%m-%d %H:%M}"
+

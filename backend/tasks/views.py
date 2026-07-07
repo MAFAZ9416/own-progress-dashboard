@@ -10,9 +10,10 @@ from rest_framework.views import APIView
 
 from .models import Task, TaskCompletion, TaskActivity
 from .serializers import TaskCompletionSerializer, TaskSerializer, TaskActivitySerializer
-from streaks.models import Streak
-from streaks.services import update_user_streak
-from notifications.notification_service import create_notification, create_skill_milestone_notification
+from streaks.streak_service import update_user_streak
+from notifications.notification_service import create_notification, create_skill_milestone_notification, create_streak_notification
+from analytics.activity_service import log_activity
+from analytics.achievement_service import check_achievements_for_user
 
 
 def _notify_task_completion(task, user):
@@ -46,12 +47,54 @@ class TaskViewSet(viewsets.ModelViewSet):
             .order_by("-created_at")
         )
 
+    def _record_status_change(self, task, old_status, new_status):
+        if old_status == new_status:
+            return
+
+        if new_status == 'completed':
+            TaskCompletion.objects.get_or_create(
+                task=task,
+                user=self.request.user,
+                skill=task.skill,
+            )
+            TaskActivity.objects.create(task=task, user=self.request.user, action="completed")
+            _notify_task_completion(task, self.request.user)
+            streak = update_user_streak(self.request.user)
+            create_streak_notification(self.request.user, streak)
+            log_activity(
+                self.request.user,
+                'task_completed',
+                f'Completed task {task.title}',
+                metadata={
+                    'task_id': task.id,
+                    'task_name': task.title,
+                    'skill_id': task.skill_id,
+                    'skill_name': task.skill.name,
+                },
+            )
+            check_achievements_for_user(self.request.user, skill=task.skill, task=task, streak=streak)
+        elif old_status == 'completed' and new_status in {'todo', 'in_progress'}:
+            TaskCompletion.objects.filter(task=task).delete()
+            TaskActivity.objects.create(task=task, user=self.request.user, action="reopened")
+            log_activity(
+                self.request.user,
+                'task_reopened',
+                f'Reopened task {task.title}',
+                metadata={'task_id': task.id, 'task_name': task.title},
+            )
+
     def perform_create(self, serializer):
         skill = serializer.validated_data.get("skill")
         if skill.user != self.request.user:
             raise ValidationError({"skill": "You may only assign tasks to your own skills."})
         task = serializer.save(user=self.request.user)
         TaskActivity.objects.create(task=task, user=self.request.user, action="created")
+        log_activity(
+            self.request.user,
+            'task_created',
+            f'Created task {task.title}',
+            metadata={'task_id': task.id, 'task_name': task.title, 'skill_id': task.skill_id, 'skill_name': task.skill.name},
+        )
 
     def perform_update(self, serializer):
         old_instance = serializer.instance
@@ -66,29 +109,18 @@ class TaskViewSet(viewsets.ModelViewSet):
         new_skill = task.skill_id
         new_status = task.status
 
+        if new_status == 'pending':
+            new_status = 'todo'
+            task.status = 'todo'
+            task.save(update_fields=['status'])
+
         # Determine if content other than status changed
         content_changed = (old_title != new_title) or (old_description != new_description) or (old_skill != new_skill)
 
         # Log appropriate action
         if old_status != new_status:
-            if new_status == 'completed':
-                # Sync TaskCompletion to keep dashboard analytics consistent
-                TaskCompletion.objects.get_or_create(
-                    task=task,
-                    user=self.request.user,
-                    skill=task.skill
-                )
-                TaskActivity.objects.create(task=task, user=self.request.user, action="completed")
-                _notify_task_completion(task, self.request.user)
+            self._record_status_change(task, old_status, new_status)
 
-                # Update streak
-                update_user_streak(self.request.user)
-            elif new_status == 'pending':
-                # Clean up TaskCompletion to keep dashboard analytics consistent
-                TaskCompletion.objects.filter(task=task).delete()
-                TaskActivity.objects.create(task=task, user=self.request.user, action="reopened")
-
-            # If user changed status AND title/description/skill in the same edit
             if content_changed:
                 TaskActivity.objects.create(task=task, user=self.request.user, action="updated")
         elif content_changed:
@@ -125,7 +157,20 @@ class CompleteTaskView(APIView):
 
         _notify_task_completion(task, request.user)
 
-        update_user_streak(request.user)
+        streak = update_user_streak(request.user)
+        create_streak_notification(request.user, streak)
+        log_activity(
+            request.user,
+            'task_completed',
+            f'Completed task {task.title}',
+            metadata={
+                'task_id': task.id,
+                'task_name': task.title,
+                'skill_id': task.skill_id,
+                'skill_name': task.skill.name,
+            },
+        )
+        check_achievements_for_user(request.user, skill=task.skill, task=task, streak=streak)
 
         serializer = TaskCompletionSerializer(completion)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -141,7 +186,7 @@ class ReopenTaskView(APIView):
             Task.objects.select_related("skill"), pk=task_id, user=request.user
         )
 
-        task.status = "pending"
+        task.status = "todo"
         task.save(update_fields=["status"])
 
         TaskActivity.objects.create(task=task, user=request.user, action="reopened")

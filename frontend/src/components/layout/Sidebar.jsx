@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { LayoutDashboard, Brain, ClipboardList, LogOut, Settings, Bell } from 'lucide-react'
+import { LayoutDashboard, Brain, ClipboardList, LogOut, Settings, Bell, Trophy, User } from 'lucide-react'
 import { getMediaUrl } from '../../api'
 
 const NAV_ITEMS = [
@@ -21,6 +21,11 @@ const NAV_ITEMS = [
     icon: <ClipboardList size={18} strokeWidth={1.8} />,
   },
   {
+    label: 'Achievements',
+    to: '/achievements',
+    icon: <Trophy size={18} strokeWidth={1.8} />,
+  },
+  {
     label: 'Notifications',
     to: '/notifications',
     icon: <Bell size={18} strokeWidth={1.8} />,
@@ -31,6 +36,7 @@ const NAV_ITEMS = [
     icon: <Settings size={18} strokeWidth={1.8} />,
   },
 ]
+
 
 const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth()

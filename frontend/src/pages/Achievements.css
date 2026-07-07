@@ -1,0 +1,342 @@
+/* ─── Achievements Page ──────────────────────────────────────────── */
+
+.ach-page {
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 40px;
+}
+
+/* ── Hero Header ── */
+.ach-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+}
+
+.ach-hero__icon {
+  font-size: 48px;
+  filter: drop-shadow(0 4px 16px rgba(124, 58, 237, 0.4));
+  animation: ach-float 3s ease-in-out infinite;
+}
+
+@keyframes ach-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.ach-hero__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.ach-hero__sub {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ── Stats Row ── */
+.ach-stats {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 16px;
+  padding: 20px 32px;
+  backdrop-filter: blur(10px);
+}
+
+.ach-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ach-stat__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -1px;
+}
+
+.ach-stat__label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.ach-stat__divider {
+  width: 1px;
+  height: 48px;
+  background: rgba(51, 65, 85, 0.6);
+  margin: 0 16px;
+}
+
+/* ── Filter Tabs ── */
+.ach-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Achievements Grid ── */
+.ach-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Achievement Card ── */
+.ach-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.ach-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.ach-card--unlocked {
+  border-color: rgba(124, 58, 237, 0.25);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.ach-card--unlocked:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.15);
+}
+
+.ach-card--locked {
+  opacity: 0.72;
+}
+
+.ach-card--locked:hover {
+  opacity: 0.9;
+}
+
+.ach-card--skeleton {
+  pointer-events: none;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* Glow effect behind unlocked icons */
+.ach-card__glow {
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  opacity: 0.25;
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+/* Icon wrapper */
+.ach-card__icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.ach-card:hover .ach-card__icon-wrap {
+  transform: scale(1.08);
+}
+
+.ach-card__emoji {
+  font-size: 30px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.ach-card__lock-icon {
+  color: #475569;
+  width: 28px;
+  height: 28px;
+}
+
+/* Card content */
+.ach-card__content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.ach-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.ach-card__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.ach-card__name--locked {
+  color: #64748b;
+}
+
+.ach-card__badge-unlocked {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 20px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.ach-card__desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+/* Progress bar */
+.ach-card__progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ach-card__progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ach-card__progress-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.ach-card__progress-val {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ach-card__bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.ach-card__bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 4px;
+}
+
+.ach-card__unlock-date {
+  font-size: 12px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+/* ── Empty State ── */
+.ach-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px dashed rgba(51, 65, 85, 0.5);
+  border-radius: 20px;
+}
+
+.ach-empty__icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  filter: grayscale(0.5);
+  animation: ach-float 3s ease-in-out infinite;
+}
+
+.ach-empty__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0 0 8px 0;
+}
+
+.ach-empty__desc {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ── Skeleton shimmer ── */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .ach-hero {
+    padding: 20px;
+    gap: 14px;
+  }
+  .ach-hero__icon { font-size: 36px; }
+  .ach-hero__title { font-size: 22px; }
+  .ach-stats { padding: 16px 20px; }
+  .ach-stat__value { font-size: 24px; }
+  .ach-card { padding: 16px; gap: 14px; }
+  .ach-card__icon-wrap { width: 52px; height: 52px; }
+  .ach-card__emoji { font-size: 24px; }
+}

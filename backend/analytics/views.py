@@ -1,6 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, F
+from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +10,8 @@ from rest_framework import status
 from skills.models import Skill
 from tasks.models import Task, TaskCompletion
 from streaks.models import Streak
+from analytics.models import Achievement, UserAchievement, Activity
+from analytics.achievement_service import seed_default_achievements
 
 
 class DashboardSummaryView(APIView):
@@ -93,13 +96,15 @@ class DashboardSummaryView(APIView):
         task_stats = Task.objects.filter(user=user).aggregate(
             total=Count('id'),
             completed=Count('id', filter=Q(status='completed')),
-            pending=Count('id', filter=Q(status='pending')),
+            pending=Count('id', filter=Q(status__in=['todo', 'pending'])),
+            in_progress=Count('id', filter=Q(status='in_progress')),
             recent=Count('id', filter=Q(created_at__gte=thirty_days_ago)),
         )
         total_skills = skill_stats['total']
         total_tasks = task_stats['total']
         completed_tasks = task_stats['completed']
         pending_tasks = task_stats['pending']
+        in_progress_tasks = task_stats['in_progress']
         skills_change = skill_stats['recent']
         tasks_change = task_stats['recent']
 
@@ -115,6 +120,57 @@ class DashboardSummaryView(APIView):
         # Read cached longest streak; avoid write on read path
         streak_obj, _ = Streak.objects.get_or_create(user=user)
         longest_streak = max(longest_streak, streak_obj.longest_streak)
+
+        streak_history = list(
+            TaskCompletion.objects.filter(user=user)
+            .values('completed_date')
+            .annotate(count=Count('id'))
+            .order_by('-completed_date')[:30]
+        )
+
+        unlocked_achievements = list(
+            UserAchievement.objects.filter(user=user)
+            .select_related('achievement')
+            .order_by('-unlocked_at')[:10]
+        )
+
+        recent_activities = list(
+            Activity.objects.filter(user=user)
+            .order_by('-created_at')[:20]
+        )
+
+        seed_default_achievements()
+        all_achievements = list(Achievement.objects.all().order_by('created_at'))
+
+        completed_skill_count = Skill.objects.filter(user=user).annotate(
+            completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed'))
+        ).filter(completed_tasks_count__gte=1).count()
+
+        profile = getattr(user, 'profile', None)
+        profile_score = 0
+        suggestions = []
+        if getattr(profile, 'avatar', None):
+            profile_score += 20
+        else:
+            suggestions.append('Add an avatar to complete your profile')
+        if getattr(profile, 'bio', ''):
+            profile_score += 20
+        else:
+            suggestions.append('Add a bio to complete your profile')
+        if getattr(profile, 'country', ''):
+            profile_score += 20
+        else:
+            suggestions.append('Add your country to complete your profile')
+        if total_skills > 0:
+            profile_score += 20
+        else:
+            suggestions.append('Create your first skill')
+        if total_tasks > 0:
+            profile_score += 20
+        else:
+            suggestions.append('Create your first task')
+
+        profile_score = min(profile_score, 100)
 
         # ── Active days in the current week (derived from active_dates) ──
         monday = today - timedelta(days=today.weekday())
@@ -135,6 +191,7 @@ class DashboardSummaryView(APIView):
             "total_tasks":        total_tasks,
             "completed_tasks":    completed_tasks,
             "pending_tasks":      pending_tasks,
+            "in_progress_tasks":   in_progress_tasks,
             "current_streak":     current_streak,
             "longest_streak":     longest_streak,
             "tasks_done":         completed_tasks,
@@ -143,9 +200,107 @@ class DashboardSummaryView(APIView):
             "tasks_change":       tasks_change,
             "current_streak_trend": current_streak_trend,
             "longest_streak_trend": longest_streak_trend,
+            "streak_history": streak_history,
+            "recent_achievements": [
+                {
+                    'id': item.id,
+                    'name': item.achievement.name,
+                    'description': item.achievement.description,
+                    'icon': item.achievement.icon,
+                    'unlocked_at': item.unlocked_at,
+                }
+                for item in unlocked_achievements
+            ],
+            "achievements": [
+                {
+                    'id': achievement.id,
+                    'name': achievement.name,
+                    'description': achievement.description,
+                    'icon': achievement.icon,
+                    'unlocked': any(ua.achievement_id == achievement.id for ua in unlocked_achievements),
+                }
+                for achievement in all_achievements
+            ],
+            "recent_activities": [
+                {
+                    'id': item.id,
+                    'action_type': item.action_type,
+                    'message': item.message,
+                    'metadata': item.metadata,
+                    'created_at': item.created_at,
+                }
+                for item in recent_activities
+            ],
+            "profile_completion": profile_score,
+            "profile_suggestions": suggestions,
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class SearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = (request.query_params.get('q') or '').strip()
+        if not query:
+            return Response({'results': []}, status=status.HTTP_200_OK)
+
+        skills = Skill.objects.filter(user=request.user, name__icontains=query)[:10]
+        tasks = Task.objects.filter(user=request.user, title__icontains=query)[:10]
+        achievements = Achievement.objects.filter(name__icontains=query)[:10]
+
+        results = []
+        for skill in skills:
+            results.append({'type': 'skill', 'id': skill.id, 'label': skill.name, 'path': '/skills'})
+        for task in tasks:
+            results.append({'type': 'task', 'id': task.id, 'label': task.title, 'path': '/tasks'})
+        for achievement in achievements:
+            results.append({'type': 'achievement', 'id': achievement.id, 'label': achievement.name, 'path': '/achievements'})
+
+        return Response({'results': results[:20]}, status=status.HTTP_200_OK)
+
+
+class ExportDataView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        export_format = (request.query_params.get('format') or 'json').lower()
+
+        payload = {
+            'profile': {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'full_name': getattr(getattr(request.user, 'profile', None), 'full_name', ''),
+                'bio': getattr(getattr(request.user, 'profile', None), 'bio', ''),
+                'country': getattr(getattr(request.user, 'profile', None), 'country', ''),
+            },
+            'skills': list(Skill.objects.filter(user=request.user).values()),
+            'tasks': list(Task.objects.filter(user=request.user).values()),
+            'achievements': list(UserAchievement.objects.filter(user=request.user).select_related('achievement').values('achievement__name', 'achievement__description', 'achievement__icon', 'unlocked_at')),
+            'progress': {
+                'total_skills': Skill.objects.filter(user=request.user).count(),
+                'total_tasks': Task.objects.filter(user=request.user).count(),
+                'completed_tasks': Task.objects.filter(user=request.user, status='completed').count(),
+            },
+        }
+
+        if export_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="progressly-export.csv"'
+            rows = [
+                'section,title,details',
+                f"profile,{payload['profile']['full_name'] or payload['profile']['username']},email={payload['profile']['email']}",
+            ]
+            for skill in payload['skills']:
+                rows.append(f"skill,{skill['name']},status={skill['id']}")
+            for task in payload['tasks']:
+                rows.append(f"task,{task['title']},status={task['status']}")
+            response.write('\n'.join(rows))
+            return response
+
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 
@@ -438,3 +593,101 @@ class HeatmapAnalyticsView(APIView):
         ]
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class AchievementsView(APIView):
+    """
+    Dedicated achievements endpoint.
+    Returns all achievements with per-user unlock status,
+    unlock date, and contextual progress hints.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from analytics.achievement_service import seed_default_achievements
+        from tasks.models import Task
+        from skills.models import Skill
+        from streaks.models import Streak
+
+        user = request.user
+        seed_default_achievements()
+
+        all_achievements = Achievement.objects.all().order_by('created_at')
+        user_unlocked = {
+            ua.achievement_id: ua
+            for ua in UserAchievement.objects.filter(user=user).select_related('achievement')
+        }
+
+        # Compute progress context once
+        total_skills = Skill.objects.filter(user=user).count()
+        completed_tasks = Task.objects.filter(user=user, status='completed').count()
+        streak_obj = Streak.objects.filter(user=user).first()
+        current_streak = streak_obj.current_streak if streak_obj else 0
+
+        results = []
+        for achievement in all_achievements:
+            ua = user_unlocked.get(achievement.id)
+            unlocked = ua is not None
+
+            # Build progress hint
+            cond = achievement.condition
+            if 'skills_created' in cond:
+                progress_val = total_skills
+                progress_max = 1
+            elif 'completed_tasks >= 50' in cond:
+                progress_val = min(completed_tasks, 50)
+                progress_max = 50
+            elif 'completed_tasks >= 100' in cond:
+                progress_val = min(completed_tasks, 100)
+                progress_max = 100
+            elif 'current_streak' in cond:
+                progress_val = min(current_streak, 7)
+                progress_max = 7
+            elif 'skill_progress' in cond:
+                # Check if any skill is at 100% by comparing done tasks vs target
+                from django.db.models import Count, Q
+                mastered = Skill.objects.filter(user=user).annotate(
+                    done=Count('tasks', filter=Q(tasks__status='completed'))
+                ).filter(done__gte=F('target_tasks'), target_tasks__gt=0).count()
+                progress_val = 1 if mastered > 0 else 0
+                progress_max = 1
+            else:
+                progress_val = 1 if unlocked else 0
+                progress_max = 1
+
+            progress_pct = min(100, int((progress_val / max(progress_max, 1)) * 100))
+
+            results.append({
+                'id': achievement.id,
+                'name': achievement.name,
+                'description': achievement.description,
+                'icon': achievement.icon,
+                'condition': achievement.condition,
+                'unlocked': unlocked,
+                'unlocked_at': ua.unlocked_at if ua else None,
+                'progress_pct': progress_pct,
+                'progress_val': progress_val,
+                'progress_max': progress_max,
+            })
+
+        return Response({'achievements': results}, status=status.HTTP_200_OK)
+
+
+class ActivityFeedView(APIView):
+    """Paginated activity timeline for the authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        limit = min(int(request.query_params.get('limit', 30)), 100)
+        activities = Activity.objects.filter(user=request.user).order_by('-created_at')[:limit]
+        data = [
+            {
+                'id': item.id,
+                'action_type': item.action_type,
+                'message': item.message,
+                'metadata': item.metadata,
+                'created_at': item.created_at,
+            }
+            for item in activities
+        ]
+        return Response({'activities': data}, status=status.HTTP_200_OK)

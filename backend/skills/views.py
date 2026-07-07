@@ -1,9 +1,12 @@
 from django.db.models import Count, Q
+from django.utils import timezone
 from rest_framework import permissions, viewsets
 
 from .models import Skill
 from .serializers import SkillSerializer
 from notifications.notification_service import create_notification
+from analytics.activity_service import log_activity
+from analytics.achievement_service import check_achievements_for_user
 
 
 class SkillViewSet(viewsets.ModelViewSet):
@@ -24,7 +27,10 @@ class SkillViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        skill = serializer.save(user=self.request.user)
+        skill = serializer.save(
+            user=self.request.user,
+            started_date=timezone.now().date(),
+        )
         create_notification(
             self.request.user,
             "New Skill Added",
@@ -38,3 +44,10 @@ class SkillViewSet(viewsets.ModelViewSet):
                 'total_tasks': skill.target_tasks,
             },
         )
+        log_activity(
+            self.request.user,
+            'skill_created',
+            f'Created skill {skill.name}',
+            metadata={'skill_id': skill.id, 'skill_name': skill.name},
+        )
+        check_achievements_for_user(self.request.user, skill=skill)

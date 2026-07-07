@@ -92,3 +92,16 @@ def create_skill_milestone_notification(user, skill):
         return None
 
     return create_notification(user, title, message, 'achievement', metadata=metadata)
+
+
+def create_streak_notification(user, streak):
+    if streak.current_streak and streak.current_streak % 7 == 0:
+        title = f"🔥 {streak.current_streak} Day Streak Achieved"
+        message = f"You have kept your learning streak going for {streak.current_streak} days."
+        metadata = {
+            'current_streak': streak.current_streak,
+            'longest_streak': streak.longest_streak,
+            'last_activity_date': str(streak.last_activity_date) if streak.last_activity_date else None,
+        }
+        return create_notification(user, title, message, 'achievement', metadata=metadata)
+    return None

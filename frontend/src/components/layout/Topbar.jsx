@@ -1,9 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Menu, Bell, CheckCircle2, Info, AlertTriangle, Award, Settings2 } from 'lucide-react'
+import { Menu, Bell, CheckCircle2, Info, AlertTriangle, Award, Settings2, Search, X } from 'lucide-react'
 import { getMediaUrl } from '../../api'
 import notificationService from '../../services/notificationService'
+import dashboardService from '../../services/dashboardService'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import NotificationDetailModal from '../notifications/NotificationDetailModal'
 
@@ -14,6 +15,7 @@ const PAGE_TITLES = {
   '/profile':   { title: 'Profile',    sub: 'Your personal information and stats' },
   '/settings':  { title: 'Settings',   sub: 'Customize your dashboard preferences' },
   '/notifications': { title: 'Notifications', sub: 'Updates, milestones, and system alerts' },
+  '/achievements': { title: 'Achievements', sub: 'Your badges and milestones' },
 }
 
 const ICONS = {
@@ -96,6 +98,56 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
 
   const visibleNotifications = notifications.slice(0, 5)
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchRef = useRef(null)
+  const searchTimerRef = useRef(null)
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setIsSearchOpen(false)
+      return
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const data = await dashboardService.search(searchQuery.trim())
+        setSearchResults(data?.results ?? [])
+        setIsSearchOpen(true)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(searchTimerRef.current)
+  }, [searchQuery])
+
+  // Close search on outside click
+  useEffect(() => {
+    function handleOutside(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setIsSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
+
+  const handleSearchNavigate = (result) => {
+    navigate(result.path)
+    setSearchQuery('')
+    setIsSearchOpen(false)
+    setSearchResults([])
+  }
+
+  const typeIcon = { skill: '🧠', task: '✅', achievement: '🏆' }
+
   const handleBellClick = () => {
     if (isMobile) {
       navigate('/notifications')
@@ -126,6 +178,55 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
           <h1 className="topbar__title">{page.title}</h1>
           {page.sub && <p className="topbar__sub">{page.sub}</p>}
         </div>
+      </div>
+
+      {/* Center: Global Search */}
+      <div className="topbar__search-wrap" ref={searchRef}>
+        <div className={`topbar__search-box ${searchQuery ? 'topbar__search-box--active' : ''}`}>
+          <Search size={15} className="topbar__search-icon" strokeWidth={2} />
+          <input
+            id="topbar-search-input"
+            type="text"
+            placeholder="Search skills, tasks, achievements..."
+            className="topbar__search-input"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery.trim() && setIsSearchOpen(true)}
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <button
+              className="topbar__search-clear"
+              onClick={() => { setSearchQuery(''); setIsSearchOpen(false); setSearchResults([]) }}
+              aria-label="Clear search"
+            >
+              <X size={13} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        {isSearchOpen && (
+          <div className="topbar__search-dropdown" role="listbox">
+            {isSearching ? (
+              <div className="topbar__search-item topbar__search-item--muted">Searching...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="topbar__search-item topbar__search-item--muted">No results found</div>
+            ) : (
+              searchResults.map((result, i) => (
+                <button
+                  key={`${result.type}-${result.id}-${i}`}
+                  className="topbar__search-item"
+                  onClick={() => handleSearchNavigate(result)}
+                  role="option"
+                >
+                  <span className="topbar__search-item-type">{typeIcon[result.type] ?? '📄'}</span>
+                  <span className="topbar__search-item-label">{result.label}</span>
+                  <span className="topbar__search-item-badge">{result.type}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right: actions + avatar */}

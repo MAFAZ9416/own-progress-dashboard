@@ -31,6 +31,9 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
   const [name, setName] = useState('')
   const [targetTasks, setTargetTasks] = useState(10)
   const [color, setColor] = useState('#3b82f6')
+  const [level, setLevel] = useState('beginner')
+  const [goalDescription, setGoalDescription] = useState('')
+  const [targetDate, setTargetDate] = useState('')
 
   // API states
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -43,10 +46,16 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
         setName(editSkill.name)
         setTargetTasks(editSkill.target_tasks)
         setColor(editSkill.color)
+        setLevel(editSkill.level || 'beginner')
+        setGoalDescription(editSkill.goal_description || '')
+        setTargetDate(editSkill.target_date || '')
       } else {
         setName('')
         setTargetTasks(10)
         setColor('#3b82f6')
+        setLevel('beginner')
+        setGoalDescription('')
+        setTargetDate('')
       }
       setApiError(null)
       setIsSubmitting(false)
@@ -74,6 +83,9 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
       name: name.trim(),
       target_tasks: parseInt(targetTasks, 10),
       color: color,
+      level: level,
+      goal_description: goalDescription.trim(),
+      target_date: targetDate || null,
     }
 
     try {
@@ -184,6 +196,51 @@ export default function SkillModal({ isOpen, onClose, onSaveSuccess, editSkill }
             <p className="text-[11px] text-slate-500 mt-1.5">
               The number of completed tasks required to master this skill.
             </p>
+          </div>
+
+          {/* Skill Level */}
+          <div>
+            <label htmlFor="skill-level" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Skill Level
+            </label>
+            <select
+              id="skill-level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="w-full bg-[#0a0f1d] border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all focus:ring-1 focus:ring-indigo-500/30"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+
+          {/* Goal Description */}
+          <div>
+            <label htmlFor="goal-description" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Goal Description
+            </label>
+            <textarea
+              id="goal-description"
+              placeholder="What is your main goal for this skill?"
+              value={goalDescription}
+              onChange={(e) => setGoalDescription(e.target.value)}
+              className="w-full bg-slate-950/40 border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all placeholder-slate-600 focus:ring-1 focus:ring-indigo-500/30 h-20 resize-none"
+            />
+          </div>
+
+          {/* Target Date */}
+          <div>
+            <label htmlFor="target-date" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Target Date
+            </label>
+            <input
+              id="target-date"
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="w-full bg-slate-950/40 border border-slate-800 focus:border-indigo-500/60 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none transition-all focus:ring-1 focus:ring-indigo-500/30"
+            />
           </div>
 
           {/* Color Selection */}

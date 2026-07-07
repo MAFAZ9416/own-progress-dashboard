@@ -6,6 +6,8 @@ from .models import Task, TaskCompletion, TaskActivity
 class TaskSerializer(serializers.ModelSerializer):
     """Serialize Task objects for CRUD operations."""
 
+    status = serializers.CharField(required=False)
+
     class Meta:
         model = Task
         fields = [
@@ -14,10 +16,23 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "status",
+            "priority",
+            "due_date",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_status(self, value):
+        if value == 'pending':
+            return 'todo'
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('status') == 'pending':
+            data['status'] = 'todo'
+        return data
 
     def validate_skill(self, value):
         request = self.context.get("request")

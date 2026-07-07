@@ -15,10 +15,14 @@ class SkillSerializer(serializers.ModelSerializer):
             "name",
             "color",
             "target_tasks",
+            "goal_description",
+            "target_date",
+            "level",
+            "started_date",
             "progress",
             "created_at",
         ]
-        read_only_fields = ["id", "progress", "created_at"]
+        read_only_fields = ["id", "progress", "created_at", "started_date"]
 
     def get_progress(self, obj):
         """Calculate progress from completed tasks for this skill."""

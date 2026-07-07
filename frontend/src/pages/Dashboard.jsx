@@ -20,6 +20,14 @@ const TYPE_DOT = {
   streak: '#f59e0b',
 }
 
+const TYPE_ICON = {
+  skill:  '🎯',
+  task:   '✅',
+  achievement: '🏆',
+  streak: '🔥',
+}
+
+
 /** Greeting + emoji based on current hour */
 function getGreeting() {
   const h = new Date().getHours()
@@ -68,6 +76,15 @@ function buildStats(summary) {
       gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
       trend: summary?.longest_streak_trend ? { value: summary.longest_streak_trend, positive: (summary?.longest_streak ?? 0) > 0 } : undefined,
       icon: <Trophy size={20} strokeWidth={1.8} />,
+    },
+    {
+      id: 'stat-profile-completion',
+      label: 'Profile Strength',
+      value: summary?.profile_completion ?? 0,
+      suffix: '%',
+      gradient: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
+      trend: summary?.profile_suggestions?.length ? { value: `${summary.profile_suggestions.length} tips`, positive: false } : undefined,
+      icon: <Star size={20} strokeWidth={1.8} />,
     },
   ]
 }
@@ -145,6 +162,8 @@ export default function Dashboard() {
     pendingTasks,
     skills,
     topSkills,
+    recentAchievements,
+    streakHistory,
     isLoading,
     error,
     refetch,
@@ -257,10 +276,24 @@ export default function Dashboard() {
                       className="activity-item"
                       style={{ animationDelay: `${i * 60}ms` }}
                     >
-                      <span
-                        className="activity-item__dot"
-                        style={{ background: TYPE_DOT[item.type] ?? '#6366f1' }}
-                      />
+                      <div
+                        className="activity-item__icon-wrapper"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontSize: '0.85rem',
+                          flexShrink: 0,
+                          marginRight: '0.75rem',
+                        }}
+                      >
+                        {TYPE_ICON[item.type] ?? '⚡'}
+                      </div>
                       <div className="activity-item__body">
                         <p className="activity-item__text">{item.text}</p>
                         <span className="activity-item__time">{item.time}</span>
@@ -269,7 +302,11 @@ export default function Dashboard() {
                   ))}
                 </ul>
               ) : (
-                <p className="dash-empty">No recent activity yet.</p>
+                <div className="dash-empty-timeline flex flex-col items-center justify-center p-6 text-center border border-dashed border-slate-800 rounded-xl bg-slate-900/10">
+                  <span className="text-2xl mb-2">📅</span>
+                  <p className="text-sm font-medium text-slate-300">No activity logged yet</p>
+                  <p className="text-xs text-slate-500 mt-1">Completing tasks or adding skills will populate this feed.</p>
+                </div>
               )}
             </section>
           )}
@@ -406,6 +443,65 @@ export default function Dashboard() {
               <Trophy size={13} className="text-amber-400 mr-1.5" />
               <span>Personal best: <strong>{isLoading ? '—' : `${longestStreak} days`}</strong></span>
             </div>
+
+            <div className="streak-history mt-4">
+              <div className="dash-card__title-group mb-2">
+                <h4 className="dash-card__title" style={{ fontSize: '0.9rem' }}>Streak History</h4>
+                <span className="dash-card__subtitle">Last 7 active days</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem' }}>
+                {(streakHistory.slice(0, 7).reverse() || []).map((item, index) => (
+                  <div
+                    key={`${item.completed_date ?? index}`}
+                    style={{
+                      minHeight: '2.25rem',
+                      borderRadius: '0.75rem',
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      border: '1px solid rgba(99, 102, 241, 0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.7rem',
+                      color: '#c4b5fd',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {item.count}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="dash-card" id="section-achievements-mini">
+            <div className="dash-card__header">
+              <div className="dash-card__title-group">
+                <h3 className="dash-card__title">Recent Achievements</h3>
+                <span className="dash-card__subtitle">Unlocked rewards</span>
+              </div>
+              <button className="dash-card__action-btn" id="btn-view-profile" onClick={() => navigate('/profile')}>
+                View profile
+                <ChevronRight size={14} className="ml-0.5" />
+              </button>
+            </div>
+
+            {isLoading ? (
+              <ActivitySkeleton />
+            ) : recentAchievements.length > 0 ? (
+              <ul className="activity-feed">
+                {recentAchievements.slice(0, 4).map((achievement, i) => (
+                  <li key={achievement.id ?? i} className="activity-item" style={{ animationDelay: `${i * 40}ms` }}>
+                    <span className="activity-item__dot" style={{ background: '#f59e0b' }} />
+                    <div className="activity-item__body">
+                      <p className="activity-item__text">{achievement.icon} {achievement.name}</p>
+                      <span className="activity-item__time">{achievement.description}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="dash-empty">Keep learning to unlock achievements.</p>
+            )}
           </section>
 
           {/* Skills overview mini */}
@@ -495,10 +591,24 @@ export default function Dashboard() {
                       className="activity-item"
                       style={{ animationDelay: `${i * 40}ms` }}
                     >
-                      <span
-                        className="activity-item__dot"
-                        style={{ background: TYPE_DOT[item.type] ?? '#6366f1' }}
-                      />
+                      <div
+                        className="activity-item__icon-wrapper"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontSize: '0.85rem',
+                          flexShrink: 0,
+                          marginRight: '0.75rem',
+                        }}
+                      >
+                        {TYPE_ICON[item.type] ?? '⚡'}
+                      </div>
                       <div className="activity-item__body">
                         <p className="activity-item__text">{item.text}</p>
                         <span className="activity-item__time">{item.time}</span>

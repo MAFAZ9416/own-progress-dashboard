@@ -16,6 +16,7 @@ const Tasks = lazy(() => import('../pages/Tasks'))
 const Profile = lazy(() => import('../pages/Profile'))
 const Settings = lazy(() => import('../pages/Settings'))
 const Notifications = lazy(() => import('../pages/Notifications'))
+const Achievements = lazy(() => import('../pages/Achievements'))
 
 // Admin Protected Pages
 const AdminDashboard = lazy(() => import('../admin/pages/AdminDashboard'))
@@ -67,6 +68,7 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<LazyPage><Dashboard /></LazyPage>} />
           <Route path="/skills" element={<LazyPage><Skills /></LazyPage>} />
           <Route path="/tasks" element={<LazyPage><Tasks /></LazyPage>} />
+          <Route path="/achievements" element={<LazyPage><Achievements /></LazyPage>} />
           <Route path="/profile" element={<LazyPage><Profile /></LazyPage>} />
           <Route path="/settings" element={<LazyPage><Settings /></LazyPage>} />
           <Route path="/notifications" element={<LazyPage><Notifications /></LazyPage>} />

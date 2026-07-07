@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Pencil, Trash2, Code2 } from 'lucide-react'
+import { Pencil, Trash2, Code2, Target, Flag } from 'lucide-react'
 
 /* ─── Technology Icon Map ─────────────────────────────────────────────
    SVG icon components keyed by lowercase skill name fragments.
@@ -118,24 +118,23 @@ function resolveIcon(skillName) {
   return null
 }
 
+const LEVEL_STYLES = {
+  beginner:     { label: 'Beginner',     bg: 'rgba(16,185,129,0.12)', color: '#10b981', border: 'rgba(16,185,129,0.25)' },
+  intermediate: { label: 'Intermediate', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
+  advanced:     { label: 'Advanced',     bg: 'rgba(239,68,68,0.12)',  color: '#ef4444', border: 'rgba(239,68,68,0.25)'  },
+}
+
+function getRemainingDays(targetDate) {
+  if (!targetDate) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(targetDate)
+  target.setHours(0, 0, 0, 0)
+  const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24))
+  return diff
+}
+
 /* ─── SkillCard ─────────────────────────────────────────────────────── */
-/**
- * SkillCard — V3 Premium Redesign
- *
- * Large glassmorphic card with:
- *   - Glowing circular technology icon
- *   - Bold skill name + target tasks
- *   - Progress label + bold percentage
- *   - 12px tall purple-gradient progress bar with animation
- *   - Completed / remaining task counters from backend
- *   - Hover lift + purple glow
- *   - Edit / Delete action buttons
- *
- * Props:
- *   - skill: skill object from API
- *   - onEdit: callback when edit is triggered
- *   - onDelete: callback when delete is triggered
- */
 const SkillCard = memo(function SkillCard({ skill, onEdit, onDelete }) {
   // Derive completed/remaining from backend progress field + target_tasks
   const completedTasks = Math.round((skill.progress / 100) * skill.target_tasks)
@@ -144,6 +143,8 @@ const SkillCard = memo(function SkillCard({ skill, onEdit, onDelete }) {
 
   const iconEntry = resolveIcon(skill.name)
   const skillColor = skill.color || '#8B5CF6'
+  const levelStyle = LEVEL_STYLES[skill.level] || LEVEL_STYLES.beginner
+  const remainingDays = getRemainingDays(skill.target_date)
 
   return (
     <div
@@ -174,10 +175,20 @@ const SkillCard = memo(function SkillCard({ skill, onEdit, onDelete }) {
           }
         </div>
 
-        {/* Name + Target */}
+        {/* Name + Target + Level */}
         <div className="sc-card__name-wrap">
           <h3 className="sc-card__name" title={skill.name}>{skill.name}</h3>
-          <p className="sc-card__target">{skill.target_tasks} target tasks</p>
+          <div className="sc-card__meta-row">
+            <p className="sc-card__target">{skill.target_tasks} target tasks</p>
+            {skill.level && (
+              <span
+                className="sc-card__level-badge"
+                style={{ background: levelStyle.bg, color: levelStyle.color, border: `1px solid ${levelStyle.border}` }}
+              >
+                {levelStyle.label}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -200,6 +211,14 @@ const SkillCard = memo(function SkillCard({ skill, onEdit, onDelete }) {
           </button>
         </div>
       </div>
+
+      {/* ── Goal Description ── */}
+      {skill.goal_description && (
+        <div className="sc-card__goal">
+          <Flag size={11} strokeWidth={2} style={{ color: skillColor, flexShrink: 0, marginTop: 1 }} />
+          <p className="sc-card__goal-text">{skill.goal_description}</p>
+        </div>
+      )}
 
       {/* ── Progress Section ── */}
       <div className="sc-card__progress-wrap">
@@ -226,10 +245,23 @@ const SkillCard = memo(function SkillCard({ skill, onEdit, onDelete }) {
           />
         </div>
 
-        {/* Footer Counters */}
+        {/* Footer Counters + Target Date */}
         <div className="sc-card__counters">
           <span className="sc-card__counter">{completedTasks} completed</span>
           <span className="sc-card__counter">{remainingTasks} left</span>
+          {remainingDays !== null && (
+            <span
+              className="sc-card__counter sc-card__counter--date"
+              style={{ color: remainingDays < 0 ? '#ef4444' : remainingDays <= 7 ? '#f59e0b' : '#64748b' }}
+            >
+              <Target size={10} strokeWidth={2} style={{ display: 'inline', marginRight: 3 }} />
+              {remainingDays < 0
+                ? `${Math.abs(remainingDays)}d overdue`
+                : remainingDays === 0
+                ? 'Due today'
+                : `${remainingDays}d left`}
+            </span>
+          )}
         </div>
       </div>
     </div>

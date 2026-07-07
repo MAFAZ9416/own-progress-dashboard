@@ -12,12 +12,24 @@ class Streak(models.Model):
     current_streak = models.IntegerField(default=0)
     longest_streak = models.IntegerField(default=0)
 
-    last_active_date = models.DateField(
+    last_activity_date = models.DateField(
         null=True,
         blank=True
     )
 
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def last_active_date(self):
+        return self.last_activity_date
+
+    @last_active_date.setter
+    def last_active_date(self, value):
+        self.last_activity_date = value
 
     def __str__(self):
         return f"{self.user.username} Streak"
+
+
+UserStreak = Streak

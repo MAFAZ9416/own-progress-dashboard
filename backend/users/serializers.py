@@ -280,6 +280,56 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['refresh'] = str(refresh)
         data['access'] = str(refresh.access_token)
 
+        # Record login history
+        try:
+            request = self.context.get('request')
+            if request:
+                user_agent_str = request.META.get('HTTP_USER_AGENT', '')
+                ip = (
+                    request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                    or request.META.get('REMOTE_ADDR', '')
+                )
+                # Simple UA parsing
+                ua_lower = user_agent_str.lower()
+                if 'chrome' in ua_lower and 'edg' not in ua_lower:
+                    browser = 'Chrome'
+                elif 'firefox' in ua_lower:
+                    browser = 'Firefox'
+                elif 'safari' in ua_lower and 'chrome' not in ua_lower:
+                    browser = 'Safari'
+                elif 'edg' in ua_lower:
+                    browser = 'Edge'
+                elif 'opera' in ua_lower or 'opr' in ua_lower:
+                    browser = 'Opera'
+                else:
+                    browser = 'Unknown Browser'
+
+                if 'windows' in ua_lower:
+                    device = 'Windows'
+                elif 'macintosh' in ua_lower or 'mac os' in ua_lower:
+                    device = 'Mac'
+                elif 'iphone' in ua_lower:
+                    device = 'iPhone'
+                elif 'ipad' in ua_lower:
+                    device = 'iPad'
+                elif 'android' in ua_lower:
+                    device = 'Android'
+                elif 'linux' in ua_lower:
+                    device = 'Linux'
+                else:
+                    device = 'Unknown Device'
+
+                from .models import LoginHistory
+                LoginHistory.objects.create(
+                    user=self.user,
+                    device=device,
+                    browser=browser,
+                    ip_address=ip or None,
+                    user_agent=user_agent_str[:500],
+                )
+        except Exception:
+            pass  # Never block login due to history logging errors
+
         return data
 
 
@@ -312,6 +362,16 @@ class ForgotPasswordSerializer(serializers.Serializer):
         except User.DoesNotExist:
             self.context['reset_user'] = None
         return value
+
+
+class LoginHistorySerializer(serializers.ModelSerializer):
+    """Serialize LoginHistory records for the security panel."""
+
+    class Meta:
+        from .models import LoginHistory
+        model = LoginHistory
+        fields = ['id', 'device', 'browser', 'ip_address', 'created_at', 'is_active']
+        read_only_fields = fields
 
 
 class ResetPasswordSerializer(serializers.Serializer):

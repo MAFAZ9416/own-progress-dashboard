@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import tasksService from '../services/tasksService'
 import skillsService from '../services/skillsService'
 import { TaskCard, TaskModal, TaskHistoryModal, DeleteConfirmModal } from '../components/tasks'
-import { Plus, Search, AlertCircle, ClipboardList, SlidersHorizontal } from 'lucide-react'
+import { Plus, Search, AlertCircle, ClipboardList, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 
 /* ─── Skeleton Card ─────────────────────────────────────────────────── */
 function TaskCardSkeleton() {
@@ -103,6 +103,7 @@ export default function Tasks() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSkillFilter, setSelectedSkillFilter] = useState('all')
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('created')
 
   // Modals Control
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -214,7 +215,7 @@ export default function Tasks() {
   // Client-Side Task Filter Resolution
   const filteredTasks = useMemo(() => {
     const query = searchQuery.toLowerCase()
-    return tasks.filter((task) => {
+    const result = tasks.filter((task) => {
       // 1. Text Search Filter (Title & Description)
       const matchesSearch =
         task.title.toLowerCase().includes(query) ||
@@ -228,11 +229,45 @@ export default function Tasks() {
 
       return matchesSearch && matchesSkill && matchesStatus
     })
-  }, [tasks, searchQuery, selectedSkillFilter, selectedStatusFilter])
+
+    // Sorting
+    const priorityWeight = { high: 3, medium: 2, low: 1 }
+    result.sort((a, b) => {
+      if (sortBy === 'priority_desc') {
+        const wa = priorityWeight[a.priority] || 2
+        const wb = priorityWeight[b.priority] || 2
+        if (wb !== wa) return wb - wa
+        return new Date(b.created_at) - new Date(a.created_at)
+      }
+      if (sortBy === 'priority_asc') {
+        const wa = priorityWeight[a.priority] || 2
+        const wb = priorityWeight[b.priority] || 2
+        if (wa !== wb) return wa - wb
+        return new Date(b.created_at) - new Date(a.created_at)
+      }
+      if (sortBy === 'deadline_asc') {
+        if (!a.due_date && !b.due_date) return new Date(b.created_at) - new Date(a.created_at)
+        if (!a.due_date) return 1
+        if (!b.due_date) return -1
+        return new Date(a.due_date) - new Date(b.due_date)
+      }
+      if (sortBy === 'deadline_desc') {
+        if (!a.due_date && !b.due_date) return new Date(b.created_at) - new Date(a.created_at)
+        if (!a.due_date) return 1
+        if (!b.due_date) return -1
+        return new Date(b.due_date) - new Date(a.due_date)
+      }
+      // default: created desc (newest first)
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    return result
+  }, [tasks, searchQuery, selectedSkillFilter, selectedStatusFilter, sortBy])
 
   const STATUS_TABS = [
     { label: 'All', value: 'all' },
-    { label: 'Pending', value: 'pending' },
+    { label: 'Todo', value: 'todo' },
+    { label: 'In Progress', value: 'in_progress' },
     { label: 'Completed', value: 'completed' },
   ]
 
@@ -299,6 +334,24 @@ export default function Tasks() {
                     {skill.name}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="tc-skill-filter">
+              <ArrowUpDown size={14} className="tc-skill-filter__icon" />
+              <select
+                id="task-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="tc-skill-filter__select"
+                aria-label="Sort tasks"
+              >
+                <option value="created" className="bg-[#111827]">Newest First</option>
+                <option value="priority_desc" className="bg-[#111827]">Priority: High to Low</option>
+                <option value="priority_asc" className="bg-[#111827]">Priority: Low to High</option>
+                <option value="deadline_asc" className="bg-[#111827]">Deadline: Soonest first</option>
+                <option value="deadline_desc" className="bg-[#111827]">Deadline: Latest first</option>
               </select>
             </div>
           </div>

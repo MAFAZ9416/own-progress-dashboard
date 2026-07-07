@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProfileStats } from '../hooks/useProfileStats'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import authService from '../services/authService'
 import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle, X } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
 import { getMediaUrl } from '../api'
@@ -185,6 +186,9 @@ export default function Profile() {
   const totalTasks = summary?.total_tasks ?? 0
   const completedTasks = summary?.tasks_done ?? 0
   const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(0) : 0
+  const profileCompletion = summary?.profile_completion ?? 0
+  const recentAchievements = summary?.recent_achievements ?? []
+  const profileSuggestions = summary?.profile_suggestions ?? []
 
   return (
     <div className="profile-page">
@@ -217,6 +221,64 @@ export default function Profile() {
           </button>
         </div>
         <div className="profile-hero-wave"></div>
+      </div>
+
+      {/* Profile Strength / Completion Widget */}
+      <div className="profile-card profile-strength-widget" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <span style={{ fontSize: '24px' }}>🛡️</span>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Profile Strength</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Complete suggestions to strengthen your profile &amp; unlock badges.</p>
+            </div>
+          </div>
+          <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary)' }}>{isLoading ? '...' : `${profileCompletion}%`}</span>
+        </div>
+
+        {/* Progress Bar */}
+        <div style={{ height: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '99px', overflow: 'hidden' }}>
+          <div
+            style={{
+              height: '100%',
+              width: `${profileCompletion}%`,
+              background: 'linear-gradient(90deg, var(--primary), var(--secondary))',
+              borderRadius: '99px',
+              transition: 'width 0.5s ease-out'
+            }}
+          />
+        </div>
+
+        {/* Suggestions */}
+        {!isLoading && profileSuggestions.length > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Suggestions to improve:</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {profileSuggestions.map((suggestion, index) => (
+                <div
+                  key={index}
+                  style={{
+                    background: 'rgba(139, 92, 246, 0.08)',
+                    border: '1px solid rgba(139, 92, 246, 0.15)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '12.5px',
+                    color: '#c4b5fd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span style={{ color: 'var(--primary)' }}>✦</span>
+                  {suggestion}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {!isLoading && profileSuggestions.length === 0 && (
+          <p style={{ fontSize: '13px', color: 'var(--success)', fontWeight: '600' }}>✓ Your profile is 100% complete! Great job!</p>
+        )}
       </div>
 
       {/* Statistics Section */}
@@ -296,8 +358,8 @@ export default function Profile() {
             <Target size={20} />
           </div>
           <div className="profile-stat-data">
-            <span className="profile-stat-value">{isLoading ? '...' : (recent?.length ?? 0)}</span>
-            <span className="profile-stat-label">Total Activity</span>
+            <span className="profile-stat-value">{isLoading ? '...' : `${profileCompletion}%`}</span>
+            <span className="profile-stat-label">Profile Complete</span>
           </div>
         </div>
       </div>
@@ -328,6 +390,49 @@ export default function Profile() {
               <span className="profile-account-value">{joinDate}</span>
             </div>
           </div>
+        </div>
+
+        <div className="profile-card profile-achievements">
+          <h2 className="profile-card-title">
+            <Star size={18} /> Achievements
+          </h2>
+          {isLoading ? (
+            <p className="profile-activity-text">Loading...</p>
+          ) : recentAchievements.length > 0 ? (
+            <div className="profile-activity-timeline">
+              {recentAchievements.slice(0, 4).map((achievement) => (
+                <div key={achievement.id} className="profile-activity-item">
+                  <div className="profile-activity-icon">{achievement.icon}</div>
+                  <div className="profile-activity-content">
+                    <p className="profile-activity-text">{achievement.name}</p>
+                    <span className="profile-activity-time">{achievement.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="profile-activity-text">No achievements unlocked yet.</p>
+          )}
+        </div>
+
+        <div className="profile-card profile-recommendations">
+          <h2 className="profile-card-title">
+            <Target size={18} /> Profile Suggestions
+          </h2>
+          {profileSuggestions.length > 0 ? (
+            <ul className="profile-activity-timeline">
+              {profileSuggestions.slice(0, 4).map((suggestion, index) => (
+                <li key={index} className="profile-activity-item">
+                  <div className="profile-activity-icon"><PlusCircle size={16} /></div>
+                  <div className="profile-activity-content">
+                    <p className="profile-activity-text">{suggestion}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="profile-activity-text">Your profile is in good shape.</p>
+          )}
         </div>
 
         {/* Recent Activity Card */}

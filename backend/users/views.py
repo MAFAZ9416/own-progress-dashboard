@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import ProfileSerializer, RegisterSerializer, EmailTokenObtainPairSerializer, ChangePasswordSerializer, DeleteAccountSerializer, FeedbackSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+from .serializers import ProfileSerializer, RegisterSerializer, EmailTokenObtainPairSerializer, ChangePasswordSerializer, DeleteAccountSerializer, FeedbackSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, LoginHistorySerializer
 from threading import Thread
 import logging
 
@@ -131,6 +131,21 @@ class DeleteAccountView(generics.GenericAPIView):
 
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
+
+
+class LoginHistoryView(generics.ListAPIView):
+    """Return the last 15 login history records for the authenticated user."""
+    serializer_class = LoginHistorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from .models import LoginHistory
+        return LoginHistory.objects.filter(user=self.request.user).order_by('-created_at')[:15]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class FeedbackView(generics.GenericAPIView):
