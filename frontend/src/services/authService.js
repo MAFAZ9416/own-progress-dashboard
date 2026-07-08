@@ -39,6 +39,19 @@ const authService = {
  
     return { access: tokens.access, refresh: tokens.refresh, user }
   },
+
+  /**
+   * Google Login — verify Google token with backend.
+   *
+   * POST /api/users/google-login/
+   * Body: { credential }
+   * Returns { access, refresh, user }
+   */
+  googleLogin: async (credential) => {
+    const { data } = await apiClient.post('/users/google-login/', { credential })
+    return data
+  },
+
  
   /**
    * Register — create a new user account.

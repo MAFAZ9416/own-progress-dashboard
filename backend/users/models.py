@@ -11,9 +11,38 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True, max_length=150)
     country = models.CharField(max_length=100, blank=True, null=True)
     notifications_enabled = models.BooleanField(default=True)
+    public_slug = models.SlugField(max_length=80, unique=True, blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    def generate_public_slug(self):
+        """
+        Generate a unique public slug from full_name or username.
+        Format: <name-slug>-<4-char-uuid>
+        Never uses email to avoid exposing it in the URL.
+        """
+        import re
+        import uuid
+
+        base = self.full_name or self.user.username or ''
+        # Strip email if base happens to be an email
+        if '@' in base:
+            base = base.split('@')[0]
+        # Slugify: lowercase, replace non-alphanumeric with hyphens
+        slug_base = re.sub(r'[^a-z0-9]+', '-', base.lower()).strip('-') or 'user'
+        # Add short UUID suffix for uniqueness
+        suffix = uuid.uuid4().hex[:6]
+        return f"{slug_base[:40]}-{suffix}"
+
+    def save(self, *args, **kwargs):
+        if not self.public_slug:
+            slug = self.generate_public_slug()
+            # Ensure uniqueness (collision retry)
+            while UserProfile.objects.filter(public_slug=slug).exclude(pk=self.pk).exists():
+                slug = self.generate_public_slug()
+            self.public_slug = slug
+        super().save(*args, **kwargs)
 
 
 import uuid

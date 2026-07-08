@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import authService from '../services/authService'
+import { useAuth } from '../contexts/AuthContext'
+import { GoogleLogin } from '@react-oauth/google'
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -18,6 +20,21 @@ export default function Register() {
   const [success, setSuccess]           = useState(false)
 
   const navigate = useNavigate()
+  const { login } = useAuth()
+
+  const handleGoogleSuccess = async (credential) => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const { access, refresh, user } = await authService.googleLogin(credential)
+      login(access, refresh, user)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err?.response?.data?.error ?? 'Google signup failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const passwordMatch =
     form.confirmPassword.length > 0 && form.password === form.confirmPassword
@@ -93,7 +110,7 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page register-page-only">
       {/* ── Animated background orbs ── */}
       <div className="orb orb-1" />
       <div className="orb orb-2" />
@@ -345,6 +362,21 @@ export default function Register() {
             )}
           </button>
         </form>
+
+        <div className="google-auth-btn-wrap" style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={credentialResponse => {
+              handleGoogleSuccess(credentialResponse.credential)
+            }}
+            onError={() => {
+              setError('Google signup failed.')
+            }}
+            text="signup_with"
+            theme="filled_blue"
+            size="large"
+            width="328"
+          />
+        </div>
 
         {/* Divider */}
         <div className="auth-divider">

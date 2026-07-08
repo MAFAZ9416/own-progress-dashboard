@@ -209,6 +209,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', 'mock-google-client-id.apps.googleusercontent.com')
+
 # Email Configurations
 # ==========================
 # Email Configuration

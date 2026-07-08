@@ -27,3 +27,19 @@ class DashboardSummaryTests(APITestCase):
         self.assertIn("tasks_done", response.data)
         self.assertEqual(response.data["tasks_done"], 2)
         self.assertEqual(response.data["total_tasks"], 4)
+
+    def test_export_data_json(self):
+        url = reverse("dashboard-export")
+        response = self.client.get(url, {"format": "json"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("profile", response.data)
+
+    def test_export_data_csv(self):
+        url = reverse("dashboard-export")
+        response = self.client.get(url, {"format": "csv"})
+        print("EXPORT CSV STATUS:", response.status_code)
+        print("EXPORT CSV CONTENT:", response.content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("attachment", response["Content-Disposition"])
+

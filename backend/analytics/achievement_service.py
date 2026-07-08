@@ -67,26 +67,45 @@ def unlock_achievement(user, achievement, metadata=None):
 
 
 def check_achievements_for_user(user, *, skill=None, task=None, streak=None):
+    """
+    Check ALL achievement conditions independently for the given user.
+
+    Each condition is evaluated regardless of which trigger (skill/task/streak)
+    called this function. This ensures that:
+    - Completing achievement #4 condition does NOT require achieving #1, #2, #3 first.
+    - Every call checks every condition — no order dependency.
+    - Duplicate unlocks are prevented by get_or_create inside unlock_achievement().
+    """
     from skills.models import Skill
     from streaks.models import Streak
     from tasks.models import Task
 
     achievements = {item.name: item for item in seed_default_achievements()}
 
+    # ── Condition 1: Create first skill ─────────────────────────────────────
     if Skill.objects.filter(user=user).count() >= 1:
         unlock_achievement(user, achievements['First Step'], {'source': 'skill_created'})
 
-    if task is not None:
-        completed_tasks = Task.objects.filter(user=user, status='completed').count()
-        if completed_tasks >= 50:
-            unlock_achievement(user, achievements['Productive'], {'completed_tasks': completed_tasks})
-        if completed_tasks >= 100:
-            unlock_achievement(user, achievements['Champion'], {'completed_tasks': completed_tasks})
+    # ── Condition 2: Complete 50 tasks ──────────────────────────────────────
+    completed_tasks_count = Task.objects.filter(user=user, status='completed').count()
+    if completed_tasks_count >= 50:
+        unlock_achievement(user, achievements['Productive'], {'completed_tasks': completed_tasks_count})
 
+    # ── Condition 3: Complete 100 tasks ─────────────────────────────────────
+    if completed_tasks_count >= 100:
+        unlock_achievement(user, achievements['Champion'], {'completed_tasks': completed_tasks_count})
+
+    # ── Condition 4: Maintain 7-day streak ──────────────────────────────────
     streak_obj = streak or Streak.objects.filter(user=user).first()
     if streak_obj and streak_obj.current_streak >= 7:
-        unlock_achievement(user, achievements['Consistent Learner'], {'current_streak': streak_obj.current_streak})
+        unlock_achievement(
+            user,
+            achievements['Consistent Learner'],
+            {'current_streak': streak_obj.current_streak},
+        )
 
+    # ── Condition 5: Complete a skill to 100% ───────────────────────────────
+    # Check via the passed-in skill first (fast path), then full scan if not provided
     if skill is not None:
         completed = skill.tasks.filter(status='completed').count()
         progress = min(int((completed / skill.target_tasks) * 100), 100) if skill.target_tasks else 0
@@ -96,3 +115,15 @@ def check_achievements_for_user(user, *, skill=None, task=None, streak=None):
                 achievements['Master'],
                 {'skill_id': skill.id, 'skill_name': skill.name, 'progress': progress},
             )
+    else:
+        # Full scan for any mastered skill (e.g. called from task completion trigger)
+        for s in Skill.objects.filter(user=user, target_tasks__gt=0):
+            done = s.tasks.filter(status='completed').count()
+            if done >= s.target_tasks:
+                unlock_achievement(
+                    user,
+                    achievements['Master'],
+                    {'skill_name': s.name, 'progress': 100},
+                )
+                break  # One master achievement unlock is enough for this trigger
+

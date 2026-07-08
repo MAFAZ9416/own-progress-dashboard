@@ -264,43 +264,91 @@ class SearchView(APIView):
 class ExportDataView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def perform_content_negotiation(self, request, force=False):
+        from rest_framework.renderers import JSONRenderer
+        return (JSONRenderer(), 'application/json')
+
     def get(self, request):
         export_format = (request.query_params.get('format') or 'json').lower()
 
+        profile = getattr(request.user, 'profile', None)
+
+        # ── Safe whitelisted export payload ─────────────────────────────────
+        # ONLY export specified safe fields. NEVER export ids, email, passwords, tokens, staff status.
+        skills_list = []
+        for s in Skill.objects.filter(user=request.user):
+            done_t = s.tasks.filter(status='completed').count()
+            progress = min(round((done_t / s.target_tasks) * 100), 100) if s.target_tasks else 0
+            skills_list.append({
+                'name': s.name,
+                'progress': progress,
+                'level': s.level,
+                'goal': s.goal_description or '',
+            })
+
+        tasks_list = []
+        for t in Task.objects.filter(user=request.user):
+            tasks_list.append({
+                'title': t.title,
+                'status': t.status,
+                'priority': t.priority,
+            })
+
+        achievements_list = []
+        for ua in UserAchievement.objects.filter(user=request.user).select_related('achievement'):
+            achievements_list.append({
+                'name': ua.achievement.name,
+                'date_unlocked': str(ua.unlocked_at),
+            })
+
         payload = {
             'profile': {
-                'id': request.user.id,
-                'username': request.user.username,
-                'email': request.user.email,
-                'full_name': getattr(getattr(request.user, 'profile', None), 'full_name', ''),
-                'bio': getattr(getattr(request.user, 'profile', None), 'bio', ''),
-                'country': getattr(getattr(request.user, 'profile', None), 'country', ''),
+                'name': getattr(profile, 'full_name', '') or request.user.username or '',
+                'bio': getattr(profile, 'bio', '') or '',
+                'country': getattr(profile, 'country', '') or '',
             },
-            'skills': list(Skill.objects.filter(user=request.user).values()),
-            'tasks': list(Task.objects.filter(user=request.user).values()),
-            'achievements': list(UserAchievement.objects.filter(user=request.user).select_related('achievement').values('achievement__name', 'achievement__description', 'achievement__icon', 'unlocked_at')),
-            'progress': {
-                'total_skills': Skill.objects.filter(user=request.user).count(),
-                'total_tasks': Task.objects.filter(user=request.user).count(),
-                'completed_tasks': Task.objects.filter(user=request.user, status='completed').count(),
-            },
+            'skills': skills_list,
+            'tasks': tasks_list,
+            'achievements': achievements_list,
         }
 
         if export_format == 'csv':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="progressly-export.csv"'
-            rows = [
-                'section,title,details',
-                f"profile,{payload['profile']['full_name'] or payload['profile']['username']},email={payload['profile']['email']}",
-            ]
+            import csv, io
+            output = io.StringIO()
+            writer = csv.writer(output)
+
+            # Profile section
+            writer.writerow(['section', 'field', 'value'])
+            writer.writerow(['profile', 'name', payload['profile']['name']])
+            writer.writerow(['profile', 'bio', payload['profile']['bio']])
+            writer.writerow(['profile', 'country', payload['profile']['country']])
+
+            # Skills section
+            writer.writerow([])
+            writer.writerow(['skills', 'name', 'progress', 'level', 'goal'])
             for skill in payload['skills']:
-                rows.append(f"skill,{skill['name']},status={skill['id']}")
+                writer.writerow(['skill', skill['name'], f"{skill['progress']}%", skill['level'], skill['goal']])
+
+            # Tasks section
+            writer.writerow([])
+            writer.writerow(['tasks', 'title', 'status', 'priority'])
             for task in payload['tasks']:
-                rows.append(f"task,{task['title']},status={task['status']}")
-            response.write('\n'.join(rows))
+                writer.writerow(['task', task['title'], task['status'], task['priority']])
+
+            # Achievements section
+            writer.writerow([])
+            writer.writerow(['achievements', 'name', 'date_unlocked'])
+            for ach in payload['achievements']:
+                writer.writerow(['achievement', ach['name'], ach['date_unlocked']])
+
+            csv_content = output.getvalue()
+            response = HttpResponse(csv_content, content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="progressly-export.csv"'
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
             return response
 
         return Response(payload, status=status.HTTP_200_OK)
+
 
 
 

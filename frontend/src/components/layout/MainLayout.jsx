@@ -23,7 +23,7 @@ export default function MainLayout() {
   }, [location.pathname])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0f172a] relative">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)] relative">
       {/* Dark overlay behind sidebar on mobile */}
       {isSidebarOpen && (
         <div

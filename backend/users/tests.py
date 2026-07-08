@@ -564,5 +564,67 @@ class PasswordResetTests(APITestCase):
         self.assertIn("password", response.data)
 
 
+class GoogleLoginTests(APITestCase):
+    def setUp(self):
+        self.google_login_url = reverse("user-google-login")
+
+    @patch('requests.get')
+    def test_google_login_new_user_success(self, mock_get):
+        """Verify Google login registers new user and returns JWT tokens."""
+        from django.conf import settings
+        import unittest.mock as mock
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "email": "googlenew@example.com",
+            "name": "Google New User",
+            "picture": "http://example.com/pic.jpg",
+            "aud": getattr(settings, "GOOGLE_CLIENT_ID", "mock-google-client-id.apps.googleusercontent.com")
+        }
+        mock_get.return_value = mock_response
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_url_resp = mock.Mock()
+            mock_url_resp.read.return_value = b"fakeimagecontent"
+            mock_urlopen.return_value.__enter__.return_value = mock_url_resp
+
+            response = self.client.post(self.google_login_url, {"credential": "mock-token"})
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn("access", response.data)
+            self.assertIn("refresh", response.data)
+            self.assertEqual(response.data["user"]["email"], "googlenew@example.com")
+            self.assertEqual(response.data["user"]["full_name"], "Google New User")
+            self.assertTrue(User.objects.filter(email="googlenew@example.com").exists())
+
+    @patch('requests.get')
+    def test_google_login_existing_user_success(self, mock_get):
+        """Verify Google login logs in an existing user with matching email."""
+        from django.conf import settings
+        existing_user = User.objects.create_user(
+            username="googleexisting@example.com",
+            email="googleexisting@example.com",
+            password="SomePassword123!"
+        )
+        existing_user.profile.full_name = "Google Existing User"
+        existing_user.profile.save()
+
+        import unittest.mock as mock
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "email": "googleexisting@example.com",
+            "name": "Google Existing User",
+            "aud": getattr(settings, "GOOGLE_CLIENT_ID", "mock-google-client-id.apps.googleusercontent.com")
+        }
+        mock_get.return_value = mock_response
+
+        response = self.client.post(self.google_login_url, {"credential": "mock-token"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertEqual(response.data["user"]["email"], "googleexisting@example.com")
+        self.assertEqual(User.objects.filter(email="googleexisting@example.com").count(), 1)
+
+
+
 
 

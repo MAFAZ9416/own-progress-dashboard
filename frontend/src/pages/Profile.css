@@ -1,17 +1,17 @@
 :root {
-  --bg-dark: #050816;
-  --bg-card: rgba(15, 23, 42, 0.4);
-  --bg-card-hover: rgba(15, 23, 42, 0.6);
-  --border-color: rgba(51, 65, 85, 0.5);
+  --bg-dark: var(--bg-primary);
+  --bg-card: var(--card-bg);
+  --bg-card-hover: var(--bg-secondary);
+  --border-color: var(--border-color);
   
-  --primary: #8B5CF6;
+  --primary: var(--accent-color);
   --secondary: #3B82F6;
   --success: #22C55E;
   --warning: #F59E0B;
   --danger: #EF4444;
 
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
+  --text-main: var(--text-primary);
+  --text-muted: var(--text-secondary);
 }
 
 /* Base Page Layout */

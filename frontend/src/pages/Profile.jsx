@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProfileStats } from '../hooks/useProfileStats'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import authService from '../services/authService'
-import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle, X } from 'lucide-react'
+import { User, Mail, Calendar, Brain, ClipboardList, CheckCircle, Clock, Flame, Star, BarChart, LogOut, PlusCircle, Target, FileText, Lock, Loader2, AlertCircle, X, Share2, Check } from 'lucide-react'
 import EditProfileModal from '../components/profile/EditProfileModal'
 import { getMediaUrl } from '../api'
 import './Profile.css'
@@ -14,10 +14,25 @@ export default function Profile() {
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [toast, setToast] = useState(null)
+  const [shareCopied, setShareCopied] = useState(false)
 
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleShareProfile = async () => {
+    const slug = user?.public_slug
+    if (!slug) return
+    const url = `${window.location.origin}/p/${slug}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      showToast('Profile link copied to clipboard!')
+      setTimeout(() => setShareCopied(false), 2500)
+    } catch {
+      showToast('Copy failed — try again')
+    }
   }
 
   const [passwordData, setPasswordData] = useState({
@@ -219,67 +234,21 @@ export default function Profile() {
           <button className="profile-edit-button" onClick={() => setIsModalOpen(true)}>
             <User size={14} /> Edit Profile
           </button>
+          {user?.public_slug && (
+            <button
+              id="btn-share-profile"
+              className="profile-edit-button"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}
+              onClick={handleShareProfile}
+            >
+              {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
+              {shareCopied ? 'Copied!' : 'Share Profile'}
+            </button>
+          )}
         </div>
         <div className="profile-hero-wave"></div>
       </div>
 
-      {/* Profile Strength / Completion Widget */}
-      <div className="profile-card profile-strength-widget" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <span style={{ fontSize: '24px' }}>🛡️</span>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Profile Strength</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Complete suggestions to strengthen your profile &amp; unlock badges.</p>
-            </div>
-          </div>
-          <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary)' }}>{isLoading ? '...' : `${profileCompletion}%`}</span>
-        </div>
-
-        {/* Progress Bar */}
-        <div style={{ height: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '99px', overflow: 'hidden' }}>
-          <div
-            style={{
-              height: '100%',
-              width: `${profileCompletion}%`,
-              background: 'linear-gradient(90deg, var(--primary), var(--secondary))',
-              borderRadius: '99px',
-              transition: 'width 0.5s ease-out'
-            }}
-          />
-        </div>
-
-        {/* Suggestions */}
-        {!isLoading && profileSuggestions.length > 0 && (
-          <div style={{ marginTop: '8px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Suggestions to improve:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {profileSuggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  style={{
-                    background: 'rgba(139, 92, 246, 0.08)',
-                    border: '1px solid rgba(139, 92, 246, 0.15)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontSize: '12.5px',
-                    color: '#c4b5fd',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span style={{ color: 'var(--primary)' }}>✦</span>
-                  {suggestion}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {!isLoading && profileSuggestions.length === 0 && (
-          <p style={{ fontSize: '13px', color: 'var(--success)', fontWeight: '600' }}>✓ Your profile is 100% complete! Great job!</p>
-        )}
-      </div>
 
       {/* Statistics Section */}
       <div className="profile-stats-grid">

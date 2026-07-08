@@ -77,6 +77,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(source='profile.bio', max_length=150, allow_blank=True, required=False)
     avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
     notifications_enabled = serializers.BooleanField(source='profile.notifications_enabled', required=False)
+    public_slug = serializers.CharField(source='profile.public_slug', read_only=True)
     email = serializers.EmailField(required=True)
     date_joined = serializers.DateTimeField(read_only=True, format="%Y-%m-%d")
 
@@ -90,10 +91,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             "avatar",
             "notifications_enabled",
             "date_joined",
-            "is_staff",
-            "is_superuser",
+            "public_slug",
         ]
-        read_only_fields = ["id", "is_staff", "is_superuser"]
+        read_only_fields = ["id", "public_slug"]
+
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

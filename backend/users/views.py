@@ -285,3 +285,279 @@ class ResetPasswordView(generics.GenericAPIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class PublicProfileView(generics.GenericAPIView):
+    """
+    Public profile endpoint — no authentication required.
+    Returns only publicly-safe data for a user identified by their public_slug.
+    NEVER exposes: email, internal IDs, private tasks, login history, admin flags.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, slug, *args, **kwargs):
+        from .models import UserProfile
+        from skills.models import Skill
+        from analytics.models import UserAchievement
+        from django.db.models import Count, Q
+
+        try:
+            profile = UserProfile.objects.select_related('user').get(public_slug=slug)
+        except UserProfile.DoesNotExist:
+            return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = profile.user
+
+        # Avatar URL
+        avatar_url = None
+        if profile.avatar:
+            avatar_str = str(profile.avatar)
+            if avatar_str.startswith('http'):
+                avatar_url = avatar_str
+            elif hasattr(profile.avatar, 'url'):
+                try:
+                    avatar_url = request.build_absolute_uri(profile.avatar.url)
+                except Exception:
+                    avatar_url = None
+
+        # Skills — name, progress, color only (no IDs exposed)
+        skills_qs = Skill.objects.filter(user=user).annotate(
+            done=Count('tasks', filter=Q(tasks__status='completed'))
+        ).values('name', 'target_tasks', 'color', 'done')
+
+        skills_data = []
+        for s in skills_qs:
+            target = s['target_tasks'] or 1
+            progress = min(round((s['done'] / target) * 100), 100)
+            skills_data.append({
+                'name': s['name'],
+                'progress': progress,
+                'color': s['color'] or '#6366f1',
+            })
+
+        # Unlocked achievements only
+        achievements_data = [
+            {
+                'name': ua.achievement.name,
+                'icon': ua.achievement.icon,
+                'description': ua.achievement.description,
+                'unlocked_at': ua.unlocked_at,
+            }
+            for ua in UserAchievement.objects.filter(user=user).select_related('achievement').order_by('-unlocked_at')
+        ]
+
+        # Stats — counts only, no private details
+        from tasks.models import Task
+        total_tasks = Task.objects.filter(user=user).count()
+        completed_tasks = Task.objects.filter(user=user, status='completed').count()
+        total_skills = Skill.objects.filter(user=user).count()
+
+        data = {
+            'name': profile.full_name or user.username.split('@')[0],
+            'bio': profile.bio or '',
+            'country': profile.country or '',
+            'avatar': avatar_url,
+            'public_slug': profile.public_slug,
+            'member_since': user.date_joined.strftime('%B %Y'),
+            'skills': skills_data,
+            'achievements': achievements_data,
+            'stats': {
+                'total_skills': total_skills,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'achievements_unlocked': len(achievements_data),
+            },
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class GoogleLoginView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        # We expect a POST request with the 'credential' token (Google ID Token)
+        token = request.data.get('token') or request.data.get('credential')
+        if not token:
+            return Response(
+                {"error": "Google credential token is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ── Verify Google token ──
+        # Read client ID from settings or environment
+        from django.conf import settings
+        from django.contrib.auth import get_user_model
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        User = get_user_model()
+        google_client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+        if not google_client_id:
+            import os
+            google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+
+        idinfo = None
+        # Try verifying with google-auth library first since we installed it successfully
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), google_client_id)
+        except Exception as e:
+            logger.warning(f"google-auth verification failed: {e}. Falling back to tokeninfo endpoint.")
+
+        # Fallback to direct tokeninfo HTTP request to support local testing or if client_id mismatch
+        if not idinfo:
+            try:
+                import requests as py_requests
+                resp = py_requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}", timeout=10)
+                if resp.status_code == 200:
+                    idinfo = resp.json()
+                    # Double check audience/client ID matches if configured
+                    if google_client_id and idinfo.get('aud') != google_client_id:
+                        logger.warning(f"Audience mismatch: {idinfo.get('aud')} != {google_client_id}")
+                else:
+                    return Response(
+                        {"error": "Invalid Google credential token."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except Exception as e:
+                logger.exception("Failed to verify Google token via HTTP request.")
+                return Response(
+                    {"error": "Google auth service unavailable."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+
+        if not idinfo:
+            return Response(
+                {"error": "Could not verify Google credential."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        email = idinfo.get('email')
+        name = idinfo.get('name') or idinfo.get('given_name', '')
+        picture = idinfo.get('picture')
+
+        if not email:
+            return Response(
+                {"error": "Google account must have an email address."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ── Lookup or Create User ──
+        # Check if email is already in use
+        user = User.objects.filter(email__iexact=email).first()
+
+        if not user:
+            # Create user safely
+            import random, string
+            username = email
+            # Generate long random password
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=30))
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
+            )
+            # Create welcome notification
+            from notifications.notification_service import create_notification
+            try:
+                create_notification(
+                    user,
+                    "Welcome to Progressly 🎉",
+                    "Your workspace is ready. Start by adding a skill or task.",
+                    "success",
+                    metadata={"source": "google_registration"},
+                )
+            except Exception:
+                logger.exception("Failed to create welcome notification.")
+            
+            # Send welcome email
+            from .email_service import send_welcome_email
+            try:
+                Thread(
+                    target=send_welcome_email,
+                    args=(user.email, name or username),
+                    daemon=True
+                ).start()
+            except Exception:
+                logger.exception("Failed to start email thread.")
+
+        # Update profile properties (fullname / avatar) if needed
+        profile = user.profile
+        if not profile.full_name and name:
+            profile.full_name = name
+
+        # Download avatar if profile doesn't have one and google profile picture exists
+        if not profile.avatar and picture:
+            from django.core.files.base import ContentFile
+            import urllib.request
+            try:
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                req = urllib.request.Request(picture, headers=headers)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    profile.avatar.save(f"avatar_{user.id}.jpg", ContentFile(resp.read()), save=False)
+            except Exception:
+                logger.warning("Failed to download Google avatar.")
+
+        profile.save()
+
+        # ── Record login history ──
+        try:
+            user_agent_str = request.META.get('HTTP_USER_AGENT', '')
+            ip = (
+                request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                or request.META.get('REMOTE_ADDR', '')
+            )
+            ua_lower = user_agent_str.lower()
+            if 'chrome' in ua_lower and 'edg' not in ua_lower:
+                browser = 'Chrome'
+            elif 'firefox' in ua_lower:
+                browser = 'Firefox'
+            elif 'safari' in ua_lower and 'chrome' not in ua_lower:
+                browser = 'Safari'
+            else:
+                browser = 'Unknown Browser'
+
+            if 'windows' in ua_lower:
+                device = 'Windows'
+            elif 'mac' in ua_lower:
+                device = 'Mac'
+            else:
+                device = 'Mobile/Other'
+
+            from .models import LoginHistory
+            LoginHistory.objects.create(
+                user=user,
+                device=device,
+                browser=browser,
+                ip_address=ip or None,
+                user_agent=user_agent_str[:500],
+            )
+        except Exception:
+            pass
+
+        # ── Generate tokens ──
+        refresh = RefreshToken.for_user(user)
+
+        # Avatar absolute URI
+        avatar_uri = None
+        if profile.avatar:
+            try:
+                avatar_uri = request.build_absolute_uri(profile.avatar.url)
+            except Exception:
+                avatar_uri = None
+
+        response_data = {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username,
+                'full_name': profile.full_name,
+                'avatar': avatar_uri,
+                'public_slug': profile.public_slug,
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+

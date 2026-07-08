@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import authService from '../services/authService'
+import { GoogleLogin } from '@react-oauth/google'
 
 export default function Login() {
   const [form, setForm]           = useState({ email: '', password: '' })
@@ -21,6 +22,20 @@ export default function Login() {
 
   const { login } = useAuth()
   const navigate  = useNavigate()
+
+  const handleGoogleSuccess = async (credential) => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const { access, refresh, user } = await authService.googleLogin(credential)
+      login(access, refresh, user)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err?.response?.data?.error ?? 'Google login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleChange = (e) => {
     setError('')                                              // clear error on edit
@@ -199,6 +214,21 @@ export default function Login() {
             )}
           </button>
         </form>
+
+        <div className="google-auth-btn-wrap" style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={credentialResponse => {
+              handleGoogleSuccess(credentialResponse.credential)
+            }}
+            onError={() => {
+              setError('Google login failed.')
+            }}
+            text="continue_with"
+            theme="filled_blue"
+            size="large"
+            width="328"
+          />
+        </div>
 
         {/* Divider */}
         <div className="auth-divider">

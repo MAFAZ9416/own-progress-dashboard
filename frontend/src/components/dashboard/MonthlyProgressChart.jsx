@@ -133,27 +133,27 @@ const MonthlyProgressChart = memo(function MonthlyProgressChart({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(99,102,241,0.1)"
+              stroke="var(--chart-grid)"
               vertical={false}
             />
 
             <XAxis
               dataKey="month"
-              tick={{ fill: 'rgba(148,163,184,0.55)', fontSize: 11, fontFamily: 'Inter' }}
+              tick={{ fill: 'var(--chart-text)', fontSize: 11, fontFamily: 'Inter' }}
               axisLine={false}
               tickLine={false}
               dy={6}
             />
 
             <YAxis
-              tick={{ fill: 'rgba(148,163,184,0.45)', fontSize: 10, fontFamily: 'Inter' }}
+              tick={{ fill: 'var(--chart-text)', fontSize: 10, fontFamily: 'Inter' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
               width={32}
             />
 
-            <Tooltip content={MonthlyTooltip} cursor={{ fill: 'rgba(99,102,241,0.05)' }} />
+            <Tooltip content={MonthlyTooltip} cursor={{ fill: 'var(--chart-grid)' }} />
 
             <Bar dataKey="count" shape={<RoundedBar />} maxBarSize={32}>
               {chartData.map((entry, i) => (

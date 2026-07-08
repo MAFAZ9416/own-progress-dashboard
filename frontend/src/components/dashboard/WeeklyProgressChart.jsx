@@ -92,13 +92,13 @@ const WeeklyProgressChart = memo(function WeeklyProgressChart({ data = [], isLoa
 
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(99,102,241,0.1)"
+              stroke="var(--chart-grid)"
               vertical={false}
             />
 
             <XAxis
               dataKey="day"
-              tick={{ fill: 'rgba(148,163,184,0.55)', fontSize: 11, fontFamily: 'Inter' }}
+              tick={{ fill: 'var(--chart-text)', fontSize: 11, fontFamily: 'Inter' }}
               axisLine={false}
               tickLine={false}
               dy={6}
@@ -106,14 +106,14 @@ const WeeklyProgressChart = memo(function WeeklyProgressChart({ data = [], isLoa
 
             <YAxis
               domain={[0, maxVal + 1]}
-              tick={{ fill: 'rgba(148,163,184,0.45)', fontSize: 10, fontFamily: 'Inter' }}
+              tick={{ fill: 'var(--chart-text)', fontSize: 10, fontFamily: 'Inter' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
               width={32}
             />
 
-            <Tooltip content={WeeklyTooltip} cursor={{ stroke: 'rgba(124,58,237,0.2)', strokeWidth: 1 }} />
+            <Tooltip content={WeeklyTooltip} cursor={{ stroke: 'var(--border-color)', strokeWidth: 1 }} />
 
             {/* Activities area + line */}
             <Area

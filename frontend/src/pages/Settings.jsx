@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Monitor, Eye, Bell, User, Info, Check, ExternalLink, ChevronRight, Mail, MessageSquare, Loader2, Shield, Monitor as DeviceIcon, Clock } from 'lucide-react'
+import { Monitor, Eye, Bell, User, Info, Check, ExternalLink, ChevronRight, Mail, MessageSquare, Loader2, Shield, Monitor as DeviceIcon, Clock, Sun, Moon, X } from 'lucide-react'
 import feedbackService from '../services/feedbackService'
 import authService from '../services/authService'
 import dashboardService from '../services/dashboardService'
@@ -10,6 +10,9 @@ import './Settings.css'
 
 export default function Settings() {
   const { user, updateUser } = useAuth()
+
+  // Login History modal state
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
 
   // 1. Dashboard Preferences State (Default all enabled)
   const [dbPreferences, setDbPreferences] = useState({
@@ -205,20 +208,27 @@ export default function Settings() {
     try {
       const response = await dashboardService.exportData(format)
       if (format === 'csv') {
-        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+        // response.data is already a Blob when responseType: 'blob'
+        const blob = response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'progressly-export.csv'
+        link.setAttribute('download', 'progressly-export.csv')
+        document.body.appendChild(link)
         link.click()
+        document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       } else {
         const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'progressly-export.json'
+        link.setAttribute('download', 'progressly-data.json')
+        document.body.appendChild(link)
         link.click()
+        document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       }
     } catch (err) {
@@ -231,29 +241,7 @@ export default function Settings() {
   return (
     <div className="settings-page">
       
-      {/* ── Section 1: Appearance ── */}
-      <div className="settings-card">
-        <h2 className="settings-card-title">
-          <Monitor size={18} /> Appearance
-        </h2>
-        <div className="appearance-options">
-          {/* Dark Mode - Active */}
-          <div className="appearance-option appearance-option--active">
-            <span className="appearance-option-title">Dark Mode</span>
-            <span className="appearance-option-desc">Sleek dark glassmorphism theme</span>
-            <span className="appearance-coming-soon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80' }}>
-              Default
-            </span>
-          </div>
 
-          {/* Light Mode - Disabled */}
-          <div className="appearance-option appearance-option--disabled">
-            <span className="appearance-option-title">Light Mode</span>
-            <span className="appearance-option-desc">Coming in V2.0 releases</span>
-            <span className="appearance-coming-soon">Coming Soon</span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Section 2: Dashboard Preferences ── */}
       <div className="settings-card">
@@ -449,10 +437,10 @@ export default function Settings() {
       {/* ── Section: Security — Login History ── */}
       <div className="settings-card">
         <h2 className="settings-card-title">
-          <Shield size={18} /> Security — Login History
+          <Shield size={18} /> Recent Login Activity
         </h2>
         <p className="settings-card-subtitle">
-          Recent account access. Showing last 15 sessions.
+          Showing latest 5 logins
         </p>
         <div className="login-history-list">
           {isLoadingHistory ? (
@@ -468,7 +456,7 @@ export default function Settings() {
           ) : loginHistory.length === 0 ? (
             <p className="settings-card-subtitle" style={{ marginTop: 8 }}>No login records found.</p>
           ) : (
-            loginHistory.map(record => (
+            loginHistory.slice(0, 5).map(record => (
               <div key={record.id} className="login-history-item">
                 <div className="login-history-icon">
                   <DeviceIcon size={16} strokeWidth={1.8} />
@@ -476,16 +464,73 @@ export default function Settings() {
                 <div className="login-history-info">
                   <span className="login-history-device">{record.device} · {record.browser}</span>
                   <span className="login-history-meta">
-                    {record.ip_address && <span>{record.ip_address} · </span>}
-                    <Clock size={11} style={{ display: 'inline', marginRight: 3 }} />
-                    {new Date(record.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    <span>Date: {new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span style={{ margin: '0 4px', opacity: 0.5 }}>·</span>
+                    <span>Time: {new Date(record.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                   </span>
                 </div>
               </div>
             ))
           )}
         </div>
+        {!isLoadingHistory && loginHistory.length > 0 && (
+          <button
+            id="btn-view-all-login-history"
+            className="settings-btn"
+            style={{ marginTop: '0.75rem', width: '100%', justifyContent: 'center' }}
+            onClick={() => setShowHistoryModal(true)}
+          >
+            <Shield size={14} style={{ marginRight: '0.375rem' }} />
+            View All History
+          </button>
+        )}
       </div>
+
+      {/* ── Login History Modal ── */}
+      {showHistoryModal && (
+        <div
+          className="activity-modal-overlay"
+          onClick={() => setShowHistoryModal(false)}
+        >
+          <div
+            className="activity-modal"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '560px' }}
+          >
+            <div className="activity-modal__header">
+              <div>
+                <h2 className="activity-modal__title">Full Login History</h2>
+                <p className="activity-modal__sub">Read-only security information — {loginHistory.length} sessions</p>
+              </div>
+              <button
+                className="activity-modal__close"
+                id="btn-close-history-modal"
+                onClick={() => setShowHistoryModal(false)}
+                aria-label="Close"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="activity-modal__body">
+              {loginHistory.map(record => (
+                <div key={record.id} className="login-history-item" style={{ marginBottom: '0.5rem' }}>
+                  <div className="login-history-icon">
+                    <DeviceIcon size={16} strokeWidth={1.8} />
+                  </div>
+                  <div className="login-history-info">
+                    <span className="login-history-device">{record.device} · {record.browser}</span>
+                    <span className="login-history-meta">
+                      <span>Date: {new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span style={{ margin: '0 4px', opacity: 0.5 }}>·</span>
+                      <span>Time: {new Date(record.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Section 6: Contact Developer ── */}
       <div className="settings-card">

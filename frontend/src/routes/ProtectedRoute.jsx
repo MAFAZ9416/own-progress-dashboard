@@ -15,8 +15,8 @@ export default function ProtectedRoute({ adminOnly = false }) {
   // Show nothing (or a spinner) while auth state is being resolved
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0f172a]">
-        <span className="text-slate-400 text-sm animate-pulse">Loading…</span>
+      <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
+        <span className="text-[var(--text-secondary)] text-sm animate-pulse">Loading…</span>
       </div>
     )
   }

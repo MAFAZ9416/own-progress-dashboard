@@ -17,6 +17,7 @@ const Profile = lazy(() => import('../pages/Profile'))
 const Settings = lazy(() => import('../pages/Settings'))
 const Notifications = lazy(() => import('../pages/Notifications'))
 const Achievements = lazy(() => import('../pages/Achievements'))
+const PublicProfile = lazy(() => import('../pages/PublicProfile'))
 
 // Admin Protected Pages
 const AdminDashboard = lazy(() => import('../admin/pages/AdminDashboard'))
@@ -61,6 +62,10 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<LazyPage><ForgotPassword /></LazyPage>} />
       <Route path="/reset-password/:token" element={<LazyPage><ResetPassword /></LazyPage>} />
       <Route path="/admin/login" element={<LazyPage><AdminLogin /></LazyPage>} />
+
+      {/* Public profile — no auth required */}
+      <Route path="/p/:slug" element={<LazyPage><PublicProfile /></LazyPage>} />
+
 
       {/* Standard Protected routes — wrapped in the standard user sidebar layout */}
       <Route element={<ProtectedRoute />}>

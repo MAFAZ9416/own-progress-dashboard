@@ -8,7 +8,7 @@ import WeeklyProgressChart  from '../components/dashboard/WeeklyProgressChart'
 import MonthlyProgressChart from '../components/dashboard/MonthlyProgressChart'
 import LearningHeatmap      from '../components/dashboard/LearningHeatmap'
 import SkeletonCard, { SkeletonText } from '../components/common/SkeletonCard'
-import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus, X } from 'lucide-react'
+import { Brain, ClipboardList, Flame, Trophy, AlertCircle, CalendarDays, ChevronRight, Plus, X, Star } from 'lucide-react'
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -76,15 +76,6 @@ function buildStats(summary) {
       gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
       trend: summary?.longest_streak_trend ? { value: summary.longest_streak_trend, positive: (summary?.longest_streak ?? 0) > 0 } : undefined,
       icon: <Trophy size={20} strokeWidth={1.8} />,
-    },
-    {
-      id: 'stat-profile-completion',
-      label: 'Profile Strength',
-      value: summary?.profile_completion ?? 0,
-      suffix: '%',
-      gradient: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-      trend: summary?.profile_suggestions?.length ? { value: `${summary.profile_suggestions.length} tips`, positive: false } : undefined,
-      icon: <Star size={20} strokeWidth={1.8} />,
     },
   ]
 }
