@@ -414,3 +414,68 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Checkbox & Header Count Styles */
+.send-email-checkbox-wrap {
+  margin: 6px 0;
+}
+.checkbox-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-container input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--admin-accent-purple);
+  cursor: pointer;
+}
+.checkbox-text {
+  font-size: 0.82rem;
+  color: var(--admin-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.card-header-with-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--admin-border-color);
+  padding-bottom: 0.75rem;
+}
+.card-header-with-badge .card-header-title {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.notif-count-summary {
+  display: flex;
+  gap: 6px;
+}
+.count-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+.count-pill.sent {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--admin-status-success);
+}
+.count-pill.failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--admin-status-danger);
+}
+.notif-spin {
+  animation: notif-spin 1.2s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes notif-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+

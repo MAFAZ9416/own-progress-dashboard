@@ -65,7 +65,6 @@ export const NAVIGATION_ITEMS = [
     label: 'Notifications',
     icon: Bell,
     path: '/admin/notifications',
-    badgeCount: 8,
   },
   {
     id: 'feedback',

@@ -1,0 +1,80 @@
+/* Email Logs Styles */
+.emaillogs-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; min-height: 100vh; }
+
+.emaillogs-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.emaillogs-header__left { display: flex; align-items: center; gap: 14px; }
+.emaillogs-header__icon { width: 44px; height: 44px; background: var(--admin-grad-purple); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.emaillogs-header__title { font-size: 1.4rem; font-weight: 700; color: var(--admin-text-primary); margin: 0; }
+.emaillogs-header__sub { font-size: 0.82rem; color: var(--admin-text-secondary); margin: 2px 0 0; }
+.emaillogs-refresh-btn { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 9px; border: 1px solid var(--admin-border-color); background: var(--admin-surface); color: var(--admin-text-secondary); font-size: 0.82rem; cursor: pointer; transition: var(--admin-transition); }
+.emaillogs-refresh-btn:hover { border-color: var(--admin-accent-purple); color: var(--admin-text-primary); }
+.el-spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.emaillogs-summary { display: flex; gap: 10px; flex-wrap: wrap; }
+.emaillogs-summary-pill { display: flex; align-items: center; gap: 7px; padding: 7px 16px; border-radius: 30px; font-size: 0.82rem; font-weight: 600; }
+.emaillogs-summary-pill--sent { background: rgba(16,185,129,0.14); color: var(--admin-status-success); border: 1px solid rgba(16,185,129,0.25); }
+.emaillogs-summary-pill--failed { background: rgba(239,68,68,0.14); color: var(--admin-status-danger); border: 1px solid rgba(239,68,68,0.25); }
+.emaillogs-summary-pill--total { background: rgba(99,102,241,0.14); color: var(--admin-accent-indigo); border: 1px solid rgba(99,102,241,0.25); }
+
+.emaillogs-filters { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.emaillogs-search { display: flex; gap: 8px; }
+.emaillogs-search__wrap { flex: 1; position: relative; }
+.emaillogs-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--admin-text-muted); pointer-events: none; }
+.emaillogs-search__input { width: 100%; padding: 8px 12px 8px 36px; background: var(--admin-bg); border: 1px solid var(--admin-border-color); border-radius: 9px; color: var(--admin-text-primary); font-size: 0.85rem; outline: none; transition: var(--admin-transition); box-sizing: border-box; }
+.emaillogs-search__input:focus { border-color: var(--admin-accent-purple); }
+.emaillogs-search__btn { padding: 8px 18px; background: var(--admin-grad-purple); color: #fff; border: none; border-radius: 9px; font-size: 0.83rem; font-weight: 600; cursor: pointer; }
+.emaillogs-filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.emaillogs-select { padding: 7px 12px; background: var(--admin-bg); border: 1px solid var(--admin-border-color); border-radius: 9px; color: var(--admin-text-secondary); font-size: 0.82rem; cursor: pointer; outline: none; }
+.emaillogs-clear-btn { display: flex; align-items: center; gap: 5px; padding: 7px 12px; background: rgba(239,68,68,0.12); color: var(--admin-status-danger); border: 1px solid rgba(239,68,68,0.2); border-radius: 9px; font-size: 0.82rem; cursor: pointer; }
+
+.emaillogs-error { display: flex; align-items: center; gap: 10px; background: var(--admin-status-danger-bg); border: 1px solid var(--admin-status-danger); border-radius: 10px; padding: 12px; color: var(--admin-status-danger); font-size: 0.85rem; }
+
+.emaillogs-table-wrap { overflow: hidden; }
+.emaillogs-loading { height: 200px; display: flex; align-items: center; justify-content: center; color: var(--admin-text-muted); }
+.emaillogs-empty { height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--admin-text-muted); }
+.emaillogs-empty svg { color: var(--admin-border-color); }
+.emaillogs-empty p { font-size: 0.9rem; margin: 0; }
+.emaillogs-empty span { font-size: 0.78rem; }
+
+.emaillogs-table { width: 100%; border-collapse: collapse; }
+.emaillogs-table thead tr { border-bottom: 1px solid var(--admin-border-color); }
+.emaillogs-table th { padding: 10px 16px; text-align: left; font-size: 0.73rem; font-weight: 700; color: var(--admin-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.emaillogs-table__row { border-bottom: 1px solid rgba(99,102,241,0.05); transition: background 0.15s; }
+.emaillogs-table__row--clickable { cursor: pointer; }
+.emaillogs-table__row--clickable:hover { background: var(--admin-surface-hover); }
+.emaillogs-table td { padding: 11px 16px; font-size: 0.83rem; color: var(--admin-text-secondary); }
+.emaillogs-td-email { color: var(--admin-text-primary) !important; font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emaillogs-td-subject { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emaillogs-td-date { white-space: nowrap; font-size: 0.78rem; }
+.emaillogs-td-by { font-size: 0.78rem; color: var(--admin-text-muted) !important; }
+
+.emaillogs-badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; }
+.emaillogs-badge--blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.emaillogs-badge--orange { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.emaillogs-badge--purple { background: rgba(124,58,237,0.15); color: #a78bfa; }
+.emaillogs-badge--indigo { background: rgba(99,102,241,0.15); color: var(--admin-accent-indigo); }
+.emaillogs-badge--gray { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+.emaillogs-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; font-size: 0.76rem; font-weight: 600; }
+.emaillogs-status--sent { background: rgba(16,185,129,0.15); color: var(--admin-status-success); }
+.emaillogs-status--failed { background: rgba(239,68,68,0.15); color: var(--admin-status-danger); }
+
+/* Modal */
+.emaillogs-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.emaillogs-modal { width: 100%; max-width: 560px; padding: 0; overflow: hidden; }
+.emaillogs-modal__header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--admin-border-color); }
+.emaillogs-modal__title { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700; color: var(--admin-text-primary); }
+.emaillogs-modal__close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--admin-border-color); background: transparent; color: var(--admin-text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.emaillogs-modal__close:hover { color: var(--admin-text-primary); }
+.emaillogs-modal__body { padding: 22px; }
+.emaillogs-modal__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.emaillogs-modal__field { display: flex; flex-direction: column; gap: 4px; }
+.emaillogs-modal__field--full { grid-column: 1 / -1; }
+.emaillogs-modal__label { font-size: 0.72rem; font-weight: 700; color: var(--admin-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.emaillogs-modal__value { font-size: 0.87rem; color: var(--admin-text-primary); word-break: break-all; }
+.emaillogs-modal__error { margin-top: 18px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; padding: 14px; }
+.emaillogs-modal__error-title { display: flex; align-items: center; gap: 7px; color: var(--admin-status-danger); font-size: 0.82rem; font-weight: 700; margin-bottom: 8px; }
+.emaillogs-modal__error-body { font-size: 0.78rem; color: #fca5a5; margin: 0; white-space: pre-wrap; word-break: break-all; background: transparent; }
+
+@media (max-width: 768px) { .emaillogs-page { padding: 16px; } .emaillogs-modal__grid { grid-template-columns: 1fr; } }

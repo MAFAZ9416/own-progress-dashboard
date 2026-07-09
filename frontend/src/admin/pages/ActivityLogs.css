@@ -319,3 +319,108 @@
     display: none; /* Hide log source column on mobile to fit screen */
   }
 }
+
+/* Clickable table rows */
+.admin-activity-tr--clickable {
+  cursor: pointer;
+  transition: var(--admin-transition);
+}
+
+.admin-activity-tr--clickable:hover {
+  background: var(--admin-surface-hover);
+}
+
+/* Details Modal Styles */
+.activity-detail-modal {
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.activity-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.activity-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-detail-field--full {
+  grid-column: 1 / -1;
+}
+
+.activity-detail-field .lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activity-detail-field .val {
+  font-size: 0.86rem;
+  color: var(--admin-text-primary);
+  font-weight: 600;
+}
+
+.action-content-box {
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.83rem;
+  color: var(--admin-text-secondary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Mobile responsive layout */
+.activity-cards-mobile {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-activity-table {
+    display: none;
+  }
+  .activity-cards-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 2px;
+  }
+  .activity-mobile-card {
+    background: var(--admin-surface-translucent);
+    border: 1px solid var(--admin-border-color);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .activity-mobile-card:hover {
+    border-color: var(--admin-border-hover);
+  }
+  .activity-mobile-card .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .activity-mobile-card .mobile-card-header {
+    border-bottom: 1px solid var(--admin-border-color);
+    padding-bottom: 8px;
+  }
+  .activity-mobile-card .footer-time {
+    font-size: 0.74rem;
+    color: var(--admin-text-muted);
+    justify-content: flex-start;
+    gap: 4px;
+  }
+}
+

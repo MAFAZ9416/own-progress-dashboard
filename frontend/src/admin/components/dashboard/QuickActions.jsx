@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlus, PlusCircle, CheckSquare, FileText, Database, Volume2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { UserPlus, PlusCircle, CheckSquare, FileText, Database, Volume2, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react'
 import { adminDashboardService } from '../../services/dashboardService'
+import { apiClient } from '../../../api'
 import './QuickActions.css'
 
 export default function QuickActions({ onActionSuccess }) {
@@ -19,12 +20,66 @@ export default function QuickActions({ onActionSuccess }) {
     setActionStatus(null)
 
     try {
+      if (actionType === 'export') {
+        // Direct JSON export download
+        const response = await apiClient.post('/admin/action/', { action_type: 'export' })
+        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `progressly_export_${new Date().toISOString().slice(0,10)}.json`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+
+        setActionStatus({
+          type: 'success',
+          message: 'Dashboard data exported successfully.'
+        })
+        return
+      }
+
       const response = await adminDashboardService.triggerQuickAction(actionType)
+      
       if (response && response.status === 'success') {
         setActionStatus({
           type: 'success',
           message: response.message || `${label} executed successfully.`
         })
+
+        // Auto-download flow for report
+        if (actionType === 'report' && response.file_name) {
+          const downloadResponse = await apiClient.get(`/admin/reports/download/?filename=${response.file_name}`, {
+            responseType: 'blob'
+          })
+          const blob = new Blob([downloadResponse.data], { type: 'text/csv' })
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = response.file_name
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          window.URL.revokeObjectURL(url)
+        }
+
+        // Auto-download flow for backup
+        if (actionType === 'backup' && response.backup_id) {
+          const downloadResponse = await apiClient.get(`/admin/backups/${response.backup_id}/download/`, {
+            responseType: 'blob'
+          })
+          const blob = new Blob([downloadResponse.data], { type: 'application/json' })
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = response.file_name || 'progressly_backup.json'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          window.URL.revokeObjectURL(url)
+        }
+
         if (onActionSuccess) {
           onActionSuccess() // Trigger dashboard reload/update
         }
@@ -43,7 +98,7 @@ export default function QuickActions({ onActionSuccess }) {
       setRunningAction(null)
       // Auto-clear message after 5 seconds
       setTimeout(() => {
-        setActionStatus(prev => prev && prev.message === (error.message || response.message) ? null : prev)
+        setActionStatus(prev => prev ? null : prev)
       }, 5000)
     }
   }
@@ -68,18 +123,18 @@ export default function QuickActions({ onActionSuccess }) {
       color: 'blue'
     },
     {
-      id: 'add_task',
-      label: 'Add Task',
-      description: 'Create milestone task',
-      icon: CheckSquare,
-      type: 'nav',
-      handler: () => handleNavigation('/admin/tasks'),
-      color: 'yellow'
+      id: 'export',
+      label: 'Export JSON',
+      description: 'Download metrics database',
+      icon: Download,
+      type: 'api',
+      handler: () => handleApiAction('export', 'Export Data'),
+      color: 'teal'
     },
     {
       id: 'report',
       label: 'Generate Report',
-      description: 'Compile system analytica',
+      description: 'Compile system analytics (CSV)',
       icon: FileText,
       type: 'api',
       handler: () => handleApiAction('report', 'Generate Report'),
@@ -99,8 +154,8 @@ export default function QuickActions({ onActionSuccess }) {
       label: 'Send Announcement',
       description: 'Broadcast notice to users',
       icon: Volume2,
-      type: 'api',
-      handler: () => handleApiAction('announcement', 'Send Announcement'),
+      type: 'nav',
+      handler: () => handleNavigation('/admin/notifications'),
       color: 'red'
     }
   ]

@@ -9,9 +9,12 @@ import {
   Info, 
   AlertTriangle,
   Clock,
-  Check
+  Check,
+  Mail,
+  Loader2
 } from 'lucide-react'
 import { adminNotificationsService } from '../services/notificationsService'
+import { adminEmailLogsService } from '../services/emailLogsService'
 import './Notifications.css'
 
 export default function Notifications() {
@@ -19,6 +22,9 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // Email logging counts
+  const [emailStats, setEmailStats] = useState({ sent: 0, failed: 0 })
 
   // Send Alert Form State
   const [form, setForm] = useState({
@@ -26,7 +32,8 @@ export default function Notifications() {
     email: '',
     title: '',
     message: '',
-    level: 'info' // 'info', 'success', 'warning', 'danger'
+    level: 'info', // 'info', 'success', 'warning', 'danger'
+    send_email: false // ☑ Send email option
   })
   const [isSending, setIsSending] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(false)
@@ -38,6 +45,13 @@ export default function Notifications() {
     try {
       const data = await adminNotificationsService.getNotificationsList()
       setNotifications(data.notifications || [])
+
+      // Fetch Email Logs stats dynamically to show real sent/failed email counts
+      const emailData = await adminEmailLogsService.getEmailLogs({ limit: 1 })
+      setEmailStats({
+        sent: emailData.sent_count || 0,
+        failed: emailData.failed_count || 0
+      })
     } catch (err) {
       console.error('Error fetching notifications:', err)
       setError('Failed to fetch past notification logs.')
@@ -69,16 +83,22 @@ export default function Notifications() {
         email: form.send_to_type === 'single' ? form.email.trim() : undefined,
         title: form.title.trim(),
         message: form.message.trim(),
-        level: form.level
+        level: form.level,
+        send_email: form.send_email // backend support
       })
       setSendSuccess(true)
       setForm(prev => ({
         ...prev,
         email: '',
         title: '',
-        message: ''
+        message: '',
+        send_email: false
       }))
       fetchNotificationsLog(false)
+      
+      // Dispatch custom event to notify Sidebar dynamic badge to refresh
+      window.dispatchEvent(new CustomEvent('notification-changed'))
+
       setTimeout(() => setSendSuccess(false), 5000)
     } catch (err) {
       console.error('Error sending alert:', err)
@@ -111,7 +131,7 @@ export default function Notifications() {
             <Bell className="header-icon" />
           </div>
           <div>
-            <h1 className="admin-notifs-title">Alerts & Broadcasts</h1>
+            <h1 className="admin-notifs-title">Alerts &amp; Broadcasts</h1>
             <p className="admin-notifs-subtitle">Dispatch system notices and targeted bell notifications</p>
           </div>
         </div>
@@ -130,6 +150,7 @@ export default function Notifications() {
                   type="button"
                   className={`audience-btn ${form.send_to_type === 'all' ? 'active' : ''}`}
                   onClick={() => setForm({ ...form, send_to_type: 'all' })}
+                  disabled={isSending}
                 >
                   <Globe className="btn-inline-icon" />
                   Broadcast (All Active Users)
@@ -138,6 +159,7 @@ export default function Notifications() {
                   type="button"
                   className={`audience-btn ${form.send_to_type === 'single' ? 'active' : ''}`}
                   onClick={() => setForm({ ...form, send_to_type: 'single' })}
+                  disabled={isSending}
                 >
                   <User className="btn-inline-icon" />
                   Target Specific Learner
@@ -154,6 +176,8 @@ export default function Notifications() {
                   placeholder="e.g. learner@progressly.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  disabled={isSending}
+                  id="notif-target-email"
                 />
               </div>
             )}
@@ -167,6 +191,8 @@ export default function Notifications() {
                   placeholder="e.g. System Maintenance Window"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  disabled={isSending}
+                  id="notif-title-input"
                 />
               </div>
 
@@ -176,6 +202,8 @@ export default function Notifications() {
                   value={form.level}
                   onChange={(e) => setForm({ ...form, level: e.target.value })}
                   className={`level-select ${form.level}`}
+                  disabled={isSending}
+                  id="notif-level-select"
                 >
                   <option value="info">Info (Blue)</option>
                   <option value="success">Success (Green)</option>
@@ -193,19 +221,40 @@ export default function Notifications() {
                 placeholder="Write system alert message details here..."
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
+                disabled={isSending}
+                id="notif-message-textarea"
               />
+            </div>
+
+            <div className="form-group send-email-checkbox-wrap">
+              <label className="checkbox-container">
+                <input
+                  type="checkbox"
+                  checked={form.send_email}
+                  onChange={(e) => setForm({ ...form, send_email: e.target.checked })}
+                  disabled={isSending}
+                  id="notif-email-checkbox"
+                />
+                <span className="checkbox-text">
+                  <Mail size={14} className="inline-icon" />
+                  Send email notification in background
+                </span>
+              </label>
             </div>
 
             {sendSuccess && (
               <div className="success-banner animate-fade-in">
                 <Check className="success-banner-icon" />
-                <span>Notification successfully broadcasted to targets.</span>
+                <span>Notification successfully dispatched.</span>
               </div>
             )}
 
-            <button type="submit" disabled={isSending} className="send-action-btn">
+            <button type="submit" disabled={isSending} className="send-action-btn" id="notif-submit-btn">
               {isSending ? (
-                <>Sending...</>
+                <>
+                  <Loader2 size={16} className="notif-spin" />
+                  Sending Alert...
+                </>
               ) : (
                 <>
                   <Send className="btn-send-icon" />
@@ -218,7 +267,13 @@ export default function Notifications() {
 
         {/* Audit Panel: Past dispatch history log */}
         <div className="admin-notifs-log-card admin-glow-card">
-          <h2 className="card-header-title">Notification Log History</h2>
+          <div className="card-header-with-badge">
+            <h2 className="card-header-title">Notification Log History</h2>
+            <div className="notif-count-summary">
+              <span className="count-pill sent">{emailStats.sent} Sent</span>
+              <span className="count-pill failed">{emailStats.failed} Failed</span>
+            </div>
+          </div>
 
           {error && (
             <div className="admin-notifs-error-alert">
@@ -227,7 +282,7 @@ export default function Notifications() {
             </div>
           )}
 
-          {isLoading ? (
+          {isLoading && notifications.length === 0 ? (
             <div className="admin-notifs-loading">
               <div className="spinner"></div>
               <p>Loading notification logs...</p>
@@ -261,3 +316,4 @@ export default function Notifications() {
     </div>
   )
 }
+

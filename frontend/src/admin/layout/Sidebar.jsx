@@ -40,28 +40,51 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* Nav List */}
       <div className="admin-sidebar__nav-wrapper">
         <nav className="admin-sidebar__nav">
-          {NAVIGATION_ITEMS.map((item) => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.id}
-                to={item.path}
-                id={`admin-nav-${item.id}`}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `admin-sidebar__nav-item ${isActive ? 'admin-sidebar__nav-item--active' : ''}`
-                }
-              >
-                <span className="admin-sidebar__nav-icon">
-                  <Icon size={18} strokeWidth={1.8} />
-                </span>
-                <span className="admin-sidebar__nav-label">{item.label}</span>
-                {item.badgeCount && (
-                  <span className="admin-sidebar__nav-badge">{item.badgeCount}</span>
-                )}
-              </NavLink>
-            )
-          })}
+          {(() => {
+            const [dynamicCount, setDynamicCount] = React.useState(0)
+
+            const loadCount = React.useCallback(async () => {
+              try {
+                const { adminNotificationsService } = await import('../services/notificationsService')
+                const data = await adminNotificationsService.getNotificationsList()
+                setDynamicCount((data.notifications || []).length)
+              } catch (err) {
+                // Fail silently to avoid interrupting sidebar UI
+              }
+            }, [])
+
+            React.useEffect(() => {
+              loadCount()
+              window.addEventListener('notification-changed', loadCount)
+              return () => {
+                window.removeEventListener('notification-changed', loadCount)
+              }
+            }, [loadCount])
+
+            return NAVIGATION_ITEMS.map((item) => {
+              const Icon = item.icon
+              const hasBadge = item.id === 'notifications' && dynamicCount > 0
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  id={`admin-nav-${item.id}`}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `admin-sidebar__nav-item ${isActive ? 'admin-sidebar__nav-item--active' : ''}`
+                  }
+                >
+                  <span className="admin-sidebar__nav-icon">
+                    <Icon size={18} strokeWidth={1.8} />
+                  </span>
+                  <span className="admin-sidebar__nav-label">{item.label}</span>
+                  {hasBadge && (
+                    <span className="admin-sidebar__nav-badge">{dynamicCount}</span>
+                  )}
+                </NavLink>
+              )
+            })
+          })()}
         </nav>
       </div>
 

@@ -13,8 +13,10 @@ class QuickActionInputSerializer(serializers.Serializer):
         ('backup', 'Database Backup'),
         ('report', 'System Report'),
         ('announcement', 'System Announcement'),
+        ('export', 'Export Dashboard Data'),
     )
     action_type = serializers.ChoiceField(choices=ACTION_CHOICES)
+
 
 
 class AdminUserProfileSerializer(serializers.ModelSerializer):

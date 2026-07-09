@@ -1,0 +1,45 @@
+/* Database Page Styles */
+.db-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; min-height: 100vh; }
+.db-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.db-header__left { display: flex; align-items: center; gap: 14px; }
+.db-header__icon { width: 44px; height: 44px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.db-header__title { font-size: 1.4rem; font-weight: 700; color: var(--admin-text-primary); margin: 0; }
+.db-header__sub { font-size: 0.82rem; color: var(--admin-text-secondary); margin: 2px 0 0; }
+.db-refresh-btn { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 9px; border: 1px solid var(--admin-border-color); background: var(--admin-surface); color: var(--admin-text-secondary); font-size: 0.82rem; cursor: pointer; transition: var(--admin-transition); }
+.db-refresh-btn:hover { border-color: var(--admin-accent-blue); color: var(--admin-text-primary); }
+.db-spin { animation: db-spin 1s linear infinite; }
+@keyframes db-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.db-error { display: flex; align-items: center; gap: 10px; background: var(--admin-status-danger-bg); border: 1px solid var(--admin-status-danger); border-radius: 10px; padding: 12px; color: var(--admin-status-danger); font-size: 0.85rem; }
+.db-loading { height: 300px; display: flex; align-items: center; justify-content: center; color: var(--admin-text-muted); }
+
+.db-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+@media (max-width: 1400px) { .db-stats-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .db-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.db-stat-card { padding: 18px; display: flex; flex-direction: column; gap: 4px; }
+.db-stat-card__label { font-size: 0.72rem; font-weight: 700; color: var(--admin-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.db-stat-card__value { font-size: 1.4rem; font-weight: 800; color: var(--admin-text-primary); }
+.db-stat-card__sub { font-size: 0.74rem; color: var(--admin-text-muted); }
+
+.db-chart-card { padding: 20px; }
+.db-chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; color: var(--admin-text-primary); }
+.db-chart-header svg { color: var(--admin-accent-blue); }
+.db-chart-header h3 { font-size: 0.95rem; font-weight: 700; margin: 0; }
+
+.db-tooltip { background: var(--admin-surface); border: 1px solid var(--admin-border-hover); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; }
+.db-tooltip__label { color: var(--admin-text-secondary); margin-bottom: 4px; }
+.db-tooltip__val { color: var(--admin-accent-indigo); font-weight: 700; }
+
+.db-tables-card { padding: 20px; }
+.db-tables-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; color: var(--admin-text-primary); }
+.db-tables-header svg { color: var(--admin-accent-indigo); }
+.db-tables-header h3 { font-size: 0.95rem; font-weight: 700; margin: 0; }
+.db-tables-badge { margin-left: auto; font-size: 0.72rem; background: rgba(99,102,241,0.14); color: var(--admin-accent-indigo); border-radius: 6px; padding: 3px 10px; font-weight: 600; }
+.db-tables-wrap { overflow-x: auto; }
+.db-table { width: 100%; border-collapse: collapse; }
+.db-table thead tr { border-bottom: 1px solid var(--admin-border-color); }
+.db-table th { padding: 10px 14px; text-align: left; font-size: 0.72rem; font-weight: 700; color: var(--admin-text-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.db-table td { padding: 10px 14px; font-size: 0.82rem; color: var(--admin-text-secondary); border-bottom: 1px solid rgba(99,102,241,0.05); }
+.db-table__name { color: var(--admin-text-primary) !important; font-family: monospace; font-size: 0.8rem; font-weight: 600; }
+.db-table__rows { color: var(--admin-accent-purple) !important; font-weight: 700; }
+@media (max-width: 768px) { .db-page { padding: 16px; } }

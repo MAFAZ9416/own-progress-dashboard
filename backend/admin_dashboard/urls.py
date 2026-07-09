@@ -16,7 +16,7 @@ from .views import (
     AdminSkillCreateView,
     AdminUserCreateView,
     AdminUserPasswordChangeView,
-    
+
     AdminTasksListView,
     AdminAchievementsListView,
     AdminAchievementDetailView,
@@ -25,7 +25,18 @@ from .views import (
     AdminFeedbackDetailView,
     AdminFeedbackReplyView,
     AdminActivityLogsView,
-    AdminReportsAnalyticsView
+    AdminReportsAnalyticsView,
+
+    # New enterprise views
+    AdminAnalyticsView,
+    AdminEmailLogsView,
+    AdminDatabaseView,
+    AdminSystemHealthView,
+    AdminBackupsView,
+    AdminBackupDownloadView,
+    AdminRolesView,
+    AdminRoleUpdateView,
+    AdminReportDownloadView,
 )
 
 urlpatterns = [
@@ -40,15 +51,15 @@ urlpatterns = [
     path('users/<int:pk>/change-password/', AdminUserPasswordChangeView.as_view(), name='admin-user-change-password'),
     path('skills/<int:pk>/', AdminSkillDetailView.as_view(), name='admin-skill-detail'),
     path('tasks/<int:pk>/', AdminTaskDetailView.as_view(), name='admin-task-detail'),
-    
+
     # Skills Management Routes
     path('skills/list/', AdminSkillListView.as_view(), name='admin-skills-list-summary'),
     path('skills/group-detail/', AdminSkillGroupDetailView.as_view(), name='admin-skills-group-detail'),
     path('skills/global-edit/', AdminSkillGlobalEditView.as_view(), name='admin-skills-global-edit'),
     path('skills/global-delete/', AdminSkillGlobalDeleteView.as_view(), name='admin-skills-global-delete'),
     path('skills/create/', AdminSkillCreateView.as_view(), name='admin-skills-create'),
-    
-    # New Admin Dashboards Management Routes
+
+    # Core management modules
     path('tasks/', AdminTasksListView.as_view(), name='admin-tasks-list'),
     path('achievements/', AdminAchievementsListView.as_view(), name='admin-achievements-list'),
     path('achievements/<int:pk>/', AdminAchievementDetailView.as_view(), name='admin-achievement-detail'),
@@ -58,4 +69,15 @@ urlpatterns = [
     path('feedback/<int:pk>/reply/', AdminFeedbackReplyView.as_view(), name='admin-feedback-reply'),
     path('activity/', AdminActivityLogsView.as_view(), name='admin-activity-logs'),
     path('reports/', AdminReportsAnalyticsView.as_view(), name='admin-reports-analytics'),
+
+    # Enterprise new modules
+    path('analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
+    path('email-logs/', AdminEmailLogsView.as_view(), name='admin-email-logs'),
+    path('database/', AdminDatabaseView.as_view(), name='admin-database'),
+    path('health/', AdminSystemHealthView.as_view(), name='admin-system-health'),
+    path('backups/', AdminBackupsView.as_view(), name='admin-backups'),
+    path('backups/<int:pk>/download/', AdminBackupDownloadView.as_view(), name='admin-backup-download'),
+    path('reports/download/', AdminReportDownloadView.as_view(), name='admin-report-download'),
+    path('roles/', AdminRolesView.as_view(), name='admin-roles'),
+    path('roles/<int:pk>/', AdminRoleUpdateView.as_view(), name='admin-role-update'),
 ]

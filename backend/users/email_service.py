@@ -9,6 +9,35 @@ from email.mime.image import MIMEImage
 
 logger = logging.getLogger(__name__)
 
+
+def log_email_to_db(
+    recipient_email,
+    subject,
+    email_type='system',
+    status='sent',
+    error_message=None,
+    related_user=None,
+    created_by='system'
+):
+    """
+    Silently creates an EmailLog entry. Never raises — must not break email sending flow.
+    """
+    import sys
+    try:
+        from admin_dashboard.models import EmailLog
+        EmailLog.objects.create(
+            recipient_email=recipient_email,
+            subject=subject,
+            email_type=email_type,
+            status=status,
+            error_message=error_message,
+            related_user=related_user,
+            created_by=created_by,
+        )
+    except Exception as exc:
+        logger.warning(f"[log_email_to_db] Could not write EmailLog: {exc}")
+
+
 def send_progressly_email(to_email, subject, title, message_html=None, button_text=None, button_url=None, html_content=None):
     """
     Centralized Progressly HTML email dispatcher.
@@ -74,7 +103,7 @@ def send_progressly_email(to_email, subject, title, message_html=None, button_te
         return True
     except Exception as e:
         logger.exception(f"Failed to send Progressly branded email to {to_email}: {e}")
-        return False
+        raise  # re-raise so callers can log_email_to_db with 'failed' status
 
 def send_admin_notification_email(subject, title, message_html, button_text=None, button_url=None):
     """
@@ -120,12 +149,19 @@ def send_welcome_email(email_or_user, full_name=None):
         logger.error(f"Failed to render welcome_email.html: {e}")
         html_message = f"<p>Hi {full_name},</p><p>Welcome to Progressly.</p>"
 
-    return send_progressly_email(
-        to_email=email,
-        subject="🚀 Welcome to Progressly",
-        title="Welcome to Progressly",
-        html_content=html_message
-    )
+    subject_str = "🚀 Welcome to Progressly"
+    try:
+        result = send_progressly_email(
+            to_email=email,
+            subject=subject_str,
+            title="Welcome to Progressly",
+            html_content=html_message
+        )
+        log_email_to_db(email, subject_str, email_type='welcome', status='sent')
+        return result
+    except Exception as e:
+        log_email_to_db(email, subject_str, email_type='welcome', status='failed', error_message=str(e))
+        return False
 
 def send_feedback_confirmation(email_or_user, name=None, message=""):
     if hasattr(email_or_user, 'email'):
@@ -195,12 +231,19 @@ def send_password_reset_email(email, full_name, token):
         logger.error(f"Failed to render password_reset_email.html: {e}")
         html_message = f"<p>Hi {full_name},</p><p>Please click here to reset password: {reset_url}</p>"
 
-    return send_progressly_email(
-        to_email=email,
-        subject="Reset Your Password - Progressly",
-        title="Password Reset Request",
-        html_content=html_message
-    )
+    subject_str = "Reset Your Password - Progressly"
+    try:
+        result = send_progressly_email(
+            to_email=email,
+            subject=subject_str,
+            title="Password Reset Request",
+            html_content=html_message
+        )
+        log_email_to_db(email, subject_str, email_type='password_reset', status='sent')
+        return result
+    except Exception as e:
+        log_email_to_db(email, subject_str, email_type='password_reset', status='failed', error_message=str(e))
+        return False
 
 def send_password_changed_email(email, full_name):
     from django.utils import timezone
@@ -264,10 +307,17 @@ def send_admin_reset_password_email(email, full_name):
         logger.error(f"Failed to render admin_reset_password_email.html: {e}")
         html_message = f"<p>Hi {full_name},</p><p>Your password was reset by an admin.</p>"
 
-    return send_progressly_email(
-        to_email=email,
-        subject="Password Reset - Progressly Admin",
-        title="Password Reset by Admin",
-        html_content=html_message
-    )
+    subject_str = "Password Reset - Progressly Admin"
+    try:
+        result = send_progressly_email(
+            to_email=email,
+            subject=subject_str,
+            title="Password Reset by Admin",
+            html_content=html_message
+        )
+        log_email_to_db(email, subject_str, email_type='admin_password_reset', status='sent')
+        return result
+    except Exception as e:
+        log_email_to_db(email, subject_str, email_type='admin_password_reset', status='failed', error_message=str(e))
+        return False
 

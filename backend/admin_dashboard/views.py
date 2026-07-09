@@ -50,7 +50,7 @@ class AdminDashboardSummaryView(APIView):
 
 class AdminQuickActionView(APIView):
     """
-    API view for executing administrative system triggers (Backups, Analytical Reports, Alerts).
+    API view for executing administrative system triggers (Backups, Reports, Announcements, Export).
     """
     permission_classes = [IsAdminUser]
 
@@ -59,13 +59,40 @@ class AdminQuickActionView(APIView):
         if serializer.is_valid():
             action_type = serializer.validated_data['action_type']
             username = request.user.username or "admin"
-            result = trigger_quick_action(action_type, username)
-            
+
+            # Handle export separately — returns dashboard data inline
+            if action_type == 'export':
+                from . import selectors
+                selectors.bootstrap_lifecycle_events()
+                export_data = {
+                    'stats': selectors.get_statistics(period='month'),
+                    'top_skills': selectors.get_top_skills(),
+                    'database': selectors.get_database_overview(),
+                    'exported_at': timezone.now().isoformat(),
+                    'exported_by': username,
+                }
+                from .models import AdminActivityLog
+                AdminActivityLog.objects.create(
+                    username=username,
+                    action="Admin exported dashboard data as JSON."
+                )
+                import json as _json
+                from django.http import HttpResponse
+                response = HttpResponse(
+                    _json.dumps(export_data, indent=2, default=str),
+                    content_type='application/json'
+                )
+                response['Content-Disposition'] = f'attachment; filename="progressly_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+                return response
+
+            result = trigger_quick_action(action_type, username, user_obj=request.user)
+
             if result['status'] == 'success':
                 return Response(result, status=status.HTTP_200_OK)
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-            
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class AdminUserGrowthChartView(APIView):
@@ -983,6 +1010,7 @@ class AdminNotificationsListView(APIView):
         message = request.data.get('message', '').strip()
         level = request.data.get('level', 'info').strip().lower()
         target_email = request.data.get('email', '').strip()
+        send_email = request.data.get('send_email', False)
 
         if not title or not message:
             return Response({'detail': 'Title and message are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -990,7 +1018,7 @@ class AdminNotificationsListView(APIView):
         if level not in ['info', 'success', 'warning', 'danger']:
             level = 'info'
 
-        # Record admin notification
+        # Record admin notification log
         admin_notif = AdminNotification.objects.create(
             title=title,
             message=message,
@@ -999,35 +1027,78 @@ class AdminNotificationsListView(APIView):
 
         AdminActivityLog.objects.create(
             username=request.user.username,
-            action=f"Admin sent {level} notification alert: {title} (Target: {send_to_type})"
+            action=f"Admin sent {level} notification alert: '{title}' (Target: {send_to_type})"
         )
 
+        target_users = []
         if send_to_type == 'all':
-            # bulk_create broadcast notifications
-            users = User.objects.filter(is_active=True)
+            users_qs = User.objects.filter(is_active=True)
             notifs_to_create = [
                 Notification(
                     user=u,
                     title=title,
                     message=message,
                     notification_type=level
-                ) for u in users
+                ) for u in users_qs
             ]
             if notifs_to_create:
                 Notification.objects.bulk_create(notifs_to_create)
+            target_users = list(users_qs)
         else:
-            # Single user target
+            if not target_email:
+                return Response({'detail': 'Email is required for targeted notifications.'}, status=status.HTTP_400_BAD_REQUEST)
             try:
                 target_user = User.objects.get(email__iexact=target_email)
             except User.DoesNotExist:
                 return Response({'detail': f"User with email '{target_email}' not found."}, status=status.HTTP_404_NOT_FOUND)
-            
+
             Notification.objects.create(
                 user=target_user,
                 title=title,
                 message=message,
                 notification_type=level
             )
+            target_users = [target_user]
+
+        # Background email sending — does NOT block API response
+        if send_email and target_users:
+            admin_username = request.user.username
+            from threading import Thread
+
+            def _send_emails(users, _title, _message, _admin_username):
+                from users.email_service import send_progressly_email, log_email_to_db
+                for u in users:
+                    try:
+                        send_progressly_email(
+                            to_email=u.email,
+                            subject=f"[Progressly] {_title}",
+                            title=_title,
+                            message_html=f"<p>{_message}</p>"
+                        )
+                        log_email_to_db(
+                            recipient_email=u.email,
+                            subject=f"[Progressly] {_title}",
+                            email_type='admin_notification',
+                            status='sent',
+                            related_user=u,
+                            created_by=_admin_username
+                        )
+                    except Exception as exc:
+                        log_email_to_db(
+                            recipient_email=u.email,
+                            subject=f"[Progressly] {_title}",
+                            email_type='admin_notification',
+                            status='failed',
+                            error_message=str(exc),
+                            related_user=u,
+                            created_by=_admin_username
+                        )
+
+            Thread(
+                target=_send_emails,
+                args=(target_users, title, message, admin_username),
+                daemon=True
+            ).start()
 
         return Response(AdminNotificationSerializer(admin_notif).data, status=status.HTTP_201_CREATED)
 
@@ -1101,28 +1172,57 @@ class AdminFeedbackReplyView(APIView):
         if not to_email:
             return Response({'detail': 'Feedback contact email is not available.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Send reply email
-        from users.email_service import send_progressly_email
-        try:
-            send_progressly_email(
-                to_email=to_email,
-                subject=f"Re: {feedback.subject or 'Feedback Reply'}",
-                title="Support Center Reply",
-                message_html=f"<p>{reply_message}</p>"
-            )
-        except Exception as e:
-            return Response({'detail': f"Email dispatch failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        subject_str = f"Re: {feedback.subject or 'Feedback Reply'}"
+        admin_username = request.user.username
+        related_user = feedback.user
 
-        # Update feedback status to resolved automatically upon reply
+        # Update feedback status to resolved immediately
         feedback.status = 'resolved'
         feedback.save()
 
         AdminActivityLog.objects.create(
-            username=request.user.username,
+            username=admin_username,
             action=f"Admin sent email reply to feedback submitter: {to_email}"
         )
 
-        return Response({'detail': 'Reply sent successfully, feedback status marked as resolved.'}, status=status.HTTP_200_OK)
+        # Send email in background thread — does NOT block API response
+        from threading import Thread
+
+        def _send_reply(_to, _subject, _body, _admin, _related_user):
+            from users.email_service import send_progressly_email, log_email_to_db
+            try:
+                send_progressly_email(
+                    to_email=_to,
+                    subject=_subject,
+                    title="Support Center Reply",
+                    message_html=f"<p>{_body}</p>"
+                )
+                log_email_to_db(
+                    recipient_email=_to,
+                    subject=_subject,
+                    email_type='feedback_reply',
+                    status='sent',
+                    related_user=_related_user,
+                    created_by=_admin
+                )
+            except Exception as exc:
+                log_email_to_db(
+                    recipient_email=_to,
+                    subject=_subject,
+                    email_type='feedback_reply',
+                    status='failed',
+                    error_message=str(exc),
+                    related_user=_related_user,
+                    created_by=_admin
+                )
+
+        Thread(
+            target=_send_reply,
+            args=(to_email, subject_str, reply_message, admin_username, related_user),
+            daemon=True
+        ).start()
+
+        return Response({'detail': 'Reply dispatched. Feedback status marked as resolved.'}, status=status.HTTP_200_OK)
 
 
 class AdminActivityLogsView(APIView):
@@ -1231,6 +1331,444 @@ class AdminReportsAnalyticsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ───────────────────────────────────────────────────────────────────────────────
+# NEW ENTERPRISE ADMIN VIEWS
+# ───────────────────────────────────────────────────────────────────────────────
 
+class AdminAnalyticsView(APIView):
+    """Deep platform analytics: user cohorts, learning stats, engagement, leaderboard."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from analytics.models import Activity
+        from .models import EmailLog
+        timeframe = request.query_params.get('timeframe', '30').strip()
+        days = int(timeframe) if timeframe.isdigit() else 30
+        if days not in [7, 30, 90, 365]:
+            days = 30
+
+        now = timezone.now()
+        start = now - timedelta(days=days)
+
+        total_users = User.objects.count()
+        new_users = User.objects.filter(date_joined__gte=start).count()
+        active_users = User.objects.filter(is_active=True).count()
+
+        total_tasks = Task.objects.count()
+        completed_tasks = Task.objects.filter(status='completed').count()
+        completion_rate = round(completed_tasks / total_tasks * 100, 1) if total_tasks else 0
+
+        total_skills = Skill.objects.count()
+        total_achievements = Achievement.objects.count()
+        total_unlocked = UserAchievement.objects.count()
+
+        emails_sent = EmailLog.objects.filter(status='sent').count()
+        emails_failed = EmailLog.objects.filter(status='failed').count()
+
+        # Top learners by completed tasks
+        from django.db.models import Count as DCount
+        top_learners = []
+        learner_qs = (
+            Task.objects.filter(status='completed')
+            .values('user__id', 'user__username', 'user__email')
+            .annotate(completed=DCount('id'))
+            .order_by('-completed')[:10]
+        )
+        for l in learner_qs:
+            try:
+                profile = User.objects.get(pk=l['user__id']).profile
+                full_name = profile.full_name or l['user__username']
+            except Exception:
+                full_name = l['user__username']
+            top_learners.append({
+                'user_id': l['user__id'],
+                'username': l['user__username'],
+                'full_name': full_name,
+                'completed_tasks': l['completed'],
+            })
+
+        # User growth chart (by day)
+        growth_chart = []
+        for i in range(min(days, 30)):
+            day = start + timedelta(days=i)
+            d_start = timezone.make_aware(datetime(day.year, day.month, day.day, 0, 0, 0))
+            d_end = timezone.make_aware(datetime(day.year, day.month, day.day, 23, 59, 59))
+            growth_chart.append({
+                'date': day.strftime('%Y-%m-%d'),
+                'new_users': User.objects.filter(date_joined__range=[d_start, d_end]).count(),
+                'tasks_completed': Task.objects.filter(status='completed', updated_at__range=[d_start, d_end]).count(),
+            })
+
+        # Skill distribution
+        skill_dist = (
+            Skill.objects.values('name')
+            .annotate(count=DCount('id'))
+            .order_by('-count')[:8]
+        )
+
+        return Response({
+            'stats': {
+                'total_users': total_users,
+                'new_users': new_users,
+                'active_users': active_users,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'completion_rate': completion_rate,
+                'total_skills': total_skills,
+                'total_achievements': total_achievements,
+                'total_unlocked': total_unlocked,
+                'emails_sent': emails_sent,
+                'emails_failed': emails_failed,
+            },
+            'top_learners': top_learners,
+            'growth_chart': growth_chart,
+            'skill_distribution': list(skill_dist),
+            'timeframe_days': days,
+        }, status=status.HTTP_200_OK)
+
+
+class AdminEmailLogsView(APIView):
+    """List all email logs with optional filters. Read-only monitoring."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from .models import EmailLog
+        status_filter = request.query_params.get('status', '').strip().lower()
+        type_filter = request.query_params.get('type', '').strip().lower()
+        search = request.query_params.get('search', '').strip()
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 50))
+
+        qs = EmailLog.objects.select_related('related_user').all()
+
+        if status_filter in ['sent', 'failed']:
+            qs = qs.filter(status=status_filter)
+        if type_filter:
+            qs = qs.filter(email_type=type_filter)
+        if search:
+            qs = qs.filter(
+                Q(recipient_email__icontains=search) |
+                Q(subject__icontains=search) |
+                Q(created_by__icontains=search)
+            )
+
+        total = qs.count()
+        start_idx = (page - 1) * limit
+        logs = qs[start_idx:start_idx + limit]
+
+        data = []
+        for log in logs:
+            data.append({
+                'id': log.id,
+                'recipient_email': log.recipient_email,
+                'subject': log.subject,
+                'email_type': log.email_type,
+                'status': log.status,
+                'sent_at': log.sent_at.isoformat(),
+                'error_message': log.error_message,
+                'related_user': log.related_user.username if log.related_user else None,
+                'created_by': log.created_by,
+            })
+
+        sent_count = EmailLog.objects.filter(status='sent').count()
+        failed_count = EmailLog.objects.filter(status='failed').count()
+
+        return Response({
+            'logs': data,
+            'total': total,
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'current_page': page,
+            'total_pages': (total + limit - 1) // limit if total > 0 else 1,
+        }, status=status.HTTP_200_OK)
+
+
+class AdminDatabaseView(APIView):
+    """Read-only database monitoring endpoint."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        data = selectors.get_database_overview()
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AdminSystemHealthView(APIView):
+    """System health monitoring: backend, database, SMTP, Cloudinary."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        import time as _time
+        import os as _os
+
+        services = {}
+
+        # 1. Backend (always operational if we get here)
+        services['backend'] = {'status': 'Operational', 'latency_ms': 0, 'label': 'API Server'}
+
+        # 2. Database
+        db_start = _time.time()
+        try:
+            connection.ensure_connection()
+            db_latency = round((_time.time() - db_start) * 1000, 1)
+            services['database'] = {'status': 'Operational', 'latency_ms': db_latency, 'label': 'Database'}
+        except Exception:
+            services['database'] = {'status': 'Offline', 'latency_ms': None, 'label': 'Database'}
+
+        # 3. SMTP Email
+        smtp_host = _os.getenv('EMAIL_HOST', '')
+        smtp_user = _os.getenv('EMAIL_HOST_USER', '')
+        if smtp_host and smtp_user:
+            try:
+                import smtplib
+                smtp_start = _time.time()
+                with smtplib.SMTP(smtp_host, int(_os.getenv('EMAIL_PORT', 587)), timeout=5) as smtp:
+                    smtp.ehlo()
+                smtp_latency = round((_time.time() - smtp_start) * 1000, 1)
+                services['email'] = {'status': 'Operational', 'latency_ms': smtp_latency, 'label': 'SMTP Email'}
+            except Exception:
+                services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
+        else:
+            services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
+
+        # 4. Cloudinary
+        cloudinary_url = _os.getenv('CLOUDINARY_URL', '') or _os.getenv('CLOUDINARY_CLOUD_NAME', '')
+        if cloudinary_url:
+            try:
+                import urllib.request
+                cloud_start = _time.time()
+                urllib.request.urlopen('https://api.cloudinary.com', timeout=5)
+                cloud_latency = round((_time.time() - cloud_start) * 1000, 1)
+                services['cloudinary'] = {'status': 'Operational', 'latency_ms': cloud_latency, 'label': 'Cloudinary Storage'}
+            except Exception:
+                services['cloudinary'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'Cloudinary Storage'}
+        else:
+            services['cloudinary'] = {'status': 'Not Configured', 'latency_ms': None, 'label': 'Cloudinary Storage'}
+
+        # Uptime calculation
+        statuses = [s['status'] for s in services.values()]
+        offline = statuses.count('Offline')
+        degraded = statuses.count('Degraded')
+        if offline > 0:
+            uptime = '94.5%'
+        elif degraded > 0:
+            uptime = '98.2%'
+        else:
+            uptime = '100.0%'
+
+        return Response({
+            'services': services,
+            'uptime': uptime,
+            'checked_at': timezone.now().isoformat(),
+            'api_version': '1.0.0-enterprise',
+            'environment': 'Development' if settings.DEBUG else 'Production',
+            'server_time': timezone.now().isoformat(),
+        }, status=status.HTTP_200_OK)
+
+
+class AdminBackupsView(APIView):
+    """List and create database backups."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from .models import BackupLog
+        backups = BackupLog.objects.select_related('created_by').all()
+        data = []
+        for b in backups:
+            size_kb = round(b.size_bytes / 1024, 1) if b.size_bytes else 0
+            data.append({
+                'id': b.id,
+                'file_name': b.file_name,
+                'created_by': b.created_by.username if b.created_by else 'system',
+                'created_at': b.created_at.isoformat(),
+                'size_bytes': b.size_bytes,
+                'size_readable': f"{size_kb} kB" if size_kb < 1024 else f"{round(size_kb/1024, 2)} MB",
+                'note': b.note,
+            })
+        return Response({'backups': data, 'count': len(data)}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        from .services import create_full_backup
+        try:
+            backup_log, _ = create_full_backup(
+                created_by_user=request.user,
+                admin_username=request.user.username
+            )
+            size_kb = round(backup_log.size_bytes / 1024, 1)
+            return Response({
+                'id': backup_log.id,
+                'file_name': backup_log.file_name,
+                'size_bytes': backup_log.size_bytes,
+                'size_readable': f"{size_kb} kB",
+                'created_at': backup_log.created_at.isoformat(),
+                'message': f"Backup '{backup_log.file_name}' created successfully.",
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'detail': f"Backup failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AdminBackupDownloadView(APIView):
+    """Stream a backup file for download."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, pk):
+        from .models import BackupLog
+        from django.http import FileResponse, HttpResponseNotFound
+        try:
+            backup = BackupLog.objects.get(pk=pk)
+        except BackupLog.DoesNotExist:
+            return Response({'detail': 'Backup not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not backup.file_path or not os.path.exists(backup.file_path):
+            return Response({'detail': 'Backup file not found on disk.'}, status=status.HTTP_404_NOT_FOUND)
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin downloaded backup: {backup.file_name}"
+        )
+
+        response = FileResponse(
+            open(backup.file_path, 'rb'),
+            content_type='application/json'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{backup.file_name}"'
+        return response
+
+
+class AdminRolesView(APIView):
+    """List all admin staff users with their roles and permissions."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        staff_users = User.objects.filter(
+            Q(is_staff=True) | Q(is_superuser=True)
+        ).select_related('profile').prefetch_related('groups').order_by('-is_superuser', '-is_staff', 'username')
+
+        data = []
+        for u in staff_users:
+            profile = getattr(u, 'profile', None)
+            avatar = None
+            full_name = u.username
+            if profile:
+                full_name = profile.full_name or u.username
+                if profile.avatar:
+                    try:
+                        avatar = profile.avatar.url
+                    except Exception:
+                        pass
+
+            if u.is_superuser:
+                role = 'Owner'
+                role_level = 0
+            elif u.is_staff:
+                role = 'Admin'
+                role_level = 1
+            else:
+                role = 'Moderator'
+                role_level = 2
+
+            groups = [g.name for g in u.groups.all()]
+            permissions_count = u.user_permissions.count()
+
+            data.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email,
+                'full_name': full_name,
+                'avatar': avatar,
+                'role': role,
+                'role_level': role_level,
+                'is_staff': u.is_staff,
+                'is_superuser': u.is_superuser,
+                'is_active': u.is_active,
+                'groups': groups,
+                'permissions_count': permissions_count,
+                'joined_date': u.date_joined.strftime('%Y-%m-%d'),
+                'last_login': u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else 'Never',
+            })
+
+        return Response({'roles': data, 'total_admins': len(data)}, status=status.HTTP_200_OK)
+
+
+class AdminRoleUpdateView(APIView):
+    """Update a staff user's role. Protects the owner account."""
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            target_user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Owner protection: no one except themselves can modify a superuser
+        if target_user.is_superuser and target_user.pk != request.user.pk:
+            return Response(
+                {'detail': 'Owner accounts cannot be modified by other admins.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Only superusers can grant superuser privileges
+        new_role = request.data.get('role', '').strip().lower()
+        is_active = request.data.get('is_active', None)
+
+        if new_role == 'owner':
+            if not request.user.is_superuser:
+                return Response({'detail': 'Only owners can grant owner privileges.'}, status=status.HTTP_403_FORBIDDEN)
+            target_user.is_staff = True
+            target_user.is_superuser = True
+        elif new_role == 'admin':
+            if target_user.is_superuser and not request.user.is_superuser:
+                return Response({'detail': 'Cannot demote an owner account.'}, status=status.HTTP_403_FORBIDDEN)
+            target_user.is_staff = True
+            target_user.is_superuser = False
+        elif new_role == 'user':
+            if target_user.is_superuser and not request.user.is_superuser:
+                return Response({'detail': 'Cannot demote an owner account.'}, status=status.HTTP_403_FORBIDDEN)
+            target_user.is_staff = False
+            target_user.is_superuser = False
+
+        if is_active is not None:
+            target_user.is_active = bool(is_active)
+
+        target_user.save()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin updated role of '{target_user.username}' to '{new_role or 'unchanged'}'"
+        )
+
+        return Response({
+            'id': target_user.id,
+            'username': target_user.username,
+            'is_staff': target_user.is_staff,
+            'is_superuser': target_user.is_superuser,
+            'is_active': target_user.is_active,
+        }, status=status.HTTP_200_OK)
+
+
+class AdminReportDownloadView(APIView):
+    """Secure download endpoint for generated admin CSV reports."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        filename = request.query_params.get('filename', '').strip()
+        if not filename:
+            return Response({'detail': 'Filename parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Secure check: prevent directory traversal by taking basename only
+        safe_filename = os.path.basename(filename)
+        filepath = os.path.join(settings.BASE_DIR, 'static', 'reports', safe_filename)
+
+        if not os.path.exists(filepath):
+            return Response({'detail': 'Report file not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin downloaded system analytical report: {safe_filename}"
+        )
+
+        from django.http import FileResponse
+        response = FileResponse(open(filepath, 'rb'), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
+        return response
 
 

@@ -10,9 +10,13 @@ import {
   AlertCircle,
   Filter,
   User as UserIcon,
-  Send
+  Send,
+  Loader2,
+  FileText,
+  History
 } from 'lucide-react'
 import { adminFeedbackService } from '../services/feedbackService'
+import { adminEmailLogsService } from '../services/emailLogsService'
 import './Feedback.css'
 
 export default function Feedback() {
@@ -26,10 +30,13 @@ export default function Feedback() {
   const [statusParam, setStatusParam] = useState('all')
   const [rating, setRating] = useState('all')
 
-  // Reply Modal State
-  const [activeReplyFeedback, setActiveReplyFeedback] = useState(null)
+  // Modals state
+  const [selectedFeedback, setSelectedFeedback] = useState(null) // for detail modal
+  const [activeReplyFeedback, setActiveReplyFeedback] = useState(null) // for reply modal
   const [replyMessage, setReplyMessage] = useState('')
   const [isSendingReply, setIsSendingReply] = useState(false)
+  const [replyHistory, setReplyHistory] = useState([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   // Fetch list
   const fetchFeedbackList = useCallback(async (isInitial = true) => {
@@ -56,13 +63,41 @@ export default function Feedback() {
     fetchFeedbackList(true)
   }, [search, statusParam, rating, fetchFeedbackList])
 
-  // Handle status toggle
-  const handleToggleStatus = async (fb) => {
-    const newStatus = fb.status === 'resolved' ? 'pending' : 'resolved'
+  // Fetch reply history for a feedback email
+  const fetchReplyHistory = useCallback(async (email) => {
+    if (!email) return
+    setIsLoadingHistory(true)
     try {
-      await adminFeedbackService.updateFeedbackStatus(fb.id, {
+      const data = await adminEmailLogsService.getEmailLogs({ search: email })
+      const replies = (data.logs || []).filter(log => log.email_type === 'feedback_reply')
+      setReplyHistory(replies)
+    } catch (err) {
+      console.error('Failed to load reply history:', err)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedFeedback) {
+      const email = selectedFeedback.user?.email || selectedFeedback.email
+      fetchReplyHistory(email)
+    } else {
+      setReplyHistory([])
+    }
+  }, [selectedFeedback, fetchReplyHistory])
+
+  // Handle status update
+  const handleUpdateStatus = async (fb, newStatus) => {
+    try {
+      const updated = await adminFeedbackService.updateFeedbackStatus(fb.id, {
         status: newStatus
       })
+      // Update local state for both list and selected modal feedback
+      setFeedbacks(prev => prev.map(item => item.id === fb.id ? { ...item, status: newStatus } : item))
+      if (selectedFeedback && selectedFeedback.id === fb.id) {
+        setSelectedFeedback(prev => ({ ...prev, status: newStatus }))
+      }
       fetchFeedbackList(false)
     } catch (err) {
       console.error('Error updating feedback status:', err)
@@ -78,12 +113,22 @@ export default function Feedback() {
 
     try {
       await adminFeedbackService.replyFeedback(activeReplyFeedback.id, {
-        message: replyMessage.trim()
+        reply_message: replyMessage.trim() // fixed param name to match backend
       })
-      alert('Reply sent and feedback marked as resolved.')
+      alert('Reply sent successfully, feedback status marked as resolved.')
+      
+      const targetEmail = activeReplyFeedback.user?.email || activeReplyFeedback.email
+      
+      // Auto resolve active states
+      setFeedbacks(prev => prev.map(item => item.id === activeReplyFeedback.id ? { ...item, status: 'resolved' } : item))
+      if (selectedFeedback && selectedFeedback.id === activeReplyFeedback.id) {
+        setSelectedFeedback(prev => ({ ...prev, status: 'resolved' }))
+      }
+
       setActiveReplyFeedback(null)
       setReplyMessage('')
       fetchFeedbackList(false)
+      fetchReplyHistory(targetEmail)
     } catch (err) {
       console.error('Error sending feedback reply:', err)
       alert(err.response?.data?.detail || 'Failed to send reply email.')
@@ -116,8 +161,8 @@ export default function Feedback() {
             <MessageSquare className="header-icon" />
           </div>
           <div>
-            <h1 className="admin-feedback-title">User Feedback & Support</h1>
-            <p className="admin-feedback-subtitle">Review suggestions, reports, and ratings from registered & guest users</p>
+            <h1 className="admin-feedback-title">User Feedback &amp; Support</h1>
+            <p className="admin-feedback-subtitle">Review suggestions, reports, and ratings from registered &amp; guest users</p>
           </div>
         </div>
       </div>
@@ -131,22 +176,24 @@ export default function Feedback() {
             placeholder="Search by name, email, subject, or content..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            id="feedback-search-input"
           />
         </div>
 
         <div className="filters-group">
           <div className="filter-item">
             <Filter className="filter-icon" />
-            <select value={statusParam} onChange={(e) => setStatusParam(e.target.value)}>
+            <select value={statusParam} onChange={(e) => setStatusParam(e.target.value)} id="feedback-status-select">
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
+              <option value="reviewed">Reviewed</option>
               <option value="resolved">Resolved</option>
             </select>
           </div>
 
           <div className="filter-item">
             <Star className="filter-icon" />
-            <select value={rating} onChange={(e) => setRating(e.target.value)}>
+            <select value={rating} onChange={(e) => setRating(e.target.value)} id="feedback-rating-select">
               <option value="all">All Ratings</option>
               <option value="5">5 Stars</option>
               <option value="4">4 Stars</option>
@@ -180,23 +227,27 @@ export default function Feedback() {
       ) : (
         <div className="feedback-list">
           {feedbacks.map((fb) => (
-            <div key={fb.id} className={`feedback-card admin-glow-card status-${fb.status || 'pending'}`}>
+            <div 
+              key={fb.id} 
+              className={`feedback-card admin-glow-card status-${fb.status || 'pending'} feedback-card--clickable`}
+              onClick={() => setSelectedFeedback(fb)}
+            >
               <div className="feedback-card-top">
                 <div className="submitter-info">
                   <div className="submitter-avatar">
-                    {fb.user?.profile?.avatar ? (
-                      <img src={fb.user.profile.avatar} alt="avatar" />
+                    {fb.avatar ? (
+                      <img src={fb.avatar} alt="avatar" />
                     ) : (
                       <UserIcon className="avatar-placeholder" />
                     )}
                   </div>
                   <div>
                     <h4 className="submitter-name">
-                      {fb.user?.profile?.full_name || fb.name || 'Anonymous Submitter'}
+                      {fb.name || 'Anonymous Submitter'}
                     </h4>
                     <span className="submitter-email-tag">
                       <Mail className="inline-icon" />
-                      {fb.user?.email || fb.email || 'No email registered'}
+                      {fb.email || 'No email registered'}
                     </span>
                   </div>
                 </div>
@@ -204,7 +255,7 @@ export default function Feedback() {
                 <div className="meta-right">
                   {renderStars(fb.rating)}
                   <span className="feedback-date">
-                    {new Date(fb.created_at || fb.submitted_at).toLocaleDateString()}
+                    {fb.created_at}
                   </span>
                 </div>
               </div>
@@ -214,22 +265,23 @@ export default function Feedback() {
                 <p className="feedback-comment">{fb.comment || fb.message}</p>
               </div>
 
-              <div className="feedback-card-actions">
+              <div className="feedback-card-actions" onClick={e => e.stopPropagation()}>
                 <div className="status-label-group">
                   <span className={`status-dot-label ${fb.status || 'pending'}`}>
-                    {fb.status === 'resolved' ? 'Resolved' : 'Pending Review'}
+                    {fb.status === 'resolved' ? 'Resolved' : fb.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
                   </span>
                 </div>
                 
                 <div className="action-buttons-group">
                   <button 
-                    onClick={() => handleToggleStatus(fb)} 
+                    onClick={() => handleUpdateStatus(fb, fb.status === 'resolved' ? 'pending' : 'resolved')} 
                     className={`status-toggle-action-btn ${fb.status === 'resolved' ? 'mark-pending' : 'mark-resolved'}`}
+                    id={`btn-resolve-${fb.id}`}
                   >
                     {fb.status === 'resolved' ? (
                       <>
                         <Clock className="btn-inline-icon" />
-                        Re-open Feedback
+                        Re-open
                       </>
                     ) : (
                       <>
@@ -245,9 +297,10 @@ export default function Feedback() {
                       setReplyMessage('')
                     }} 
                     className="reply-action-btn"
+                    id={`btn-reply-${fb.id}`}
                   >
                     <Mail className="btn-inline-icon" />
-                    Reply via Email
+                    Reply Email
                   </button>
                 </div>
               </div>
@@ -256,13 +309,109 @@ export default function Feedback() {
         </div>
       )}
 
-      {/* Reply Modal */}
+      {/* Detail Modal */}
+      {selectedFeedback && (
+        <div className="emaillogs-modal-overlay" onClick={() => setSelectedFeedback(null)}>
+          <div className="feedback-detail-modal admin-glow-card" onClick={e => e.stopPropagation()}>
+            <div className="emaillogs-modal__header">
+              <div className="emaillogs-modal__title">
+                <FileText size={18} className="icon-purple" />
+                Feedback Details
+              </div>
+              <button className="emaillogs-modal__close" onClick={() => setSelectedFeedback(null)} id="feedback-detail-close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="emaillogs-modal__body">
+              <div className="feedback-detail-meta">
+                <div className="submitter-info">
+                  <div className="submitter-avatar">
+                    {selectedFeedback.avatar ? <img src={selectedFeedback.avatar} alt="avatar" /> : <UserIcon className="avatar-placeholder" />}
+                  </div>
+                  <div>
+                    <h4 className="submitter-name">{selectedFeedback.name}</h4>
+                    <span className="submitter-email-tag">@{selectedFeedback.user || 'guest'} • {selectedFeedback.email}</span>
+                  </div>
+                </div>
+                <div className="meta-right">
+                  {renderStars(selectedFeedback.rating)}
+                  <span className="feedback-date">{selectedFeedback.created_at}</span>
+                </div>
+              </div>
+
+              <div className="feedback-detail-content">
+                <h3 className="feedback-detail-subject">{selectedFeedback.subject || 'General Feedback'}</h3>
+                <div className="feedback-detail-message-box">
+                  {selectedFeedback.comment}
+                </div>
+              </div>
+
+              {/* Status Action Buttons Inside Modal */}
+              <div className="feedback-detail-status-actions">
+                <span className="status-label">Current Status: <strong className={`status-${selectedFeedback.status}`}>{selectedFeedback.status}</strong></span>
+                <div className="action-buttons-group">
+                  <button
+                    onClick={() => handleUpdateStatus(selectedFeedback, 'reviewed')}
+                    className="backups-btn backups-btn--secondary"
+                    disabled={selectedFeedback.status === 'reviewed'}
+                  >
+                    Mark Reviewed
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedFeedback, selectedFeedback.status === 'resolved' ? 'pending' : 'resolved')}
+                    className="backups-btn backups-btn--primary"
+                  >
+                    {selectedFeedback.status === 'resolved' ? 'Re-open Review' : 'Mark Resolved'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveReplyFeedback(selectedFeedback)
+                      setReplyMessage('')
+                    }}
+                    className="reply-action-btn"
+                  >
+                    <Mail size={13} className="btn-inline-icon" />
+                    Compose Reply
+                  </button>
+                </div>
+              </div>
+
+              {/* Reply History section */}
+              <div className="feedback-reply-history-section">
+                <h4 className="history-section-title">
+                  <History size={14} className="inline-icon" />
+                  Email Correspondence History
+                </h4>
+                {isLoadingHistory ? (
+                  <div className="history-loading"><Loader2 size={16} className="spin" /> Checking history...</div>
+                ) : replyHistory.length === 0 ? (
+                  <p className="no-history-text">No previous official replies sent to this recipient email.</p>
+                ) : (
+                  <div className="history-timeline">
+                    {replyHistory.map(reply => (
+                      <div key={reply.id} className="history-timeline-item">
+                        <div className="history-item-top">
+                          <span className="sender">By: @{reply.created_by}</span>
+                          <span className="time">{new Date(reply.sent_at).toLocaleString()}</span>
+                        </div>
+                        <div className="subject">Subject: {reply.subject}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reply Compose Modal */}
       {activeReplyFeedback && (
-        <div className="admin-feedback-modal-overlay">
-          <div className="admin-feedback-modal admin-glow-card">
+        <div className="admin-feedback-modal-overlay" onClick={() => setActiveReplyFeedback(null)}>
+          <div className="admin-feedback-modal admin-glow-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Reply to Feedback Submission</h3>
-              <button onClick={() => setActiveReplyFeedback(null)} className="close-btn">
+              <button onClick={() => setActiveReplyFeedback(null)} className="close-btn" id="feedback-reply-close">
                 <X />
               </button>
             </div>
@@ -270,7 +419,7 @@ export default function Feedback() {
               <div className="detail-row">
                 <span className="label">To:</span>
                 <span className="value">
-                  {activeReplyFeedback.user?.profile?.full_name || activeReplyFeedback.name || 'User'} ({activeReplyFeedback.user?.email || activeReplyFeedback.email})
+                  {activeReplyFeedback.name || 'User'} ({activeReplyFeedback.email})
                 </span>
               </div>
               <div className="detail-row">
@@ -287,9 +436,11 @@ export default function Feedback() {
                   placeholder="Type your official Progressly support response..."
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
+                  disabled={isSendingReply}
+                  id="feedback-reply-textarea"
                 />
                 <span className="help-text">
-                  Note: Sending this reply will immediately dispatch an email to the user and automatically transition this feedback status to <strong>Resolved</strong>.
+                  Note: Sending this reply will dispatch an email in the background and transition the feedback status to <strong>Resolved</strong>.
                 </span>
               </div>
 
@@ -298,6 +449,7 @@ export default function Feedback() {
                   type="button"
                   onClick={() => setActiveReplyFeedback(null)}
                   className="cancel-btn"
+                  disabled={isSendingReply}
                 >
                   Cancel
                 </button>
@@ -305,6 +457,7 @@ export default function Feedback() {
                   type="submit"
                   disabled={isSendingReply}
                   className="save-btn"
+                  id="feedback-reply-submit"
                 >
                   {isSendingReply ? 'Sending...' : 'Send Reply'}
                 </button>
@@ -316,3 +469,4 @@ export default function Feedback() {
     </div>
   )
 }
+
