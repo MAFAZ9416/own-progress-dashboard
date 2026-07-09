@@ -92,8 +92,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             "notifications_enabled",
             "date_joined",
             "public_slug",
+            "is_staff",
+            "is_superuser",
         ]
-        read_only_fields = ["id", "public_slug"]
+        read_only_fields = ["id", "public_slug", "is_staff", "is_superuser"]
 
 
     def to_representation(self, instance):

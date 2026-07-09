@@ -211,5 +211,74 @@ class AdminUserPasswordChangeSerializer(serializers.Serializer):
         return attrs
 
 
+class AdminTaskSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+    skill = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = ['id', 'title', 'description', 'status', 'priority', 'created_at', 'owner', 'skill']
+
+    def get_owner(self, obj):
+        user = obj.user
+        full_name = getattr(user, 'username', 'Unknown')
+        try:
+            if hasattr(user, 'profile') and user.profile:
+                full_name = user.profile.full_name or user.username
+        except Exception:
+            pass
+        return {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'full_name': full_name
+        }
+
+    def get_skill(self, obj):
+        skill = obj.skill
+        if not skill:
+            return None
+        return {
+            'id': skill.id,
+            'name': skill.name,
+            'color': skill.color
+        }
+
+
+from analytics.models import Achievement
+
+class AdminAchievementSerializer(serializers.ModelSerializer):
+    unlocked_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Achievement
+        fields = ['id', 'name', 'description', 'icon', 'condition', 'is_active', 'created_at', 'unlocked_count']
+
+    def get_unlocked_count(self, obj):
+        return obj.user_unlocks.count()
+
+
+from .models import AdminNotification
+
+class AdminNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminNotification
+        fields = ['id', 'title', 'message', 'level', 'created_at']
+
+
+from .models import AdminFeedback
+
+class AdminFeedbackSerializer(serializers.ModelSerializer):
+    user_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AdminFeedback
+        fields = ['id', 'user', 'user_username', 'name', 'email', 'subject', 'avatar_url', 'rating', 'comment', 'status', 'created_at']
+
+    def get_user_username(self, obj):
+        return obj.user.username if obj.user else None
+
+
+
 
 

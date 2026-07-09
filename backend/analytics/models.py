@@ -7,6 +7,7 @@ class Achievement(models.Model):
 	description = models.TextField()
 	icon = models.CharField(max_length=32, default='🏆')
 	condition = models.CharField(max_length=255)
+	is_active = models.BooleanField(default=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self):

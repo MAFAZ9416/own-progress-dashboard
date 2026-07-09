@@ -3,11 +3,19 @@ from django.conf import settings
 from django.utils import timezone
 
 class AdminFeedback(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('reviewed', 'Reviewed'),
+        ('resolved', 'Resolved'),
+    )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, default='')
+    subject = models.CharField(max_length=255, blank=True, default='General Feedback')
     avatar_url = models.URLField(max_length=500, blank=True, null=True)
     rating = models.PositiveIntegerField(default=5)  # 1 to 5 stars
     comment = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

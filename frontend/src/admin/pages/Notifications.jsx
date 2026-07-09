@@ -1,13 +1,263 @@
-import React from 'react'
-import { Bell } from 'lucide-react'
-import PagePlaceholder from '../components/PagePlaceholder'
+import React, { useState, useEffect, useCallback } from 'react'
+import { 
+  Bell, 
+  Send, 
+  Globe, 
+  User, 
+  AlertCircle, 
+  CheckCircle, 
+  Info, 
+  AlertTriangle,
+  Clock,
+  Check
+} from 'lucide-react'
+import { adminNotificationsService } from '../services/notificationsService'
+import './Notifications.css'
 
 export default function Notifications() {
+  // Data state
+  const [notifications, setNotifications] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Send Alert Form State
+  const [form, setForm] = useState({
+    send_to_type: 'all', // 'all' or 'single'
+    email: '',
+    title: '',
+    message: '',
+    level: 'info' // 'info', 'success', 'warning', 'danger'
+  })
+  const [isSending, setIsSending] = useState(false)
+  const [sendSuccess, setSendSuccess] = useState(false)
+
+  // Fetch log
+  const fetchNotificationsLog = useCallback(async (isInitial = true) => {
+    if (isInitial) setIsLoading(true)
+    setError(null)
+    try {
+      const data = await adminNotificationsService.getNotificationsList()
+      setNotifications(data.notifications || [])
+    } catch (err) {
+      console.error('Error fetching notifications:', err)
+      setError('Failed to fetch past notification logs.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotificationsLog(true)
+  }, [fetchNotificationsLog])
+
+  // Handle Send Submit
+  const handleSendSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.title.trim() || !form.message.trim() || isSending) return
+    if (form.send_to_type === 'single' && !form.email.trim()) {
+      alert('Recipient email address is required.')
+      return
+    }
+
+    setIsSending(true)
+    setSendSuccess(false)
+    setError(null)
+
+    try {
+      await adminNotificationsService.sendNotificationAlert({
+        send_to_type: form.send_to_type,
+        email: form.send_to_type === 'single' ? form.email.trim() : undefined,
+        title: form.title.trim(),
+        message: form.message.trim(),
+        level: form.level
+      })
+      setSendSuccess(true)
+      setForm(prev => ({
+        ...prev,
+        email: '',
+        title: '',
+        message: ''
+      }))
+      fetchNotificationsLog(false)
+      setTimeout(() => setSendSuccess(false), 5000)
+    } catch (err) {
+      console.error('Error sending alert:', err)
+      setError(err.response?.data?.detail || 'Failed to dispatch notification alert.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // Helper for status icon
+  const getLevelIcon = (level) => {
+    switch (level) {
+      case 'success':
+        return <CheckCircle className="notif-level-icon text-success" />
+      case 'warning':
+        return <AlertTriangle className="notif-level-icon text-warning" />
+      case 'danger':
+        return <AlertCircle className="notif-level-icon text-danger" />
+      default:
+        return <Info className="notif-level-icon text-info" />
+    }
+  }
+
   return (
-    <PagePlaceholder
-      title="Notifications"
-      icon={Bell}
-      phaseText="This module's dashboard sub-view will be introduced in subsequent phases."
-    />
+    <div className="admin-notifs-container">
+      {/* Header section */}
+      <div className="admin-notifs-header">
+        <div className="header-left">
+          <div className="header-icon-wrapper">
+            <Bell className="header-icon" />
+          </div>
+          <div>
+            <h1 className="admin-notifs-title">Alerts & Broadcasts</h1>
+            <p className="admin-notifs-subtitle">Dispatch system notices and targeted bell notifications</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="admin-notifs-grid">
+        {/* Action Panel: Send alert form */}
+        <div className="admin-notifs-form-card admin-glow-card">
+          <h2 className="card-header-title">Send Notification Alert</h2>
+          
+          <form onSubmit={handleSendSubmit} className="dispatch-form">
+            <div className="form-group">
+              <label>Target Audience</label>
+              <div className="audience-toggle-group">
+                <button
+                  type="button"
+                  className={`audience-btn ${form.send_to_type === 'all' ? 'active' : ''}`}
+                  onClick={() => setForm({ ...form, send_to_type: 'all' })}
+                >
+                  <Globe className="btn-inline-icon" />
+                  Broadcast (All Active Users)
+                </button>
+                <button
+                  type="button"
+                  className={`audience-btn ${form.send_to_type === 'single' ? 'active' : ''}`}
+                  onClick={() => setForm({ ...form, send_to_type: 'single' })}
+                >
+                  <User className="btn-inline-icon" />
+                  Target Specific Learner
+                </button>
+              </div>
+            </div>
+
+            {form.send_to_type === 'single' && (
+              <div className="form-group animate-slide-down">
+                <label>Learner Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. learner@progressly.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="form-group flex-2">
+                <label>Alert Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. System Maintenance Window"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group flex-1">
+                <label>Severity Level</label>
+                <select
+                  value={form.level}
+                  onChange={(e) => setForm({ ...form, level: e.target.value })}
+                  className={`level-select ${form.level}`}
+                >
+                  <option value="info">Info (Blue)</option>
+                  <option value="success">Success (Green)</option>
+                  <option value="warning">Warning (Amber)</option>
+                  <option value="danger">Danger (Red)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Notification Message</label>
+              <textarea
+                rows={4}
+                required
+                placeholder="Write system alert message details here..."
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+              />
+            </div>
+
+            {sendSuccess && (
+              <div className="success-banner animate-fade-in">
+                <Check className="success-banner-icon" />
+                <span>Notification successfully broadcasted to targets.</span>
+              </div>
+            )}
+
+            <button type="submit" disabled={isSending} className="send-action-btn">
+              {isSending ? (
+                <>Sending...</>
+              ) : (
+                <>
+                  <Send className="btn-send-icon" />
+                  Send Notification
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Audit Panel: Past dispatch history log */}
+        <div className="admin-notifs-log-card admin-glow-card">
+          <h2 className="card-header-title">Notification Log History</h2>
+
+          {error && (
+            <div className="admin-notifs-error-alert">
+              <AlertCircle className="error-alert-icon" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="admin-notifs-loading">
+              <div className="spinner"></div>
+              <p>Loading notification logs...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="admin-notifs-empty-state">
+              <Bell className="empty-icon" />
+              <p>No historical admin notifications sent yet.</p>
+            </div>
+          ) : (
+            <div className="notif-log-list">
+              {notifications.map((notif) => (
+                <div key={notif.id} className={`notif-log-item border-${notif.level || 'info'}`}>
+                  <div className="notif-log-top">
+                    <div className="notif-log-title-group">
+                      {getLevelIcon(notif.level)}
+                      <span className="notif-log-title">{notif.title}</span>
+                    </div>
+                    <div className="notif-log-date">
+                      <Clock className="time-icon" />
+                      <span>{new Date(notif.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <p className="notif-log-msg">{notif.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

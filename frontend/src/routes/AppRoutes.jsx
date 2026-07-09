@@ -25,7 +25,7 @@ const AdminDashboardView = lazy(() => import('../admin/pages/Dashboard'))
 const AdminUsersView = lazy(() => import('../admin/pages/Users'))
 const AdminSkillsView = lazy(() => import('../admin/pages/Skills'))
 const AdminTasksView = lazy(() => import('../admin/pages/Tasks'))
-const AdminStreaksView = lazy(() => import('../admin/pages/Streaks'))
+const AdminAchievementsView = lazy(() => import('../admin/pages/Achievements'))
 const AdminAnalyticsView = lazy(() => import('../admin/pages/Analytics'))
 const AdminReportsView = lazy(() => import('../admin/pages/Reports'))
 const AdminNotificationsView = lazy(() => import('../admin/pages/Notifications'))
@@ -87,7 +87,7 @@ export default function AppRoutes() {
           <Route path="/admin/users" element={<LazyPage><AdminUsersView /></LazyPage>} />
           <Route path="/admin/skills" element={<LazyPage><AdminSkillsView /></LazyPage>} />
           <Route path="/admin/tasks" element={<LazyPage><AdminTasksView /></LazyPage>} />
-          <Route path="/admin/streaks" element={<LazyPage><AdminStreaksView /></LazyPage>} />
+          <Route path="/admin/achievements" element={<LazyPage><AdminAchievementsView /></LazyPage>} />
           <Route path="/admin/analytics" element={<LazyPage><AdminAnalyticsView /></LazyPage>} />
           <Route path="/admin/reports" element={<LazyPage><AdminReportsView /></LazyPage>} />
           <Route path="/admin/notifications" element={<LazyPage><AdminNotificationsView /></LazyPage>} />

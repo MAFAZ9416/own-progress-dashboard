@@ -556,6 +556,8 @@ class GoogleLoginView(generics.GenericAPIView):
                 'full_name': profile.full_name,
                 'avatar': avatar_uri,
                 'public_slug': profile.public_slug,
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
             }
         }
 

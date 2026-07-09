@@ -794,5 +794,443 @@ class AdminUserPasswordChangeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from tasks.models import Task
+from analytics.models import Achievement, UserAchievement, Activity
+from notifications.models import Notification
+from .models import AdminFeedback, AdminNotification, AdminActivityLog, UserLifecycleEvent
+from .serializers import (
+    AdminTaskSerializer, AdminAchievementSerializer,
+    AdminNotificationSerializer, AdminFeedbackSerializer
+)
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+from django.utils import timezone
+from datetime import datetime, timedelta
+
+class AdminTasksListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+        status_param = request.query_params.get('status', '').strip().lower()
+        priority = request.query_params.get('priority', '').strip().lower()
+        sort = request.query_params.get('sort', 'newest').strip().lower()
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 20))
+
+        queryset = Task.objects.select_related('user', 'skill', 'user__profile').all()
+
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(user__username__icontains=search) |
+                Q(skill__name__icontains=search)
+            )
+
+        if status_param in ['pending', 'completed']:
+            queryset = queryset.filter(status=status_param)
+
+        if priority in ['low', 'medium', 'high']:
+            queryset = queryset.filter(priority=priority)
+
+        if sort == 'oldest':
+            queryset = queryset.order_by('created_at')
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        total_count = queryset.count()
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        tasks_chunk = queryset[start_idx:end_idx]
+        has_more = end_idx < total_count
+        total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+
+        serializer = AdminTaskSerializer(tasks_chunk, many=True)
+
+        stats = {
+            'total_tasks': Task.objects.count(),
+            'completed_tasks': Task.objects.filter(status='completed').count(),
+            'pending_tasks': Task.objects.filter(status='pending').count(),
+        }
+
+        return Response({
+            'tasks': serializer.data,
+            'stats': stats,
+            'current_page': page,
+            'total_pages': total_pages,
+            'has_more': has_more,
+            'total_count': total_count
+        }, status=status.HTTP_200_OK)
+
+
+class AdminAchievementsListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        achievements = Achievement.objects.all().order_by('-created_at')
+        serializer = AdminAchievementSerializer(achievements, many=True)
+        
+        total_achievements = achievements.count()
+        total_unlocked = UserAchievement.objects.count()
+
+        return Response({
+            'achievements': serializer.data,
+            'stats': {
+                'total_achievements': total_achievements,
+                'total_unlocked': total_unlocked
+            }
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        name = request.data.get('name', '').strip()
+        description = request.data.get('description', '').strip()
+        icon = request.data.get('icon', '🏆').strip()
+        condition = request.data.get('condition', '').strip()
+
+        if not name or not description or not condition:
+            return Response({'detail': 'Name, description, and condition are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Achievement.objects.filter(name__iexact=name).exists():
+            return Response({'detail': 'An achievement with this name already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        achievement = Achievement.objects.create(
+            name=name,
+            description=description,
+            icon=icon,
+            condition=condition
+        )
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin created achievement: {name}"
+        )
+
+        return Response(AdminAchievementSerializer(achievement).data, status=status.HTTP_201_CREATED)
+
+
+class AdminAchievementDetailView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            achievement = Achievement.objects.get(pk=pk)
+        except Achievement.DoesNotExist:
+            return Response({'detail': 'Achievement not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        name = request.data.get('name', achievement.name).strip()
+        description = request.data.get('description', achievement.description).strip()
+        icon = request.data.get('icon', achievement.icon).strip()
+        condition = request.data.get('condition', achievement.condition).strip()
+        is_active = request.data.get('is_active', achievement.is_active)
+
+        if not name or not description or not condition:
+            return Response({'detail': 'Name, description, and condition cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        achievement.name = name
+        achievement.description = description
+        achievement.icon = icon
+        achievement.condition = condition
+        achievement.is_active = is_active
+        achievement.save()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin updated achievement: {name}"
+        )
+
+        return Response(AdminAchievementSerializer(achievement).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        try:
+            achievement = Achievement.objects.get(pk=pk)
+        except Achievement.DoesNotExist:
+            return Response({'detail': 'Achievement not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Avoid deleting achievements with user history. Soft disable is_active.
+        # Hard delete only unused achievements.
+        has_history = achievement.user_unlocks.exists()
+        name = achievement.name
+        
+        if has_history:
+            achievement.is_active = False
+            achievement.save()
+            action_msg = f"Admin soft-disabled achievement (has user history): {name}"
+            msg = "Achievement has user history and has been soft-disabled."
+        else:
+            achievement.delete()
+            action_msg = f"Admin hard-deleted achievement (no user history): {name}"
+            msg = "Achievement deleted successfully."
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=action_msg
+        )
+
+        return Response({'detail': msg, 'soft_disabled': has_history}, status=status.HTTP_200_OK)
+
+
+class AdminNotificationsListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        notifs = AdminNotification.objects.all().order_by('-created_at')
+        serializer = AdminNotificationSerializer(notifs, many=True)
+        return Response({'notifications': serializer.data}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        send_to_type = request.data.get('send_to_type', 'all').strip().lower()
+        title = request.data.get('title', '').strip()
+        message = request.data.get('message', '').strip()
+        level = request.data.get('level', 'info').strip().lower()
+        target_email = request.data.get('email', '').strip()
+
+        if not title or not message:
+            return Response({'detail': 'Title and message are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if level not in ['info', 'success', 'warning', 'danger']:
+            level = 'info'
+
+        # Record admin notification
+        admin_notif = AdminNotification.objects.create(
+            title=title,
+            message=message,
+            level=level
+        )
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin sent {level} notification alert: {title} (Target: {send_to_type})"
+        )
+
+        if send_to_type == 'all':
+            # bulk_create broadcast notifications
+            users = User.objects.filter(is_active=True)
+            notifs_to_create = [
+                Notification(
+                    user=u,
+                    title=title,
+                    message=message,
+                    notification_type=level
+                ) for u in users
+            ]
+            if notifs_to_create:
+                Notification.objects.bulk_create(notifs_to_create)
+        else:
+            # Single user target
+            try:
+                target_user = User.objects.get(email__iexact=target_email)
+            except User.DoesNotExist:
+                return Response({'detail': f"User with email '{target_email}' not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+            Notification.objects.create(
+                user=target_user,
+                title=title,
+                message=message,
+                notification_type=level
+            )
+
+        return Response(AdminNotificationSerializer(admin_notif).data, status=status.HTTP_201_CREATED)
+
+
+class AdminFeedbackListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+        status_param = request.query_params.get('status', '').strip().lower()
+        rating = request.query_params.get('rating', '').strip()
+
+        queryset = AdminFeedback.objects.select_related('user').all()
+
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(subject__icontains=search) |
+                Q(comment__icontains=search)
+            )
+
+        if status_param in ['pending', 'reviewed', 'resolved']:
+            queryset = queryset.filter(status=status_param)
+
+        if rating.isdigit():
+            queryset = queryset.filter(rating=int(rating))
+
+        serializer = AdminFeedbackSerializer(queryset, many=True)
+        return Response({'feedback': serializer.data}, status=status.HTTP_200_OK)
+
+
+class AdminFeedbackDetailView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            feedback = AdminFeedback.objects.get(pk=pk)
+        except AdminFeedback.DoesNotExist:
+            return Response({'detail': 'Feedback not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        status_val = request.data.get('status', feedback.status).strip().lower()
+        if status_val not in ['pending', 'reviewed', 'resolved']:
+            return Response({'detail': 'Invalid status choice.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        feedback.status = status_val
+        feedback.save()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin updated feedback ID {feedback.id} status to {status_val}"
+        )
+
+        return Response(AdminFeedbackSerializer(feedback).data, status=status.HTTP_200_OK)
+
+
+class AdminFeedbackReplyView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            feedback = AdminFeedback.objects.get(pk=pk)
+        except AdminFeedback.DoesNotExist:
+            return Response({'detail': 'Feedback not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        reply_message = request.data.get('reply_message', '').strip()
+        if not reply_message:
+            return Response({'detail': 'Reply message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        to_email = feedback.email or (feedback.user.email if feedback.user else '')
+        if not to_email:
+            return Response({'detail': 'Feedback contact email is not available.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Send reply email
+        from users.email_service import send_progressly_email
+        try:
+            send_progressly_email(
+                to_email=to_email,
+                subject=f"Re: {feedback.subject or 'Feedback Reply'}",
+                title="Support Center Reply",
+                message_html=f"<p>{reply_message}</p>"
+            )
+        except Exception as e:
+            return Response({'detail': f"Email dispatch failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Update feedback status to resolved automatically upon reply
+        feedback.status = 'resolved'
+        feedback.save()
+
+        AdminActivityLog.objects.create(
+            username=request.user.username,
+            action=f"Admin sent email reply to feedback submitter: {to_email}"
+        )
+
+        return Response({'detail': 'Reply sent successfully, feedback status marked as resolved.'}, status=status.HTTP_200_OK)
+
+
+class AdminActivityLogsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search_user = request.query_params.get('user', '').strip()
+        action_type = request.query_params.get('type', '').strip().lower()
+
+        # Gather AdminActivityLog
+        admin_logs = AdminActivityLog.objects.all()
+        if search_user:
+            admin_logs = admin_logs.filter(username__icontains=search_user)
+        if action_type and action_type != 'all':
+            if action_type == 'admin':
+                pass
+            else:
+                admin_logs = admin_logs.none()
+
+        # Gather User Activity
+        user_activities = Activity.objects.select_related('user').all()
+        if search_user:
+            user_activities = user_activities.filter(
+                Q(user__username__icontains=search_user) |
+                Q(user__email__icontains=search_user)
+            )
+        if action_type and action_type != 'all':
+            if action_type != 'admin':
+                user_activities = user_activities.filter(action_type=action_type)
+            else:
+                user_activities = user_activities.none()
+
+        logs_list = []
+        for l in admin_logs[:200]:
+            logs_list.append({
+                'id': f"admin-{l.id}",
+                'username': l.username,
+                'action': l.action,
+                'created_at': l.created_at.isoformat(),
+                'type': 'admin'
+            })
+
+        for u in user_activities[:200]:
+            logs_list.append({
+                'id': f"user-{u.id}",
+                'username': u.user.username,
+                'action': u.message,
+                'created_at': u.created_at.isoformat(),
+                'type': u.action_type
+            })
+
+        logs_list.sort(key=lambda x: x['created_at'], reverse=True)
+
+        return Response({'logs': logs_list[:250]}, status=status.HTTP_200_OK)
+
+
+class AdminReportsAnalyticsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        timeframe = request.query_params.get('timeframe', '30').strip()
+        days = 30
+        if timeframe == '7':
+            days = 7
+        elif timeframe == '365':
+            days = 365
+
+        now = timezone.now()
+        start_date = now - timedelta(days=days)
+
+        user_growth_chart = []
+        task_completion_chart = []
+        skill_creation_chart = []
+        active_users_chart = []
+
+        for i in range(days):
+            day = start_date + timedelta(days=i)
+            day_str = day.strftime('%Y-%m-%d')
+            d_start = timezone.make_aware(datetime(day.year, day.month, day.day, 0, 0, 0))
+            d_end = timezone.make_aware(datetime(day.year, day.month, day.day, 23, 59, 59))
+
+            user_count = User.objects.filter(date_joined__lte=d_end).count()
+            task_completed_count = Task.objects.filter(status='completed', updated_at__range=[d_start, d_end]).count()
+            skill_created_count = Skill.objects.filter(created_at__range=[d_start, d_end]).count()
+            
+            from users.models import LoginHistory
+            active_count = LoginHistory.objects.filter(created_at__range=[d_start, d_end]).values('user').distinct().count()
+            
+            user_growth_chart.append({'date': day_str, 'users': user_count})
+            task_completion_chart.append({'date': day_str, 'tasks': task_completed_count})
+            skill_creation_chart.append({'date': day_str, 'skills': skill_created_count})
+            active_users_chart.append({'date': day_str, 'active': max(active_count, 1 if user_count > 0 else 0)})
+
+        return Response({
+            'user_growth': user_growth_chart,
+            'task_completion': task_completion_chart,
+            'skill_creation': skill_creation_chart,
+            'active_users': active_users_chart,
+            'totals': {
+                'total_users': User.objects.count(),
+                'active_users': User.objects.filter(is_active=True).count(),
+                'total_skills': Skill.objects.count(),
+                'total_tasks': Task.objects.count(),
+                'completed_tasks': Task.objects.filter(status='completed').count(),
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
 

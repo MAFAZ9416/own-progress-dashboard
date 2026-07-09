@@ -1,8 +1,21 @@
-- [x] Fix Progressly production API endpoint configuration
+- [/] Fix Progressly production API endpoint configuration
   - [x] Modify frontend/.env.production to set VITE_API_URL to backend base API url ('https://progressly.onrender.com/api')
   - [x] Add refreshToken endpoint call to authService.js
   - [x] Audit all other frontend service endpoints and verify no duplicated paths exist
+  - [x] Implement JWT Refresh Interceptor in `apiClient.js`
+  - [x] Support queueing requests during active token refresh
+  - [x] Skip token refresh for authentication/login/register/google-auth/forgot-password/reset-password endpoints
+  - [x] Check that network errors do not trigger logout
+  - [x] Clear auth and redirect only on true token refresh failure
   - [x] Run npm run build successfully to verify production bundle build compiles cleanly
   - [x] Run backend test suite successfully (50/50 test cases passed)
   - [x] Commit and push fixes to GitHub origin main repository (automatically triggering Vercel redeployment)
   - [x] Overwrite walkthrough.md with updated verification details
+- [x] Backend API Views & URLs Development
+  - [x] Implement `AdminTasksListView` for tasks lookup and operations
+  - [x] Implement `AdminAchievementsListView` and detail view with soft-delete logic
+  - [x] Implement `AdminNotificationsListView` with `bulk_create` broadcasting
+  - [x] Implement `AdminFeedbackListView`, detail view, and reply endpoint
+  - [x] Implement `AdminActivityLogsView` combining admin activity logs and user activity events
+  - [x] Implement `AdminReportsAnalyticsView` supplying user growth, active users, skill and task creation charts data
+  - [x] Register all URLs in `admin_dashboard/urls.py`

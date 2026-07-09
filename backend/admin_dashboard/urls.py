@@ -15,7 +15,17 @@ from .views import (
     AdminSkillGlobalDeleteView,
     AdminSkillCreateView,
     AdminUserCreateView,
-    AdminUserPasswordChangeView
+    AdminUserPasswordChangeView,
+    
+    AdminTasksListView,
+    AdminAchievementsListView,
+    AdminAchievementDetailView,
+    AdminNotificationsListView,
+    AdminFeedbackListView,
+    AdminFeedbackDetailView,
+    AdminFeedbackReplyView,
+    AdminActivityLogsView,
+    AdminReportsAnalyticsView
 )
 
 urlpatterns = [
@@ -37,4 +47,15 @@ urlpatterns = [
     path('skills/global-edit/', AdminSkillGlobalEditView.as_view(), name='admin-skills-global-edit'),
     path('skills/global-delete/', AdminSkillGlobalDeleteView.as_view(), name='admin-skills-global-delete'),
     path('skills/create/', AdminSkillCreateView.as_view(), name='admin-skills-create'),
+    
+    # New Admin Dashboards Management Routes
+    path('tasks/', AdminTasksListView.as_view(), name='admin-tasks-list'),
+    path('achievements/', AdminAchievementsListView.as_view(), name='admin-achievements-list'),
+    path('achievements/<int:pk>/', AdminAchievementDetailView.as_view(), name='admin-achievement-detail'),
+    path('notifications/', AdminNotificationsListView.as_view(), name='admin-notifications-list'),
+    path('feedback/', AdminFeedbackListView.as_view(), name='admin-feedback-list'),
+    path('feedback/<int:pk>/', AdminFeedbackDetailView.as_view(), name='admin-feedback-detail'),
+    path('feedback/<int:pk>/reply/', AdminFeedbackReplyView.as_view(), name='admin-feedback-reply'),
+    path('activity/', AdminActivityLogsView.as_view(), name='admin-activity-logs'),
+    path('reports/', AdminReportsAnalyticsView.as_view(), name='admin-reports-analytics'),
 ]

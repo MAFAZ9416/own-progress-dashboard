@@ -1,10 +1,9 @@
-import React from 'react'
 import {
   LayoutDashboard,
   Users,
   Brain,
   ClipboardList,
-  Flame,
+  Trophy,
   LineChart,
   FileText,
   Bell,
@@ -44,10 +43,10 @@ export const NAVIGATION_ITEMS = [
     path: '/admin/tasks',
   },
   {
-    id: 'streaks',
-    label: 'Streaks',
-    icon: Flame,
-    path: '/admin/streaks',
+    id: 'achievements',
+    label: 'Achievements',
+    icon: Trophy,
+    path: '/admin/achievements',
   },
   {
     id: 'analytics',
