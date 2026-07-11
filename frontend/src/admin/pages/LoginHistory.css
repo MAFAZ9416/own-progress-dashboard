@@ -1,4 +1,4 @@
-@import '../../styles/admin-theme.css';
+@import '../styles/admin-theme.css';
 
 .loginhistory-page {
   display: flex;
@@ -246,5 +246,20 @@
   .loginhistory-refresh-btn {
     width: 100%;
     justify-content: center;
+  }
+  .desktop-only-view {
+    display: none !important;
+  }
+  .mobile-only-view {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-only-view {
+    display: block !important;
+  }
+  .mobile-only-view {
+    display: none !important;
   }
 }

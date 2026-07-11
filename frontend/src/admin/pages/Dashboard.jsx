@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { adminDashboardService } from '../services/dashboardService'
+import { apiClient } from '../../api'
+import { useAuth } from '../../contexts/AuthContext'
 import HeroBanner from '../components/dashboard/HeroBanner'
 import StatsGrid from '../components/dashboard/StatsGrid'
 import UserGrowthChart from '../components/dashboard/UserGrowthChart'
@@ -14,9 +16,11 @@ import TopSkills from '../components/dashboard/TopSkills'
 import LatestFeedback from '../components/dashboard/LatestFeedback'
 import Notifications from '../components/dashboard/Notifications'
 import QuickActions from '../components/dashboard/QuickActions'
+import { useAdminRefresh } from '../contexts/RefreshContext'
 import './Dashboard.css'
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -67,6 +71,10 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData(true)
   }, [fetchDashboardData])
+
+  useAdminRefresh('dashboard', () => {
+    fetchDashboardData(false)
+  })
 
   // 1. Fetch User Growth Chart when userGrowthPeriod changes
   useEffect(() => {
@@ -146,46 +154,35 @@ export default function Dashboard() {
     return () => { active = false }
   }, [activityPeriod])
 
-  // Handles export CSV/JSON from the hero banner
-  const handleExportData = (format = 'json') => {
-    if (!data) return
-    const isCsv = format === 'csv'
-    const mimeType = isCsv ? 'text/csv' : 'application/json'
-    const fileExt = isCsv ? 'csv' : 'json'
-    
-    let content = ''
-    if (isCsv) {
-      content = 'Section,Metric,Value\n'
-      if (data.stats) {
-        Object.entries(data.stats).forEach(([key, stat]) => {
-          content += `Stats,${stat.label || key},"${stat.value}"\n`
-        })
-      }
-      if (data.top_skills) {
-        content += '\nSection,Skill Name,Total Tasks\n'
-        data.top_skills.forEach(skill => {
-          content += `Top Skills,"${skill.name}",${skill.tasks_count}\n`
-        })
-      }
-      if (data.database?.tables) {
-        content += '\nSection,Table Name,Rows\n'
-        data.database.tables.forEach(table => {
-          content += `Database,"${table.name}",${table.rows}\n`
-        })
-      }
-    } else {
-      content = JSON.stringify(data, null, 2)
+  const [isExporting, setIsExporting] = useState(false)
+
+  // Handles export CSV/JSON from the hero banner via backend export endpoint
+  const handleExportData = async ({ format = 'json', range = 'all', module = 'all' }) => {
+    setIsExporting(true)
+    try {
+      const response = await apiClient.get('/admin/reports/export/', {
+        params: { format, range, module },
+        responseType: 'blob'
+      })
+      
+      const isCsv = format === 'csv'
+      const mimeType = isCsv ? 'text/csv' : 'application/json'
+      const fileExt = isCsv ? 'csv' : 'json'
+      
+      const blob = new Blob([response.data], { type: `${mimeType};charset=utf-8` })
+      const url = window.URL.createObjectURL(blob)
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute('href', url)
+      downloadAnchor.setAttribute('download', `progressly_export_${module}_${range}_${new Date().toISOString().slice(0, 10)}.${fileExt}`)
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to export analytical reports:', err)
+    } finally {
+      setIsExporting(false)
     }
-    
-    const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
-    const url = window.URL.createObjectURL(blob)
-    const downloadAnchor = document.createElement('a')
-    downloadAnchor.setAttribute('href', url)
-    downloadAnchor.setAttribute('download', `progressly_admin_report_${new Date().toISOString().slice(0, 10)}.${fileExt}`)
-    document.body.appendChild(downloadAnchor)
-    downloadAnchor.click()
-    downloadAnchor.remove()
-    window.URL.revokeObjectURL(url)
   }
 
   // Action Success callback to refresh dashboard metrics
@@ -230,7 +227,7 @@ export default function Dashboard() {
   return (
     <div className="admin-dashboard-content">
       {/* Row 1: Hero Banner */}
-      <HeroBanner onExportReport={handleExportData} />
+      <HeroBanner adminName={user?.profile?.full_name || user?.username} onExportReport={handleExportData} isExporting={isExporting} />
 
       {/* Row 2: Statistics Grid (6 cards) */}
       <StatsGrid stats={stats} isLoading={isLoading} />

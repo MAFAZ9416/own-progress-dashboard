@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { adminFeedbackService } from '../services/feedbackService'
 import { adminEmailLogsService } from '../services/emailLogsService'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './Feedback.css'
 
 export default function Feedback() {
@@ -254,88 +255,92 @@ export default function Feedback() {
           <p>Currently, there are no matching feedback entries in the registry.</p>
         </div>
       ) : (
-        <div className="feedback-list">
-          {feedbacks.map((fb) => (
-            <div 
-              key={fb.id} 
-              className={`feedback-card admin-glow-card status-${fb.status || 'pending'} feedback-card--clickable`}
-              onClick={() => setSelectedFeedback(fb)}
-            >
-              <div className="feedback-card-top">
-                <div className="submitter-info">
-                  <div className="submitter-avatar">
-                    {fb.avatar_url ? (
-                      <img src={fb.avatar_url} alt="avatar" />
-                    ) : (
-                      <UserIcon className="avatar-placeholder" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="submitter-name">
-                      {fb.name || 'Anonymous Submitter'}
-                    </h4>
-                    <span className="submitter-email-tag">
-                      <Mail className="inline-icon" />
-                      {fb.user_username ? `@${fb.user_username} • ` : ''}{fb.email || 'No email registered'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="meta-right">
-                  {renderStars(fb.rating)}
-                  <span className="feedback-date">
-                    {fb.created_at}
-                  </span>
-                </div>
-              </div>
-
-              <div className="feedback-card-content">
-                <h3 className="feedback-subject">{fb.subject || 'No Subject Provided'}</h3>
-                <p className="feedback-comment">{fb.comment || fb.message}</p>
-              </div>
-
-              <div className="feedback-card-actions" onClick={e => e.stopPropagation()}>
-                <div className="status-label-group">
-                  <span className={`status-dot-label ${fb.status || 'pending'}`}>
-                    {fb.status === 'resolved' ? 'Resolved' : fb.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
-                  </span>
-                </div>
-                
-                <div className="action-buttons-group">
-                  <button 
-                    onClick={() => handleUpdateStatus(fb, fb.status === 'resolved' ? 'pending' : 'resolved')} 
-                    className={`status-toggle-action-btn ${fb.status === 'resolved' ? 'mark-pending' : 'mark-resolved'}`}
-                    id={`btn-resolve-${fb.id}`}
-                  >
-                    {fb.status === 'resolved' ? (
-                      <>
-                        <Clock className="btn-inline-icon" />
-                        Re-open
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="btn-inline-icon" />
-                        Mark Resolved
-                      </>
-                    )}
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setActiveReplyFeedback(fb)
-                      setReplyMessage('')
-                    }} 
-                    className="reply-action-btn"
-                    id={`btn-reply-${fb.id}`}
-                  >
-                    <Mail className="btn-inline-icon" />
-                    Reply Email
-                  </button>
-                </div>
-              </div>
+        <>
+          {/* Desktop/Tablet Table View */}
+          <div className="desktop-only-view feedback-table-card admin-glow-card">
+            <div className="feedback-table-wrap">
+              <table className="admin-feedback-table">
+                <thead>
+                  <tr>
+                    <th>Submitter</th>
+                    <th>Rating</th>
+                    <th>Subject</th>
+                    <th>Submitted Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feedbacks.map((fb) => (
+                    <tr key={fb.id} className="feedback-tr--clickable" onClick={() => setSelectedFeedback(fb)}>
+                      <td>
+                        <div className="user-owner-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <UserIcon size={16} className="owner-icon" style={{ color: 'var(--admin-text-muted)' }} />
+                          <div>
+                            <div className="owner-name" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--admin-text-primary)' }}>{fb.name || 'Anonymous Submitter'}</div>
+                            <div className="owner-email" style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted)' }}>{fb.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{renderStars(fb.rating)}</td>
+                      <td className="feedback-td-subject" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.subject || 'No Subject'}</td>
+                      <td>{new Date(fb.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <span className={`status-pill status-${fb.status || 'pending'}`}>
+                          {fb.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="actions-cell" style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
+                          <button onClick={() => setSelectedFeedback(fb)} className="action-btn edit" style={{ padding: '6px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', cursor: 'pointer', color: 'var(--admin-text-secondary)' }} title="View Detail"><FileText size={14} /></button>
+                          <button 
+                            onClick={() => {
+                              setActiveReplyFeedback(fb)
+                              setReplyMessage('')
+                              setReplyHistory([])
+                            }} 
+                            className="action-btn reply" 
+                            style={{ padding: '6px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '6px', cursor: 'pointer', color: 'var(--admin-accent-purple)' }}
+                            title="Reply"
+                          >
+                            <Send size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="mobile-only-view feedback-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: '12px' }}>
+            {feedbacks.map((fb) => (
+              <AdminMobileCard
+                key={fb.id}
+                title={fb.name || 'Anonymous Submitter'}
+                subtitle={fb.email}
+                icon={MessageSquare}
+                badge={
+                  <span className={`status-pill status-${fb.status || 'pending'}`} style={{ fontSize: '0.65rem' }}>
+                    {fb.status}
+                  </span>
+                }
+                fields={[
+                  { label: 'Rating', value: `${fb.rating} / 5 Stars` },
+                  { label: 'Subject', value: fb.subject },
+                  { label: 'Message', value: fb.comment || fb.message },
+                  { label: 'Submitted', value: new Date(fb.created_at).toLocaleDateString() }
+                ]}
+                actions={[
+                  { icon: FileText, label: 'Detail', onClick: () => setSelectedFeedback(fb) },
+                  { icon: Send, label: 'Reply', onClick: () => { setActiveReplyFeedback(fb); setReplyMessage(''); setReplyHistory([]); } }
+                ]}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Detail Modal */}

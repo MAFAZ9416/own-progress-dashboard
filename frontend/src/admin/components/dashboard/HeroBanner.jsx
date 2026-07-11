@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Download, FileJson, FileSpreadsheet } from 'lucide-react'
+import React, { useState } from 'react'
+import { Calendar, Download, FileJson, FileSpreadsheet, X, HelpCircle } from 'lucide-react'
 import './HeroBanner.css'
 
 export default function HeroBanner({ adminName, onExportReport, isExporting }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [format, setFormat] = useState('csv')
+  const [range, setRange] = useState('all')
+  const [module, setModule] = useState('all')
 
-  // Format current date dynamically
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -14,23 +15,12 @@ export default function HeroBanner({ adminName, onExportReport, isExporting }) {
     year: 'numeric'
   })
 
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false)
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick)
-    }
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [isOpen])
-
-  const handleSelect = (format) => {
-    setIsOpen(false)
+  const handleSubmit = (e) => {
+    e.preventDefault()
     if (onExportReport) {
-      onExportReport(format)
+      onExportReport({ format, range, module })
     }
+    setIsModalOpen(false)
   }
 
   return (
@@ -72,41 +62,103 @@ export default function HeroBanner({ adminName, onExportReport, isExporting }) {
           </svg>
         </div>
 
-        <div className="admin-hero__export-wrap" ref={dropdownRef}>
-          <button 
-            onClick={() => setIsOpen(!isOpen)} 
-            disabled={isExporting}
-            className="admin-hero__export-btn"
-            id="admin-hero-export-btn"
-          >
-            {isExporting ? (
-              <>
-                <div className="admin-hero__spinner" />
-                <span>Exporting...</span>
-              </>
-            ) : (
-              <>
-                <Download size={15} />
-                <span>Export Report</span>
-              </>
-            )}
-          </button>
-          
-          {isOpen && (
-            <div className="admin-hero__export-dropdown">
-              <button onClick={() => handleSelect('csv')} className="admin-hero__dropdown-item" id="export-csv-btn">
-                <FileSpreadsheet size={13} />
-                <span>Export CSV</span>
-              </button>
-              <button onClick={() => handleSelect('json')} className="admin-hero__dropdown-item" id="export-json-btn">
-                <FileJson size={13} />
-                <span>Export JSON</span>
+        <button 
+          onClick={() => setIsModalOpen(true)} 
+          disabled={isExporting}
+          className="admin-hero__export-btn"
+          id="admin-hero-export-btn"
+        >
+          {isExporting ? (
+            <>
+              <div className="admin-hero__spinner" />
+              <span>Exporting...</span>
+            </>
+          ) : (
+            <>
+              <Download size={15} />
+              <span>Export Report</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Export Options Modal */}
+      {isModalOpen && (
+        <div className="hero-export-modal-backdrop">
+          <div className="hero-export-modal admin-glow-card animate-scale-up">
+            <div className="modal-header">
+              <div className="modal-header-title">
+                <Download className="title-icon" size={16} />
+                <h3>Generate Analytical Export</h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+                <X size={16} />
               </button>
             </div>
-          )}
+
+            <form onSubmit={handleSubmit} className="modal-form">
+              <div className="form-group">
+                <label>Select Target Dataset Module</label>
+                <select value={module} onChange={(e) => setModule(e.target.value)}>
+                  <option value="all">All Modules Combined</option>
+                  <option value="users">Users Register Only</option>
+                  <option value="skills">Learning Skills Directory</option>
+                  <option value="tasks">Platform Tasks Hub</option>
+                  <option value="feedback">Submissions Feedback Logs</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Select Timeframe Query Range</label>
+                <select value={range} onChange={(e) => setRange(e.target.value)}>
+                  <option value="all">All Lifetime Data Records</option>
+                  <option value="7_days">Past 7 Calendar Days</option>
+                  <option value="30_days">Past 30 Calendar Days</option>
+                  <option value="1_year">Past 1 Calendar Year</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>File Export Format</label>
+                <div className="format-selection-row">
+                  <label className={`format-option ${format === 'csv' ? 'selected' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="export-format" 
+                      value="csv" 
+                      checked={format === 'csv'}
+                      onChange={() => setFormat('csv')} 
+                    />
+                    <FileSpreadsheet size={16} className="format-icon text-emerald" />
+                    <span>CSV Spreadsheet</span>
+                  </label>
+                  
+                  <label className={`format-option ${format === 'json' ? 'selected' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="export-format" 
+                      value="json" 
+                      checked={format === 'json'}
+                      onChange={() => setFormat('json')} 
+                    />
+                    <FileJson size={16} className="format-icon text-blue" />
+                    <span>JSON Format</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="confirm-btn">
+                  Generate &amp; Download
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
-

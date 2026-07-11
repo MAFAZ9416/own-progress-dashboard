@@ -18,6 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { adminTasksService } from '../services/tasksService'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './Tasks.css'
 
 export default function Tasks() {
@@ -308,109 +309,141 @@ export default function Tasks() {
           </div>
         ) : (
           <>
-            <table className="admin-tasks-table">
-              <thead>
-                <tr>
-                  <th>Task Info</th>
-                  <th>Owner</th>
-                  <th>Skill Group</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th className="actions-header">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id}>
-                    <td>
-                      <div className="task-title-cell">
-                        <span className="task-title-text" title={task.title}>{task.title}</span>
-                        {task.description && (
-                          <span className="task-desc-text" title={task.description}>
-                            {task.description.length > 60 ? `${task.description.substring(0, 60)}...` : task.description}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="user-owner-cell">
-                        <UserIcon className="owner-icon" />
-                        <div>
-                          <div className="owner-name">{task.owner?.full_name || task.owner?.username}</div>
-                          <div className="owner-email">{task.owner?.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {task.skill ? (
-                        <span 
-                          className="skill-tag" 
-                          style={{ 
-                            backgroundColor: `${task.skill.color}15`, 
-                            borderColor: task.skill.color,
-                            color: task.skill.color 
-                          }}
-                        >
-                          <Brain className="tag-icon" />
-                          {task.skill.name}
-                        </span>
-                      ) : (
-                        <span className="skill-tag-none">No Skill</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`priority-badge ${task.priority || 'medium'}`}>
-                        {task.priority || 'medium'}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => handleToggleStatus(task)}
-                        className={`status-toggle-btn ${task.status === 'completed' ? 'completed' : 'pending'}`}
-                        title="Click to toggle status"
-                      >
-                        {task.status === 'completed' ? (
-                          <>
-                            <Check className="toggle-icon" />
-                            Completed
-                          </>
-                        ) : (
-                          <>
-                            <span className="toggle-dot" />
-                            Pending
-                          </>
-                        )}
-                      </button>
-                    </td>
-                    <td>
-                      <div className="date-cell">
-                        <Calendar className="date-icon" />
-                        <span>{new Date(task.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="actions-cell">
-                        <button 
-                          onClick={() => openEditModal(task)} 
-                          className="action-btn edit" 
-                          title="Edit Task"
-                        >
-                          <Edit2 className="action-icon" />
-                        </button>
-                        <button 
-                          onClick={() => openDeleteConfirm(task)} 
-                          className="action-btn delete" 
-                          title="Delete Task"
-                        >
-                          <Trash2 className="action-icon" />
-                        </button>
-                      </div>
-                    </td>
+            <div className="desktop-only-view">
+              <table className="admin-tasks-table">
+                <thead>
+                  <tr>
+                    <th>Task Info</th>
+                    <th>Owner</th>
+                    <th>Skill Group</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th className="actions-header">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tasks.map((task) => (
+                    <tr key={task.id}>
+                      <td>
+                        <div className="task-title-cell">
+                          <span className="task-title-text" title={task.title}>{task.title}</span>
+                          {task.description && (
+                            <span className="task-desc-text" title={task.description}>
+                              {task.description.length > 60 ? `${task.description.substring(0, 60)}...` : task.description}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="user-owner-cell">
+                          <UserIcon className="owner-icon" />
+                          <div>
+                            <div className="owner-name">{task.owner?.full_name || task.owner?.username}</div>
+                            <div className="owner-email">{task.owner?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        {task.skill ? (
+                          <span 
+                            className="skill-tag" 
+                            style={{ 
+                              backgroundColor: `${task.skill.color}15`, 
+                              borderColor: task.skill.color,
+                              color: task.skill.color 
+                            }}
+                          >
+                            <Brain className="tag-icon" />
+                            {task.skill.name}
+                          </span>
+                        ) : (
+                          <span className="skill-tag-none">No Skill</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`priority-badge ${task.priority || 'medium'}`}>
+                          {task.priority || 'medium'}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          onClick={() => handleToggleStatus(task)}
+                          className={`status-toggle-btn ${task.status === 'completed' ? 'completed' : 'pending'}`}
+                          title="Click to toggle status"
+                        >
+                          {task.status === 'completed' ? (
+                            <>
+                              <Check className="toggle-icon" />
+                              Completed
+                            </>
+                          ) : (
+                            <>
+                              <span className="toggle-dot" />
+                              Pending
+                            </>
+                          )}
+                        </button>
+                      </td>
+                      <td>
+                        <div className="date-cell">
+                          <Calendar className="date-icon" />
+                          <span>{new Date(task.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="actions-cell">
+                          <button 
+                            onClick={() => openEditModal(task)} 
+                            className="action-btn edit" 
+                            title="Edit Task"
+                          >
+                            <Edit2 className="action-icon" />
+                          </button>
+                          <button 
+                            onClick={() => openDeleteConfirm(task)} 
+                            className="action-btn delete" 
+                            title="Delete Task"
+                          >
+                            <Trash2 className="action-icon" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mobile-only-view tasks-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: '12px' }}>
+              {tasks.map((task) => (
+                <AdminMobileCard
+                  key={task.id}
+                  title={task.title}
+                  subtitle={task.description}
+                  icon={Brain}
+                  badge={<span className={`priority-badge ${task.priority || 'medium'}`} style={{ fontSize: '0.65rem' }}>{task.priority || 'medium'}</span>}
+                  status={
+                    <button 
+                      onClick={() => handleToggleStatus(task)}
+                      className={`status-toggle-btn ${task.status === 'completed' ? 'completed' : 'pending'}`}
+                      style={{ fontSize: '0.75rem', padding: '3px 8px' }}
+                    >
+                      {task.status === 'completed' ? 'Completed' : 'Pending'}
+                    </button>
+                  }
+                  fields={[
+                    { label: 'Owner', value: task.owner?.full_name || task.owner?.username },
+                    { label: 'Skill Group', value: task.skill ? task.skill.name : 'No Skill' },
+                    { label: 'Created', value: new Date(task.created_at).toLocaleDateString() }
+                  ]}
+                  actions={[
+                    { icon: Edit2, label: 'Edit', onClick: () => openEditModal(task) },
+                    { icon: Trash2, label: 'Delete', onClick: () => openDeleteConfirm(task), className: 'delete' }
+                  ]}
+                />
+              ))}
+            </div>
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

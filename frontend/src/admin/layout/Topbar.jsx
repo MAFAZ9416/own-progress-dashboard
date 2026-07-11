@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { apiClient, getMediaUrl } from '../../api'
+import { useAdminRefresh } from '../contexts/RefreshContext'
 import {
   Menu,
   Search,
@@ -15,43 +18,92 @@ import {
   CheckCircle2,
   Info,
   AlertTriangle,
-  Award
+  Award,
+  Database,
+  MessageSquare
 } from 'lucide-react'
-import { getMediaUrl } from '../../api'
 import notificationService from '../../services/notificationService'
 import NotificationDetailModal from '../../components/notifications/NotificationDetailModal'
 import './Topbar.css'
 
 export default function Topbar({ onToggleSidebar }) {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isThemeDark, setIsThemeDark] = useState(true)
   const dropdownRef = useRef(null)
 
   const [notifications, setNotifications] = useState([])
+  const [feedbacks, setFeedbacks] = useState([])
+  const [backups, setBackups] = useState([])
+  const [systemAlerts, setSystemAlerts] = useState([])
+
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState(null)
   const panelRef = useRef(null)
 
-  const loadNotifications = useCallback(async () => {
+  const loadDropdownData = useCallback(async () => {
     setIsLoadingNotifications(true)
+    // 1. Notifications
     try {
       const data = await notificationService.getNotifications()
       setNotifications(data || [])
     } catch (err) {
       console.error('Failed to load notifications:', err)
-    } finally {
-      setIsLoadingNotifications(false)
     }
+
+    // 2. Feedbacks (recent 3)
+    try {
+      const res = await apiClient.get('/admin/feedback/')
+      const list = res.data?.feedback || []
+      setFeedbacks(list.slice(0, 3))
+    } catch (err) {
+      console.error('Failed to load feedbacks for topbar:', err)
+    }
+
+    // 3. Backups (recent 3)
+    try {
+      const res = await apiClient.get('/admin/backups/')
+      const list = res.data || []
+      setBackups(list.slice(0, 3))
+    } catch (err) {
+      console.error('Failed to load backups for topbar:', err)
+    }
+
+    // 4. System Health Alerts
+    try {
+      const res = await apiClient.get('/admin/health/')
+      const healthData = res.data || {}
+      const alerts = []
+      if (healthData.services) {
+        Object.entries(healthData.services).forEach(([name, service]) => {
+          if (service.status !== 'Operational') {
+            alerts.push({
+              id: name,
+              title: `${service.label} degraded`,
+              message: `Status: ${service.status}`,
+            })
+          }
+        })
+      }
+      setSystemAlerts(alerts)
+    } catch (err) {
+      console.error('Failed to load system health status:', err)
+    }
+    setIsLoadingNotifications(false)
   }, [])
 
   useEffect(() => {
-    loadNotifications()
-    window.addEventListener('notification-changed', loadNotifications)
-    return () => window.removeEventListener('notification-changed', loadNotifications)
-  }, [loadNotifications])
+    loadDropdownData()
+    window.addEventListener('notification-changed', loadDropdownData)
+    return () => window.removeEventListener('notification-changed', loadDropdownData)
+  }, [loadDropdownData])
+
+  useAdminRefresh('notifications', () => {
+    loadDropdownData()
+  })
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -70,7 +122,7 @@ export default function Topbar({ onToggleSidebar }) {
     [notifications]
   )
 
-  const visibleNotifications = useMemo(() => notifications.slice(0, 5), [notifications])
+  const visibleNotifications = useMemo(() => notifications.filter(n => !n.is_read).slice(0, 5), [notifications])
 
   const handleBellClick = () => {
     setIsNotifOpen((prev) => !prev)
@@ -193,28 +245,53 @@ export default function Topbar({ onToggleSidebar }) {
           </button>
 
           {isNotifOpen && (
-            <div className="topbar__notif-panel" style={{ right: 0, top: '100%', marginTop: '10px' }}>
+            <div className="topbar__notif-panel" ref={panelRef} style={{ right: 0, top: '100%', marginTop: '10px', display: 'flex', flexDirection: 'column' }}>
               <div className="topbar__notif-panel-head">
                 <div>
-                  <p className="topbar__notif-panel-title">Notifications</p>
-                  <p className="topbar__notif-panel-sub">{unreadCount} unread</p>
+                  <p className="topbar__notif-panel-title">Administration Alerts Center</p>
+                  <p className="topbar__notif-panel-sub">Priority Realtime Feeds</p>
                 </div>
                 <button className="topbar__notif-panel-link" onClick={handleMarkAllRead}>
-                  Mark all read
+                  Clear Notifs
                 </button>
               </div>
 
-              <div className="topbar__notif-list">
-                {isLoadingNotifications ? (
-                  <p className="topbar__notif-empty">Loading notifications...</p>
-                ) : visibleNotifications.length > 0 ? (
+              <div className="topbar__notif-list" style={{ overflowY: 'auto', flex: 1, maxHeight: '24rem' }}>
+                
+                {/* 1. Critical System Alerts */}
+                <div className="topbar__section-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.85rem 0.3rem', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#ef4444' }}>
+                  <span>Critical System Alerts</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.15)', padding: '1px 6px', borderRadius: '4px' }}>{systemAlerts.length}</span>
+                </div>
+                {systemAlerts.length > 0 ? (
+                  systemAlerts.map(alert => (
+                    <div key={alert.id} className="topbar__notif-item topbar__notif-item--unread">
+                      <span className="topbar__notif-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                        <AlertTriangle size={14} />
+                      </span>
+                      <span className="topbar__notif-copy">
+                        <span className="topbar__notif-title" style={{ color: '#ef4444' }}>{alert.title}</span>
+                        <span className="topbar__notif-message">{alert.message}</span>
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="topbar__notif-empty" style={{ fontSize: '0.75rem', padding: '0.5rem 0.85rem', color: 'rgba(255,255,255,0.4)' }}>All systems operational</p>
+                )}
+
+                {/* 2. Unread Notifications */}
+                <div className="topbar__section-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.85rem 0.3rem', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#7c3aed', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span>Unread Notifications</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(124,58,237,0.15)', padding: '1px 6px', borderRadius: '4px' }}>{unreadCount}</span>
+                </div>
+                {visibleNotifications.length > 0 ? (
                   visibleNotifications.map((notification) => {
                     const type = notification.type ?? notification.notification_type
                     const Icon = getNotifIcon(type)
                     return (
                       <button
                         key={notification.id}
-                        className={`topbar__notif-item ${!notification.is_read ? 'topbar__notif-item--unread' : ''}`}
+                        className="topbar__notif-item topbar__notif-item--unread"
                         onClick={() => {
                           setSelectedNotification(notification)
                           setIsNotifOpen(false)
@@ -234,8 +311,96 @@ export default function Topbar({ onToggleSidebar }) {
                     )
                   })
                 ) : (
-                  <p className="topbar__notif-empty">No notifications</p>
+                  <p className="topbar__notif-empty" style={{ fontSize: '0.75rem', padding: '0.5rem 0.85rem', color: 'rgba(255,255,255,0.4)' }}>No unread notifications</p>
                 )}
+
+                {/* 3. Recent Feedback */}
+                <div className="topbar__section-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.85rem 0.3rem', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#6366f1', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span>Recent Feedback</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(99,102,241,0.15)', padding: '1px 6px', borderRadius: '4px' }}>{feedbacks.length}</span>
+                </div>
+                {feedbacks.length > 0 ? (
+                  feedbacks.map((fb) => (
+                    <button
+                      key={fb.id}
+                      className="topbar__notif-item"
+                      onClick={() => {
+                        navigate(`/admin/feedback`)
+                        setIsNotifOpen(false)
+                      }}
+                    >
+                      <span className="topbar__notif-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
+                        <MessageSquare size={14} />
+                      </span>
+                      <span className="topbar__notif-copy">
+                        <span className="topbar__notif-toprow">
+                          <span className="topbar__notif-title" style={{ fontWeight: 650 }}>{fb.name} ({fb.rating}★)</span>
+                          <span className="topbar__notif-time">{formatRelativeTime(fb.created_at)}</span>
+                        </span>
+                        <span className="topbar__notif-message">{fb.subject}</span>
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="topbar__notif-empty" style={{ fontSize: '0.75rem', padding: '0.5rem 0.85rem', color: 'rgba(255,255,255,0.4)' }}>No feedback reviews</p>
+                )}
+
+                {/* 4. Latest Backups */}
+                <div className="topbar__section-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.85rem 0.3rem', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#10b981', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span>Latest Backups</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(16,185,129,0.15)', padding: '1px 6px', borderRadius: '4px' }}>{backups.length}</span>
+                </div>
+                {backups.length > 0 ? (
+                  backups.map((bk) => (
+                    <button
+                      key={bk.id}
+                      className="topbar__notif-item"
+                      onClick={() => {
+                        navigate('/admin/backups')
+                        setIsNotifOpen(false)
+                      }}
+                    >
+                      <span className="topbar__notif-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                        <Database size={14} />
+                      </span>
+                      <span className="topbar__notif-copy">
+                        <span className="topbar__notif-toprow">
+                          <span className="topbar__notif-title" style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{bk.file_name?.substring(0, 16)}...</span>
+                          <span className="topbar__notif-time">{formatRelativeTime(bk.created_at)}</span>
+                        </span>
+                        <span className="topbar__notif-message">Size: {bk.file_size || '—'}</span>
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="topbar__notif-empty" style={{ fontSize: '0.75rem', padding: '0.5rem 0.85rem', color: 'rgba(255,255,255,0.4)' }}>No database snapshots</p>
+                )}
+
+              </div>
+
+              {/* Quick Actions Footer */}
+              <div className="topbar__notif-panel-footer" style={{ display: 'flex', gap: '6px', padding: '0.65rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(0,0,0,0.2)', borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
+                <button
+                  onClick={() => { navigate('/admin/feedback'); setIsNotifOpen(false); }}
+                  className="footer-action-btn"
+                  style={{ flex: 1, padding: '6px', fontSize: '0.7rem', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', background: 'transparent', color: '#cbd5e1', cursor: 'pointer' }}
+                >
+                  Feedback
+                </button>
+                <button
+                  onClick={() => { navigate('/admin/notifications'); setIsNotifOpen(false); }}
+                  className="footer-action-btn"
+                  style={{ flex: 1, padding: '6px', fontSize: '0.7rem', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', background: 'transparent', color: '#cbd5e1', cursor: 'pointer' }}
+                >
+                  Notifs
+                </button>
+                <button
+                  onClick={() => { navigate('/admin/activity-logs'); setIsNotifOpen(false); }}
+                  className="footer-action-btn"
+                  style={{ flex: 1, padding: '6px', fontSize: '0.7rem', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', background: 'transparent', color: '#cbd5e1', cursor: 'pointer' }}
+                >
+                  Audit Logs
+                </button>
               </div>
             </div>
           )}

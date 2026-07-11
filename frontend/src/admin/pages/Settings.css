@@ -427,3 +427,46 @@
   }
 }
 
+/* Settings tabs styling */
+.admin-settings-tabs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 12px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: var(--admin-transition);
+}
+
+.tab-btn:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-primary);
+}
+
+.tab-btn.active {
+  background: var(--admin-grad-purple);
+  color: var(--admin-text-primary);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.35);
+}
+
+.admin-settings-panel-wrapper {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { adminSkillsService } from '../services/skillsService'
 import { adminUsersService } from '../services/usersService'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './Skills.css'
 
 export default function Skills() {
@@ -471,34 +472,35 @@ export default function Skills() {
               </div>
             ) : (
               skills.map(s => (
-                <div 
+                <AdminMobileCard
                   key={s.name}
-                  className="admin-skills-mobile-card admin-glow-card"
-                  onClick={() => loadSkillDetail(s.name)}
-                >
-                  <div className="admin-skills-mobile-card-row">
-                    <div className="admin-skills-name-cell">
-                      <span className="admin-skills-dot" style={{ backgroundColor: s.color }} />
-                      <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</span>
-                    </div>
-                    <ChevronRight size={16} style={{ color: 'var(--admin-text-muted)' }} />
-                  </div>
-                  
-                  <div className="admin-skills-mobile-card-row" style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
-                    <span>{s.total_users} Users</span>
-                    <span>{s.total_tasks} Tasks</span>
-                  </div>
-
-                  <div className="admin-skills-progress-wrapper" style={{ marginTop: '0.25rem' }}>
-                    <div className="admin-skills-progress-track" style={{ flexGrow: 1 }}>
-                      <div 
-                        className="admin-skills-progress-fill" 
-                        style={{ width: `${s.completion_rate}%`, backgroundColor: s.color }}
-                      />
-                    </div>
-                    <span className="admin-skills-progress-text">{s.completion_rate}%</span>
-                  </div>
-                </div>
+                  title={s.name}
+                  subtitle={`${s.completion_rate}% Completion Rate`}
+                  icon={Brain}
+                  badge={
+                    <span 
+                      className="skill-tag" 
+                      style={{ 
+                        backgroundColor: `${s.color}15`, 
+                        borderColor: s.color,
+                        color: s.color,
+                        fontSize: '0.65rem',
+                        padding: '2px 6px'
+                      }}
+                    >
+                      Active Group
+                    </span>
+                  }
+                  fields={[
+                    { label: 'Total Users Assigned', value: `${s.total_users} Users` },
+                    { label: 'Total Tasks Registry', value: `${s.total_tasks} Tasks` }
+                  ]}
+                  actions={[
+                    { icon: Eye, label: 'View Detail', onClick: () => loadSkillDetail(s.name) },
+                    { icon: Edit2, label: 'Rename', onClick: () => { setEditingSkillGroup(s); setEditGroupForm({ new_name: s.name, color: s.color }); } },
+                    { icon: Trash2, label: 'Delete', onClick: () => setDeleteConfirmGroup(s), className: 'delete' }
+                  ]}
+                />
               ))
             )}
           </div>

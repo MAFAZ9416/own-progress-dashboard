@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { adminNotificationsService } from '../services/notificationsService'
 import { adminEmailLogsService } from '../services/emailLogsService'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './Notifications.css'
 
 export default function Notifications() {
@@ -293,23 +294,46 @@ export default function Notifications() {
               <p>No historical admin notifications sent yet.</p>
             </div>
           ) : (
-            <div className="notif-log-list">
-              {notifications.map((notif) => (
-                <div key={notif.id} className={`notif-log-item border-${notif.level || 'info'}`}>
-                  <div className="notif-log-top">
-                    <div className="notif-log-title-group">
-                      {getLevelIcon(notif.level)}
-                      <span className="notif-log-title">{notif.title}</span>
+            <>
+              <div className="desktop-only-view">
+                <div className="notif-log-list">
+                  {notifications.map((notif) => (
+                    <div key={notif.id} className={`notif-log-item border-${notif.level || 'info'}`}>
+                      <div className="notif-log-top">
+                        <div className="notif-log-title-group">
+                          {getLevelIcon(notif.level)}
+                          <span className="notif-log-title">{notif.title}</span>
+                        </div>
+                        <div className="notif-log-date">
+                          <Clock className="time-icon" />
+                          <span>{new Date(notif.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <p className="notif-log-msg">{notif.message}</p>
                     </div>
-                    <div className="notif-log-date">
-                      <Clock className="time-icon" />
-                      <span>{new Date(notif.created_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <p className="notif-log-msg">{notif.message}</p>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+
+              <div className="mobile-only-view notif-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: '12px' }}>
+                {notifications.map((notif) => (
+                  <AdminMobileCard
+                    key={notif.id}
+                    title={notif.title}
+                    subtitle={new Date(notif.created_at).toLocaleString()}
+                    icon={Bell}
+                    badge={
+                      <span className={`status-pill status-${notif.level || 'info'}`} style={{ fontSize: '0.65rem' }}>
+                        {notif.level || 'info'}
+                      </span>
+                    }
+                    fields={[
+                      { label: 'Message', value: notif.message }
+                    ]}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -77,4 +77,22 @@
 .emaillogs-modal__error-title { display: flex; align-items: center; gap: 7px; color: var(--admin-status-danger); font-size: 0.82rem; font-weight: 700; margin-bottom: 8px; }
 .emaillogs-modal__error-body { font-size: 0.78rem; color: #fca5a5; margin: 0; white-space: pre-wrap; word-break: break-all; background: transparent; }
 
-@media (max-width: 768px) { .emaillogs-page { padding: 16px; } .emaillogs-modal__grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .emaillogs-page { padding: 16px; }
+  .emaillogs-modal__grid { grid-template-columns: 1fr; }
+  .desktop-only-view {
+    display: none !important;
+  }
+  .mobile-only-view {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-only-view {
+    display: block !important;
+  }
+  .mobile-only-view {
+    display: none !important;
+  }
+}

@@ -134,13 +134,44 @@ class EmailTokenObtainPairView(TokenObtainPairView):
 
 
 class LoginHistoryView(generics.ListAPIView):
-    """Return the last 15 login history records for the authenticated user."""
+    """Return the login history records for the authenticated user with query filters."""
     serializer_class = LoginHistorySerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         from .models import LoginHistory
-        return LoginHistory.objects.filter(user=self.request.user).order_by('-created_at')[:15]
+        from django.db.models import Q
+        
+        queryset = LoginHistory.objects.filter(user=self.request.user).order_by('-created_at')
+        
+        search = self.request.query_params.get('search', '').strip()
+        browser = self.request.query_params.get('browser', '').strip().lower()
+        status_param = self.request.query_params.get('status', '').strip().lower()
+        date_start = self.request.query_params.get('date_start', '').strip()
+        date_end = self.request.query_params.get('date_end', '').strip()
+
+        if search:
+            queryset = queryset.filter(
+                Q(ip_address__icontains=search) |
+                Q(user_agent__icontains=search) |
+                Q(os__icontains=search) |
+                Q(device__icontains=search)
+            )
+        if browser and browser != 'all':
+            queryset = queryset.filter(browser__icontains=browser)
+        if status_param and status_param != 'all':
+            is_active_val = (status_param == 'active')
+            queryset = queryset.filter(is_active=is_active_val)
+        if date_start:
+            queryset = queryset.filter(created_at__date__gte=date_start)
+        if date_end:
+            queryset = queryset.filter(created_at__date__lte=date_end)
+            
+        # Return all filtered values, fallback to last 15 only if no parameters are passed
+        if not (search or browser or status_param or date_start or date_end):
+            return queryset[:15]
+            
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

@@ -1,3 +1,6 @@
+import os
+from django.conf import settings
+from django.db import connection
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -1129,7 +1132,7 @@ class AdminFeedbackListView(APIView):
         status_param = request.query_params.get('status', '').strip().lower()
         rating = request.query_params.get('rating', '').strip()
 
-        queryset = AdminFeedback.objects.select_related('user').all()
+        queryset = AdminFeedback.objects.select_related('user', 'user__profile').all()
 
         # Date range filtering
         date_start = request.query_params.get('date_start', '').strip()
@@ -1487,7 +1490,7 @@ class AdminEmailLogsView(APIView):
         page = int(request.query_params.get('page', 1))
         limit = int(request.query_params.get('limit', 50))
 
-        qs = EmailLog.objects.select_related('related_user').all()
+        qs = EmailLog.objects.select_related('related_user', 'related_user__profile').all()
 
         # Date range filtering & sorting
         date_start = request.query_params.get('date_start', '').strip()
@@ -1619,6 +1622,19 @@ class AdminSystemHealthView(APIView):
         else:
             uptime = '100.0%'
 
+        # Determine overall health status
+        backend_status = services.get('backend', {}).get('status', 'Offline')
+        db_status = services.get('database', {}).get('status', 'Offline')
+        email_status = services.get('email', {}).get('status', 'Degraded')
+        cloudinary_status = services.get('cloudinary', {}).get('status', 'Degraded')
+
+        if backend_status != 'Operational' or db_status != 'Operational':
+            overall_status = 'Critical'
+        elif email_status in ['Degraded', 'Offline'] or cloudinary_status in ['Degraded', 'Offline', 'Not Configured']:
+            overall_status = 'Degraded'
+        else:
+            overall_status = 'Healthy'
+
         import shutil
         try:
             total, used, free = shutil.disk_usage(settings.BASE_DIR)
@@ -1643,7 +1659,9 @@ class AdminSystemHealthView(APIView):
         return Response({
             'services': services,
             'uptime': uptime,
+            'overall_status': overall_status,
             'checked_at': timezone.now().isoformat(),
+            'last_updated': timezone.now().isoformat(),
             'api_version': '1.0.0-enterprise',
             'environment': 'Development' if settings.DEBUG else 'Production',
             'server_time': timezone.now().isoformat(),
@@ -1657,7 +1675,7 @@ class AdminBackupsView(APIView):
 
     def get(self, request):
         from .models import BackupLog
-        backups = BackupLog.objects.select_related('created_by').all()
+        backups = BackupLog.objects.select_related('created_by', 'created_by__profile').all()
 
         search = request.query_params.get('search', '').strip()
         sort = request.query_params.get('sort', 'newest').strip().lower()
@@ -1900,5 +1918,158 @@ class AdminReportDownloadView(APIView):
         response = FileResponse(open(filepath, 'rb'), content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
         return response
+
+
+from django.http import StreamingHttpResponse, JsonResponse
+from datetime import timedelta
+from datetime import datetime
+
+class AdminReportsExportView(APIView):
+    """Modular report generation with date range filtering, streamed dynamically from database."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        format_param = request.query_params.get('format', 'json').strip().lower()
+        module = request.query_params.get('module', 'all').strip().lower()
+        timeframe = request.query_params.get('range', 'all').strip()
+
+        start_date = None
+        now = timezone.now()
+        if timeframe == '7_days':
+            start_date = now - timedelta(days=7)
+        elif timeframe == '30_days':
+            start_date = now - timedelta(days=30)
+        elif timeframe == '1_year':
+            start_date = now - timedelta(days=365)
+
+        # Audit Logs
+        from .models import AdminActivityLog
+        AdminActivityLog.objects.create(
+            username=request.user.username or 'admin',
+            action=f"Generated analytical export report for module={module}, range={timeframe}, format={format_param}"
+        )
+
+        if format_param == 'csv':
+            # Setup generator for StreamingHttpResponse
+            def csv_generator_yield():
+                import csv
+                class Echo:
+                    def write(self, value):
+                        return value
+                echo = Echo()
+                writer = csv.writer(echo)
+                
+                yield writer.writerow(["Section", "Attribute 1", "Attribute 2", "Attribute 3", "Attribute 4"])
+                
+                if module in ['all', 'users']:
+                    users = User.objects.select_related('profile').all()
+                    if start_date:
+                        users = users.filter(date_joined__gte=start_date)
+                    yield writer.writerow([])
+                    yield writer.writerow(["--- USERS REGISTER ---"])
+                    yield writer.writerow(["Username", "Email", "Full Name", "Date Joined"])
+                    for u in users:
+                        profile = getattr(u, 'profile', None)
+                        yield writer.writerow([u.username, u.email, profile.full_name if profile else '', u.date_joined.isoformat()])
+
+                if module in ['all', 'skills']:
+                    skills = Skill.objects.select_related('user').all()
+                    if start_date:
+                        skills = skills.filter(created_at__gte=start_date)
+                    yield writer.writerow([])
+                    yield writer.writerow(["--- LEARNING SKILLS ---"])
+                    yield writer.writerow(["Skill Name", "Owner User", "Color", "Target Tasks", "Created At"])
+                    for s in skills:
+                        yield writer.writerow([s.name, s.user.username if s.user else '', s.color, s.target_tasks, s.created_at.isoformat() if s.created_at else ''])
+
+                if module in ['all', 'tasks']:
+                    tasks = Task.objects.select_related('user', 'skill').all()
+                    if start_date:
+                        tasks = tasks.filter(created_at__gte=start_date)
+                    yield writer.writerow([])
+                    yield writer.writerow(["--- TASKS REGISTRY ---"])
+                    yield writer.writerow(["Title", "Description", "Priority", "Status", "Owner", "Skill Group"])
+                    for t in tasks:
+                        yield writer.writerow([t.title, t.description or '', t.priority, t.status, t.user.username if t.user else '', t.skill.name if t.skill else ''])
+
+                if module in ['all', 'feedback']:
+                    feedbacks = AdminFeedback.objects.select_related('user').all()
+                    if start_date:
+                        feedbacks = feedbacks.filter(created_at__gte=start_date)
+                    yield writer.writerow([])
+                    yield writer.writerow(["--- FEEDBACK ENTRIES ---"])
+                    yield writer.writerow(["Submitter Name", "Email", "Subject", "Rating", "Comment", "Status"])
+                    for f in feedbacks:
+                        yield writer.writerow([f.name, f.email, f.subject, f.rating, f.comment, f.status])
+
+            response = StreamingHttpResponse(
+                csv_generator_yield(),
+                content_type='text/csv'
+            )
+            response['Content-Disposition'] = f'attachment; filename="progressly_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+            return response
+        else:
+            payload = {}
+            if module in ['all', 'users']:
+                users = User.objects.select_related('profile').all()
+                if start_date:
+                    users = users.filter(date_joined__gte=start_date)
+                payload['users'] = [
+                    {
+                        'username': u.username,
+                        'email': u.email,
+                        'full_name': u.profile.full_name if getattr(u, 'profile', None) else '',
+                        'date_joined': u.date_joined.isoformat()
+                    }
+                    for u in users
+                ]
+            if module in ['all', 'skills']:
+                skills = Skill.objects.select_related('user').all()
+                if start_date:
+                    skills = skills.filter(created_at__gte=start_date)
+                payload['skills'] = [
+                    {
+                        'name': s.name,
+                        'owner': s.user.username if s.user else '',
+                        'color': s.color,
+                        'target_tasks': s.target_tasks,
+                        'created_at': s.created_at.isoformat() if s.created_at else None
+                    }
+                    for s in skills
+                ]
+            if module in ['all', 'tasks']:
+                tasks = Task.objects.select_related('user', 'skill').all()
+                if start_date:
+                    tasks = tasks.filter(created_at__gte=start_date)
+                payload['tasks'] = [
+                    {
+                        'title': t.title,
+                        'description': t.description or '',
+                        'priority': t.priority,
+                        'status': t.status,
+                        'owner': t.user.username if t.user else '',
+                        'skill': t.skill.name if t.skill else None
+                    }
+                    for t in tasks
+                ]
+            if module in ['all', 'feedback']:
+                feedbacks = AdminFeedback.objects.select_related('user').all()
+                if start_date:
+                    feedbacks = feedbacks.filter(created_at__gte=start_date)
+                payload['feedback'] = [
+                    {
+                        'name': f.name,
+                        'email': f.email,
+                        'subject': f.subject,
+                        'rating': f.rating,
+                        'comment': f.comment,
+                        'status': f.status
+                    }
+                    for f in feedbacks
+                ]
+            response = JsonResponse(payload)
+            response['Content-Disposition'] = f'attachment; filename="progressly_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+            return response
+
 
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { ShieldCheck, User, Mail, ShieldAlert, Key, Edit, RefreshCw, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react'
 import { adminRolesService } from '../services/rolesService'
 import { useAuth } from '../../contexts/AuthContext'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './Roles.css'
 
 const ROLE_OPTIONS = [
@@ -226,61 +227,32 @@ export default function Roles() {
                 {admins.map((admin) => {
                   const isOwner = admin.is_superuser || admin.role?.toLowerCase() === 'owner'
                   return (
-                    <div key={admin.id} className={`roles-mobile-card${isOwner ? ' roles-mobile-card--protected' : ''}`}>
-                      <div className="mobile-card-row mobile-card-header">
-                        <div className="user-profile-summary">
-                          <div className="user-avatar-wrap">
-                            {admin.avatar ? <img src={admin.avatar} alt="avatar" /> : <User size={14} />}
-                          </div>
-                          <div>
-                            <div className="user-name">{admin.full_name || admin.username}</div>
-                            <div className="user-username">@{admin.username}</div>
-                          </div>
-                        </div>
-                        <span className={`role-badge role-badge--${admin.role?.toLowerCase()}`}>
+                    <AdminMobileCard
+                      key={admin.id}
+                      title={admin.full_name || admin.username}
+                      subtitle={`@${admin.username}`}
+                      avatar={admin.avatar}
+                      icon={User}
+                      badge={
+                        <span className={`role-badge role-badge--${admin.role?.toLowerCase()}`} style={{ fontSize: '0.65rem' }}>
                           {admin.role}
                         </span>
-                      </div>
-                      <div className="mobile-card-row">
-                        <span className="lbl">Email Address</span>
-                        <span className="val">{admin.email}</span>
-                      </div>
-                      <div className="mobile-card-row">
-                        <span className="lbl">Groups</span>
-                        <span className="val">{admin.groups?.join(', ') || '—'}</span>
-                      </div>
-                      <div className="mobile-card-row">
-                        <span className="lbl">Permissions</span>
-                        <span className="val">{admin.permissions_count}</span>
-                      </div>
-                      <div className="mobile-card-row">
-                        <span className="lbl">Account Status</span>
-                        <span className={`status-pill status-${admin.is_active ? 'active' : 'inactive'}`}>
-                          {admin.is_active ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </div>
-                      <div className="mobile-card-row">
-                        <span className="lbl">Last Login</span>
-                        <span className="val">{admin.last_login}</span>
-                      </div>
-                      <div className="mobile-card-actions">
-                        {isOwner ? (
-                          <span className="protected-indicator" style={{ width: '100%', justifyContent: 'center' }}>
-                            <Key size={12} /> Protected Owner Account
-                          </span>
-                        ) : (
-                          <button
-                            className="roles-edit-btn"
-                            style={{ width: '100%', justifyContent: 'center' }}
-                            onClick={() => startEditing(admin)}
-                            id={`edit-role-mob-${admin.id}`}
-                          >
-                            <Edit size={12} /> Edit Account Privileges
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )})}
+                      }
+                      fields={[
+                        { label: 'Email', value: admin.email },
+                        { label: 'Groups', value: admin.groups?.join(', ') || '—' },
+                        { label: 'Permissions', value: String(admin.permissions_count) },
+                        { label: 'Account Status', value: admin.is_active ? 'Enabled' : 'Disabled' },
+                        { label: 'Last Login', value: admin.last_login }
+                      ]}
+                      actions={
+                        isOwner ? [] : [
+                          { icon: Edit, label: 'Edit privileges', onClick: () => startEditing(admin) }
+                        ]
+                      }
+                    />
+                  )
+                })}
               </div>
             </div>
           )}

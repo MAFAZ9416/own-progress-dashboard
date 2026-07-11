@@ -37,9 +37,11 @@ from .views import (
     AdminRolesView,
     AdminRoleUpdateView,
     AdminReportDownloadView,
+    AdminReportsExportView,
 )
 
 urlpatterns = [
+    path('reports/export/', AdminReportsExportView.as_view(), name='admin-reports-export'),
     path('dashboard/', AdminDashboardSummaryView.as_view(), name='admin-dashboard-summary'),
     path('dashboard/charts/user-growth/', AdminUserGrowthChartView.as_view(), name='admin-user-growth-chart'),
     path('dashboard/charts/tasks/', AdminTaskCompletionChartView.as_view(), name='admin-task-completion-chart'),

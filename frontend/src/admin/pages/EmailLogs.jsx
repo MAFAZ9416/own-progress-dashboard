@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Mail, AlertCircle, RefreshCw, Search, CheckCircle, XCircle, X, Loader2 } from 'lucide-react'
 import { adminEmailLogsService } from '../services/emailLogsService'
+import AdminMobileCard from '../components/common/AdminMobileCard'
 import './EmailLogs.css'
 
 const TYPE_OPTIONS = [
@@ -179,52 +180,87 @@ export default function EmailLogs() {
         {isLoading ? (
           <div className="emaillogs-loading"><Loader2 size={28} className="el-spin" /></div>
         ) : logs.length === 0 ? (
-          <div className="emaillogs-empty">
-            <Mail size={40} />
-            <p>No email logs found.</p>
-            {(statusFilter || typeFilter || search) && <span>Try clearing your filters.</span>}
+          <div className="emaillogs-empty" style={{ padding: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+            <Mail size={40} style={{ color: 'var(--admin-text-muted)' }} />
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--admin-text-secondary)' }}>No SMTP email records log found. Transactional emails have not been dispatched.</p>
+            {(statusFilter || typeFilter || search) && <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-muted)' }}>Try adjusting your search filters.</span>}
           </div>
         ) : (
-          <table className="emaillogs-table">
-            <thead>
-              <tr>
-                <th>Recipient</th>
-                <th>Subject</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Sent At</th>
-                <th>By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(log => {
+          <>
+            <div className="desktop-only-view">
+              <table className="emaillogs-table">
+                <thead>
+                  <tr>
+                    <th>Recipient</th>
+                    <th>Subject</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Sent At</th>
+                    <th>By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map(log => {
+                    const typeInfo = TYPE_LABELS[log.email_type] || { label: log.email_type, color: 'gray' }
+                    return (
+                      <tr
+                        key={log.id}
+                        className="emaillogs-table__row emaillogs-table__row--clickable"
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <td className="emaillogs-td-email">{log.recipient_email}</td>
+                        <td className="emaillogs-td-subject">{log.subject}</td>
+                        <td>
+                          <span className={`emaillogs-badge emaillogs-badge--${typeInfo.color}`}>
+                            {typeInfo.label}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`emaillogs-status emaillogs-status--${log.status}`}>
+                            {log.status === 'sent' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="emaillogs-td-date">{formatDate(log.sent_at)}</td>
+                        <td className="emaillogs-td-by">{log.created_by || 'system'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mobile-only-view emaillogs-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: '12px' }}>
+              {logs.map((log) => {
                 const typeInfo = TYPE_LABELS[log.email_type] || { label: log.email_type, color: 'gray' }
                 return (
-                  <tr
+                  <AdminMobileCard
                     key={log.id}
-                    className="emaillogs-table__row emaillogs-table__row--clickable"
-                    onClick={() => setSelectedLog(log)}
-                  >
-                    <td className="emaillogs-td-email">{log.recipient_email}</td>
-                    <td className="emaillogs-td-subject">{log.subject}</td>
-                    <td>
-                      <span className={`emaillogs-badge emaillogs-badge--${typeInfo.color}`}>
+                    title={log.recipient_email || 'No Recipient'}
+                    subtitle={log.subject}
+                    icon={Mail}
+                    badge={
+                      <span className={`emaillogs-badge emaillogs-badge--${typeInfo.color}`} style={{ fontSize: '0.65rem' }}>
                         {typeInfo.label}
                       </span>
-                    </td>
-                    <td>
-                      <span className={`emaillogs-status emaillogs-status--${log.status}`}>
-                        {log.status === 'sent' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                    }
+                    status={
+                      <span className={`emaillogs-status emaillogs-status--${log.status}`} style={{ fontSize: '0.72rem' }}>
                         {log.status}
                       </span>
-                    </td>
-                    <td className="emaillogs-td-date">{formatDate(log.sent_at)}</td>
-                    <td className="emaillogs-td-by">{log.created_by || 'system'}</td>
-                  </tr>
+                    }
+                    fields={[
+                      { label: 'Sender By', value: log.created_by || 'system' },
+                      { label: 'Sent At', value: formatDate(log.sent_at) }
+                    ]}
+                    actions={[
+                      { icon: Mail, label: 'View Detail', onClick: () => setSelectedLog(log) }
+                    ]}
+                  />
                 )
               })}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

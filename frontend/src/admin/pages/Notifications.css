@@ -479,3 +479,21 @@
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 768px) {
+  .desktop-only-view {
+    display: none !important;
+  }
+  .mobile-only-view {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-only-view {
+    display: block !important;
+  }
+  .mobile-only-view {
+    display: none !important;
+  }
+}
+
