@@ -1,0 +1,540 @@
+{
+  "backup_meta": {
+    "created_at": "2026-07-11T11:22:41.481482+00:00",
+    "created_by": "progressly.admin@gmail.com",
+    "version": "1.0",
+    "note": "Progressly safe data backup. No passwords or tokens included."
+  },
+  "users": [
+    {
+      "id": 18,
+      "username": "test_admin@example.com",
+      "email": "test_admin@example.com",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "date_joined": "2026-07-09T12:46:52.568799+00:00",
+      "last_login": null,
+      "full_name": "",
+      "country": null,
+      "bio": ""
+    },
+    {
+      "id": 3,
+      "username": "progressly.admin@gmail.com",
+      "email": "progressly.admin@gmail.com",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "date_joined": "2026-07-01T12:42:48+00:00",
+      "last_login": "2026-07-03T13:15:23.908760+00:00",
+      "full_name": "Progressly_Admin",
+      "country": "",
+      "bio": "Hi i am the admin of this site...."
+    },
+    {
+      "id": 2,
+      "username": "mafaz9416@gmail.com",
+      "email": "mafaz9416@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-06-30T12:43:27.280935+00:00",
+      "last_login": null,
+      "full_name": "MOHAMMED MAFAZ T S",
+      "country": "",
+      "bio": "hi i am mafaz"
+    },
+    {
+      "id": 4,
+      "username": "mafaz941@gmail.com",
+      "email": "mafaz941@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-01T12:47:09.862318+00:00",
+      "last_login": null,
+      "full_name": "mafaz",
+      "country": "",
+      "bio": ""
+    },
+    {
+      "id": 5,
+      "username": "mafaz94@gmail.com",
+      "email": "mafaz94@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-01T12:49:37.001567+00:00",
+      "last_login": null,
+      "full_name": "MOHAMMED MAFAZ",
+      "country": "",
+      "bio": "hi this is mafaz 94"
+    },
+    {
+      "id": 12,
+      "username": "srivishnusri1404@gmail.com",
+      "email": "srivishnusri1404@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-04T15:14:48.249329+00:00",
+      "last_login": null,
+      "full_name": "Srivishnu  C",
+      "country": null,
+      "bio": ""
+    },
+    {
+      "id": 15,
+      "username": "mafaz202007@gmail.com",
+      "email": "mafaz202007@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-06T14:07:21.475920+00:00",
+      "last_login": null,
+      "full_name": "MOHAMMED MAFAZ",
+      "country": null,
+      "bio": ""
+    },
+    {
+      "id": 16,
+      "username": "testuser@progressly.com",
+      "email": "testuser@progressly.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-07T15:14:14.490150+00:00",
+      "last_login": null,
+      "full_name": "",
+      "country": null,
+      "bio": ""
+    },
+    {
+      "id": 17,
+      "username": "test@gmail.com",
+      "email": "test@gmail.com",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2026-07-09T11:57:17.684727+00:00",
+      "last_login": null,
+      "full_name": "test",
+      "country": null,
+      "bio": ""
+    },
+    {
+      "id": 13,
+      "username": "progressly.offical@gmail.com",
+      "email": "progressly.offical@gmail.com",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "date_joined": "2026-07-06T13:01:32.061406+00:00",
+      "last_login": null,
+      "full_name": "Progressly_offical",
+      "country": "India",
+      "bio": "This is the progressly offical site account"
+    }
+  ],
+  "skills": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "name": "Python",
+      "color": "#3b82f6",
+      "target_tasks": 10,
+      "created_at": "2026-06-30T12:44:57.581764+00:00"
+    },
+    {
+      "id": 2,
+      "user_id": 2,
+      "name": "test",
+      "color": "#3b82f6",
+      "target_tasks": 10,
+      "created_at": "2026-06-30T13:07:52.646732+00:00"
+    },
+    {
+      "id": 6,
+      "user_id": 5,
+      "name": "fdsg",
+      "color": "#EC4899",
+      "target_tasks": 10,
+      "created_at": "2026-07-01T12:50:02.220078+00:00"
+    },
+    {
+      "id": 20,
+      "user_id": 5,
+      "name": "JAVA",
+      "color": "#EF4444",
+      "target_tasks": 10,
+      "created_at": "2026-07-04T11:29:20.783208+00:00"
+    },
+    {
+      "id": 21,
+      "user_id": 3,
+      "name": "tst",
+      "color": "#3b82f6",
+      "target_tasks": 10,
+      "created_at": "2026-07-06T13:06:38.090778+00:00"
+    },
+    {
+      "id": 23,
+      "user_id": 15,
+      "name": "test",
+      "color": "#3b82f6",
+      "target_tasks": 1,
+      "created_at": "2026-07-06T14:09:55.552054+00:00"
+    },
+    {
+      "id": 24,
+      "user_id": 15,
+      "name": "st",
+      "color": "#3b82f6",
+      "target_tasks": 1,
+      "created_at": "2026-07-06T14:21:35.300252+00:00"
+    },
+    {
+      "id": 25,
+      "user_id": 15,
+      "name": "sss",
+      "color": "#3b82f6",
+      "target_tasks": 10,
+      "created_at": "2026-07-06T14:27:17.084659+00:00"
+    },
+    {
+      "id": 3,
+      "user_id": 2,
+      "name": "java",
+      "color": "#f43f5e",
+      "target_tasks": 1,
+      "created_at": "2026-06-30T13:22:32.010481+00:00"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 48,
+      "user_id": 2,
+      "skill_id": 3,
+      "title": "Test",
+      "description": null,
+      "status": "todo",
+      "priority": "medium",
+      "created_at": "2026-07-04T15:08:29.165076+00:00",
+      "updated_at": "2026-07-04T15:08:29.165092+00:00"
+    },
+    {
+      "id": 49,
+      "user_id": 3,
+      "skill_id": 21,
+      "title": "tes",
+      "description": null,
+      "status": "completed",
+      "priority": "high",
+      "created_at": "2026-07-06T13:06:56.614068+00:00",
+      "updated_at": "2026-07-07T14:13:07.709356+00:00"
+    },
+    {
+      "id": 46,
+      "user_id": 5,
+      "skill_id": 6,
+      "title": "test",
+      "description": null,
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-07-03T13:22:17.141662+00:00",
+      "updated_at": "2026-07-03T13:22:17.141685+00:00"
+    },
+    {
+      "id": 4,
+      "user_id": 2,
+      "skill_id": 3,
+      "title": "oop",
+      "description": null,
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-06-30T13:23:08.049981+00:00",
+      "updated_at": "2026-06-30T13:23:08.049994+00:00"
+    },
+    {
+      "id": 50,
+      "user_id": 15,
+      "skill_id": 23,
+      "title": "tes",
+      "description": null,
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-07-06T14:10:48.080416+00:00",
+      "updated_at": "2026-07-06T14:10:48.080445+00:00"
+    },
+    {
+      "id": 51,
+      "user_id": 15,
+      "skill_id": 24,
+      "title": "st",
+      "description": null,
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-07-06T14:22:01.978891+00:00",
+      "updated_at": "2026-07-06T14:22:01.978903+00:00"
+    },
+    {
+      "id": 52,
+      "user_id": 15,
+      "skill_id": 25,
+      "title": "ssss",
+      "description": null,
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-07-06T14:27:23.221510+00:00",
+      "updated_at": "2026-07-06T14:27:23.221789+00:00"
+    },
+    {
+      "id": 1,
+      "user_id": 2,
+      "skill_id": 1,
+      "title": "oop",
+      "description": "for testing",
+      "status": "completed",
+      "priority": "medium",
+      "created_at": "2026-06-30T12:45:16.526249+00:00",
+      "updated_at": "2026-06-30T12:45:16.526299+00:00"
+    }
+  ],
+  "achievements": [
+    {
+      "id": 1,
+      "name": "First Step",
+      "description": "Create your first skill.",
+      "icon": "🥇",
+      "condition": "skills_created >= 1",
+      "is_active": true,
+      "created_at": "2026-07-07T14:11:52.577210+00:00"
+    },
+    {
+      "id": 2,
+      "name": "Consistent Learner",
+      "description": "Maintain a 7 day streak.",
+      "icon": "🔥",
+      "condition": "current_streak >= 7",
+      "is_active": true,
+      "created_at": "2026-07-07T14:11:53.393024+00:00"
+    },
+    {
+      "id": 3,
+      "name": "Productive",
+      "description": "Complete 50 tasks.",
+      "icon": "⚡",
+      "condition": "completed_tasks >= 50",
+      "is_active": true,
+      "created_at": "2026-07-07T14:11:54.108978+00:00"
+    },
+    {
+      "id": 4,
+      "name": "Master",
+      "description": "Complete a skill to 100%.",
+      "icon": "👑",
+      "condition": "skill_progress >= 100",
+      "is_active": true,
+      "created_at": "2026-07-07T14:11:54.621525+00:00"
+    },
+    {
+      "id": 5,
+      "name": "Champion",
+      "description": "Complete 100 tasks.",
+      "icon": "🏆",
+      "condition": "completed_tasks >= 100",
+      "is_active": true,
+      "created_at": "2026-07-07T14:11:55.133857+00:00"
+    }
+  ],
+  "user_achievements": [
+    {
+      "id": 1,
+      "user_id": 3,
+      "achievement_id": 1,
+      "unlocked_at": "2026-07-07T14:12:39.780726+00:00"
+    },
+    {
+      "id": 2,
+      "user_id": 2,
+      "achievement_id": 1,
+      "unlocked_at": "2026-07-07T15:20:48.432919+00:00"
+    },
+    {
+      "id": 3,
+      "user_id": 2,
+      "achievement_id": 4,
+      "unlocked_at": "2026-07-09T11:55:59.619274+00:00"
+    }
+  ],
+  "feedback": [
+    {
+      "id": 19,
+      "name": "Progressly_Admin",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is admin mail checker msg",
+      "status": "resolved",
+      "created_at": "2026-07-11T05:56:50.184031+00:00"
+    },
+    {
+      "id": 18,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi after successfully created admin panel",
+      "status": "resolved",
+      "created_at": "2026-07-09T14:25:58.501168+00:00"
+    },
+    {
+      "id": 17,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for the user site testing",
+      "status": "resolved",
+      "created_at": "2026-07-09T12:26:08.235401+00:00"
+    },
+    {
+      "id": 16,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi i am mafaz now the application is good keep improving don't give up don't listion other's words",
+      "status": "pending",
+      "created_at": "2026-07-08T11:31:00.552745+00:00"
+    },
+    {
+      "id": 15,
+      "name": "Progressly_Admin",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for",
+      "status": "pending",
+      "created_at": "2026-07-07T13:31:37.694247+00:00"
+    },
+    {
+      "id": 14,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this testing",
+      "status": "pending",
+      "created_at": "2026-07-06T13:37:00.369216+00:00"
+    },
+    {
+      "id": 13,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hey this is for the testing and check the all issuse",
+      "status": "pending",
+      "created_at": "2026-07-06T12:45:22.086136+00:00"
+    },
+    {
+      "id": 12,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for testing",
+      "status": "pending",
+      "created_at": "2026-07-05T14:03:01.028534+00:00"
+    },
+    {
+      "id": 11,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for testing",
+      "status": "pending",
+      "created_at": "2026-07-05T13:49:13.335919+00:00"
+    },
+    {
+      "id": 10,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "Hi this is the first test after deployment",
+      "status": "pending",
+      "created_at": "2026-07-04T15:08:57.735143+00:00"
+    },
+    {
+      "id": 9,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi now i think the problem is solve",
+      "status": "pending",
+      "created_at": "2026-07-04T06:01:32.441884+00:00"
+    },
+    {
+      "id": 8,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for testing",
+      "status": "pending",
+      "created_at": "2026-07-04T05:48:44.238419+00:00"
+    },
+    {
+      "id": 7,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi i am mohammed mafaz and i am the admin of this application",
+      "status": "pending",
+      "created_at": "2026-07-04T05:42:13.999602+00:00"
+    },
+    {
+      "id": 6,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for testing",
+      "status": "pending",
+      "created_at": "2026-07-04T05:32:45.626021+00:00"
+    },
+    {
+      "id": 5,
+      "name": "MOHAMMED MAFAZ T S",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "hi this is for the testing purpose",
+      "status": "pending",
+      "created_at": "2026-07-04T05:12:38.339568+00:00"
+    },
+    {
+      "id": 4,
+      "name": "test",
+      "email": "",
+      "subject": "General Feedback",
+      "rating": 5,
+      "comment": "testing purpose",
+      "status": "pending",
+      "created_at": "2026-07-04T04:53:21.894870+00:00"
+    }
+  ],
+  "totals": {
+    "users": 10,
+    "skills": 9,
+    "tasks": 8,
+    "achievements": 5,
+    "feedback": 16
+  }
+}

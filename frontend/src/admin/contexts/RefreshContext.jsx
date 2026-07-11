@@ -18,7 +18,7 @@ export function AdminRefreshProvider({ children }) {
   })
 
   const getIntervalMs = () => {
-    const autoRefreshPref = user?.preferences?.application?.auto_refresh || 'off'
+    const autoRefreshPref = user?.preferences?.dashboard?.auto_refresh || user?.preferences?.application?.auto_refresh || 'off'
     if (autoRefreshPref === 'off') return null
     if (autoRefreshPref === '30s') return 30000
     if (autoRefreshPref === '1m') return 60000
@@ -57,7 +57,7 @@ export function AdminRefreshProvider({ children }) {
       if (timers.current.notifications) clearInterval(timers.current.notifications)
       if (timers.current.health) clearInterval(timers.current.health)
     }
-  }, [user?.preferences?.application?.auto_refresh])
+  }, [user?.preferences?.dashboard?.auto_refresh, user?.preferences?.application?.auto_refresh])
 
   return (
     <RefreshContext.Provider value={{ ticks, triggerManualRefresh }}>

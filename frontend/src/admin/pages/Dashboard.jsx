@@ -26,10 +26,11 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
   const [responseTimeMs, setResponseTimeMs] = useState(0)
 
-  // Chart Independent Period States
-  const [userGrowthPeriod, setUserGrowthPeriod] = useState('month')
-  const [taskPeriod, setTaskPeriod] = useState('month')
-  const [activityPeriod, setActivityPeriod] = useState('month')
+  // Chart Independent Period States, initialized from preferences
+  const getPrefPeriod = () => user?.preferences?.dashboard?.period || 'month'
+  const [userGrowthPeriod, setUserGrowthPeriod] = useState(getPrefPeriod)
+  const [taskPeriod, setTaskPeriod] = useState(getPrefPeriod)
+  const [activityPeriod, setActivityPeriod] = useState(getPrefPeriod)
 
   // Chart Independent Data States
   const [userGrowthData, setUserGrowthData] = useState([])
@@ -47,7 +48,8 @@ export default function Dashboard() {
     const startTime = performance.now()
 
     try {
-      const result = await adminDashboardService.getDashboardSummary('month', isInitial)
+      const prefPeriod = user?.preferences?.dashboard?.period || 'month'
+      const result = await adminDashboardService.getDashboardSummary(prefPeriod, isInitial)
       const endTime = performance.now()
       setResponseTimeMs(Math.round(endTime - startTime))
       console.log('--- DEBUG FRONTEND DASHBOARD SUMMARY RESPONSE ---', result)
@@ -56,17 +58,25 @@ export default function Dashboard() {
       setTaskData(result.charts?.task_completion || [])
       setActivityData(result.charts?.weekly_activity || [])
       
-      // Reset period state selections back to default
-      setUserGrowthPeriod('month')
-      setTaskPeriod('month')
-      setActivityPeriod('month')
+      // Reset period state selections back to default from preferences
+      setUserGrowthPeriod(prefPeriod)
+      setTaskPeriod(prefPeriod)
+      setActivityPeriod(prefPeriod)
     } catch (err) {
       console.error('Error fetching dashboard summary:', err)
       setError(err.response?.data?.message || err.message || 'Failed to connect to administrative server.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [user?.preferences?.dashboard?.period])
+
+  // Sync state when preferences are updated dynamically
+  useEffect(() => {
+    const prefPeriod = user?.preferences?.dashboard?.period || 'month'
+    setUserGrowthPeriod(prefPeriod)
+    setTaskPeriod(prefPeriod)
+    setActivityPeriod(prefPeriod)
+  }, [user?.preferences?.dashboard?.period])
 
   useEffect(() => {
     fetchDashboardData(true)
@@ -224,79 +234,120 @@ export default function Dashboard() {
   const totalUsersValue = stats?.total_users?.value || 0
   const totalUsersTrend = stats?.total_users?.trend || 0
 
+  // Preferences integration
+  const dbPrefs = user?.preferences?.dashboard || {}
+  const widgets = dbPrefs.widgets || {}
+  const showLegend = dbPrefs.show_legend !== false
+  const showGrid = dbPrefs.show_grid !== false
+  const enableAnimations = dbPrefs.enable_animations !== false
+  const isCompact = dbPrefs.compact_cards === true
+
   return (
-    <div className="admin-dashboard-content">
+    <div className={`admin-dashboard-content ${isCompact ? 'compact-mode' : ''}`}>
       {/* Row 1: Hero Banner */}
       <HeroBanner adminName={user?.profile?.full_name || user?.username} onExportReport={handleExportData} isExporting={isExporting} />
 
       {/* Row 2: Statistics Grid (6 cards) */}
-      <StatsGrid stats={stats} isLoading={isLoading} />
+      {widgets.stats_grid !== false && (
+        <StatsGrid stats={stats} isLoading={isLoading} />
+      )}
 
       {/* Row 3: Charts Group (Growth, Completion, Activity) */}
-      <div className="admin-dashboard-charts-row">
-        <UserGrowthChart 
-          data={userGrowthData} 
-          totalValue={totalUsersValue}
-          trend={totalUsersTrend}
-          isLoading={isLoading || isUserGrowthLoading} 
-          period={userGrowthPeriod}
-          onPeriodChange={setUserGrowthPeriod}
-        />
-        <TaskCompletionChart 
-          data={taskData} 
-          isLoading={isLoading || isTaskLoading} 
-          period={taskPeriod}
-          onPeriodChange={setTaskPeriod}
-        />
-        <WeeklyActivityChart 
-          data={activityData} 
-          isLoading={isLoading || isActivityLoading} 
-          period={activityPeriod}
-          onPeriodChange={setActivityPeriod}
-        />
-      </div>
+      {widgets.charts !== false && dbPrefs.show_charts !== false && (
+        <div className="admin-dashboard-charts-row">
+          <UserGrowthChart 
+            data={userGrowthData} 
+            totalValue={totalUsersValue}
+            trend={totalUsersTrend}
+            isLoading={isLoading || isUserGrowthLoading} 
+            period={userGrowthPeriod}
+            onPeriodChange={setUserGrowthPeriod}
+            showLegend={showLegend}
+            showGrid={showGrid}
+            enableAnimations={enableAnimations}
+          />
+          <TaskCompletionChart 
+            data={taskData} 
+            isLoading={isLoading || isTaskLoading} 
+            period={taskPeriod}
+            onPeriodChange={setTaskPeriod}
+            showLegend={showLegend}
+            showGrid={showGrid}
+            enableAnimations={enableAnimations}
+          />
+          <WeeklyActivityChart 
+            data={activityData} 
+            isLoading={isLoading || isActivityLoading} 
+            period={activityPeriod}
+            onPeriodChange={setActivityPeriod}
+            showLegend={showLegend}
+            showGrid={showGrid}
+            enableAnimations={enableAnimations}
+          />
+        </div>
+      )}
 
       {/* Row 4: Lists & Metrics Group A */}
-      <div className="admin-dashboard-metrics-row-4">
-        <RecentUsers 
-          users={recentUsers} 
-          isLoading={isLoading} 
-          onViewAll={() => handleNavigationRedirect('/admin/users')}
-        />
-        <RecentActivity 
-          activities={recentActivity} 
-          isLoading={isLoading} 
-          onViewAll={() => handleNavigationRedirect('/admin/activity-logs')}
-        />
-        <SystemHealth 
-          healthData={systemHealth} 
-          responseTimeMs={responseTimeMs}
-          isLoading={isLoading} 
-        />
-        <DatabaseOverview 
-          databaseData={databaseData} 
-          isLoading={isLoading} 
-        />
-      </div>
+      {(widgets.recent_users !== false || widgets.recent_activity !== false || widgets.system_health !== false || widgets.database_overview !== false) && (
+        <div className="admin-dashboard-metrics-row-4">
+          {widgets.recent_users !== false && (
+            <RecentUsers 
+              users={recentUsers} 
+              isLoading={isLoading} 
+              onViewAll={() => handleNavigationRedirect('/admin/users')}
+            />
+          )}
+          {widgets.recent_activity !== false && (
+            <RecentActivity 
+              activities={recentActivity} 
+              isLoading={isLoading} 
+              onViewAll={() => handleNavigationRedirect('/admin/activity-logs')}
+            />
+          )}
+          {widgets.system_health !== false && (
+            <SystemHealth 
+              healthData={systemHealth} 
+              responseTimeMs={responseTimeMs}
+              isLoading={isLoading} 
+            />
+          )}
+          {widgets.database_overview !== false && (
+            <DatabaseOverview 
+              databaseData={databaseData} 
+              isLoading={isLoading} 
+            />
+          )}
+        </div>
+      )}
 
       {/* Row 5: Actions & Feedbacks Group B */}
-      <div className="admin-dashboard-metrics-row-5">
-        <TopSkills 
-          skillsData={topSkills} 
-          isLoading={isLoading} 
-        />
-        <LatestFeedback 
-          feedbackData={feedbackData} 
-          isLoading={isLoading} 
-        />
-        <Notifications 
-          notificationsData={notificationsData} 
-          isLoading={isLoading} 
-        />
-        <QuickActions 
-          onActionSuccess={handleActionSuccess} 
-        />
-      </div>
+      {(widgets.top_skills !== false || widgets.latest_feedback !== false || widgets.notifications !== false || widgets.quick_actions !== false) && (
+        <div className="admin-dashboard-metrics-row-5">
+          {widgets.top_skills !== false && (
+            <TopSkills 
+              skillsData={topSkills} 
+              isLoading={isLoading} 
+            />
+          )}
+          {widgets.latest_feedback !== false && (
+            <LatestFeedback 
+              feedbackData={feedbackData} 
+              isLoading={isLoading} 
+            />
+          )}
+          {widgets.notifications !== false && (
+            <Notifications 
+              notificationsData={notificationsData} 
+              isLoading={isLoading} 
+            />
+          )}
+          {widgets.quick_actions !== false && (
+            <QuickActions 
+              onActionSuccess={handleActionSuccess} 
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 

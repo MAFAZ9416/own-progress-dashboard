@@ -150,3 +150,38 @@
     gap: 0.75rem;
   }
 }
+
+/* Compact Mode Preferences Overrides */
+.admin-dashboard-content.compact-mode {
+  gap: 0.75rem !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-stat-card {
+  padding: 10px 14px !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-stat-card__body {
+  margin-top: 4px !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-stat-card__value {
+  font-size: 1.25rem !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-stat-card__sparkline {
+  height: 25px !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-chart-card,
+.admin-dashboard-content.compact-mode .admin-donut-card,
+.admin-dashboard-content.compact-mode .admin-bar-card,
+.admin-dashboard-content.compact-mode .admin-list-card {
+  padding: 12px 16px !important;
+}
+
+.admin-dashboard-content.compact-mode .admin-chart-card__plot,
+.admin-dashboard-content.compact-mode .admin-donut-card__chart-container,
+.admin-dashboard-content.compact-mode .admin-bar-card__plot {
+  height: 180px !important;
+}
+

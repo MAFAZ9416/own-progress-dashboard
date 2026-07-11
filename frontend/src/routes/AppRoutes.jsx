@@ -3,6 +3,13 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import MainLayout from '../components/layout/MainLayout'
 import PageLoader from '../components/common/PageLoader'
+import { useAuth } from '../contexts/AuthContext'
+
+const AdminRedirect = () => {
+  const { user } = useAuth()
+  const landingPage = user?.preferences?.dashboard?.landing_page || '/admin/dashboard'
+  return <Navigate to={landingPage} replace />
+}
 
 // User Protected Pages
 const Login = lazy(() => import('../pages/Login'))
@@ -104,7 +111,7 @@ export default function AppRoutes() {
 
           
           {/* Admin home path fallback */}
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin" element={<AdminRedirect />} />
         </Route>
       </Route>
 

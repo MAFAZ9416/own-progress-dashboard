@@ -3,7 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { Calendar } from 'lucide-react'
 import './TaskCompletionChart.css'
 
-export default function TaskCompletionChart({ data = [], isLoading, period = 'month', onPeriodChange }) {
+export default function TaskCompletionChart({ data = [], isLoading, period = 'month', onPeriodChange, showLegend, showGrid, enableAnimations }) {
   
   // Handle Loading Skeleton State
   if (isLoading) {
@@ -92,7 +92,7 @@ export default function TaskCompletionChart({ data = [], isLoading, period = 'mo
                     outerRadius="85%"
                     paddingAngle={3}
                     dataKey="value"
-                    isAnimationActive={true}
+                    isAnimationActive={enableAnimations}
                     animationDuration={800}
                   >
                     {chartData.map((entry, index) => (
@@ -110,29 +110,31 @@ export default function TaskCompletionChart({ data = [], isLoading, period = 'mo
             </div>
 
             {/* Custom Legend */}
-            <div className="admin-donut-card__legend">
-              <div className="admin-donut-card__legend-item">
-                <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#7c3aed' }} />
-                <span className="admin-donut-card__legend-label">Completed</span>
-                <span className="admin-donut-card__legend-val">
-                  {completed} <span className="admin-donut-card__legend-pct">({completedPct}%)</span>
-                </span>
+            {showLegend && (
+              <div className="admin-donut-card__legend">
+                <div className="admin-donut-card__legend-item">
+                  <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#7c3aed' }} />
+                  <span className="admin-donut-card__legend-label">Completed</span>
+                  <span className="admin-donut-card__legend-val">
+                    {completed} <span className="admin-donut-card__legend-pct">({completedPct}%)</span>
+                  </span>
+                </div>
+                <div className="admin-donut-card__legend-item">
+                  <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#3b82f6' }} />
+                  <span className="admin-donut-card__legend-label">In Progress</span>
+                  <span className="admin-donut-card__legend-val">
+                    {inProgress} <span className="admin-donut-card__legend-pct">({inProgressPct}%)</span>
+                  </span>
+                </div>
+                <div className="admin-donut-card__legend-item">
+                  <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#ef4444' }} />
+                  <span className="admin-donut-card__legend-label">Pending</span>
+                  <span className="admin-donut-card__legend-val">
+                    {pending} <span className="admin-donut-card__legend-pct">({pendingPct}%)</span>
+                  </span>
+                </div>
               </div>
-              <div className="admin-donut-card__legend-item">
-                <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#3b82f6' }} />
-                <span className="admin-donut-card__legend-label">In Progress</span>
-                <span className="admin-donut-card__legend-val">
-                  {inProgress} <span className="admin-donut-card__legend-pct">({inProgressPct}%)</span>
-                </span>
-              </div>
-              <div className="admin-donut-card__legend-item">
-                <div className="admin-donut-card__legend-dot" style={{ backgroundColor: '#ef4444' }} />
-                <span className="admin-donut-card__legend-label">Pending</span>
-                <span className="admin-donut-card__legend-val">
-                  {pending} <span className="admin-donut-card__legend-pct">({pendingPct}%)</span>
-                </span>
-              </div>
-            </div>
+            )}
           </>
         ) : (
           <div className="admin-donut-card__empty">No task completions logged yet.</div>

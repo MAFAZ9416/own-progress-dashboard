@@ -76,6 +76,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='profile.full_name', max_length=100, allow_blank=True, required=False)
     bio = serializers.CharField(source='profile.bio', max_length=150, allow_blank=True, required=False)
     avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
+    country = serializers.CharField(source='profile.country', max_length=100, allow_blank=True, required=False)
     notifications_enabled = serializers.BooleanField(source='profile.notifications_enabled', required=False)
     preferences = serializers.JSONField(source='profile.preferences', required=False)
     public_slug = serializers.CharField(source='profile.public_slug', read_only=True)
@@ -90,6 +91,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email",
             "bio",
             "avatar",
+            "country",
             "notifications_enabled",
             "preferences",
             "date_joined",
@@ -158,10 +160,53 @@ class ProfileSerializer(serializers.ModelSerializer):
             profile.bio = profile_data['bio']
         if 'avatar' in profile_data:
             profile.avatar = profile_data['avatar']
+        if 'country' in profile_data:
+            profile.country = profile_data['country']
         if 'notifications_enabled' in profile_data:
             profile.notifications_enabled = profile_data['notifications_enabled']
         if 'preferences' in profile_data:
-            profile.preferences = profile_data['preferences']
+            incoming_prefs = profile_data['preferences']
+            if isinstance(incoming_prefs, dict):
+                # Start with a clean/default dict based on schema structure, ignoring unknown keys
+                valid_prefs = {
+                    "schema_version": int(incoming_prefs.get("schema_version", 1)),
+                    "dashboard": {
+                        "layout": str(incoming_prefs.get("dashboard", {}).get("layout", "default")),
+                        "period": str(incoming_prefs.get("dashboard", {}).get("period", "month")),
+                        "compact_cards": bool(incoming_prefs.get("dashboard", {}).get("compact_cards", False)),
+                        "auto_refresh": str(incoming_prefs.get("dashboard", {}).get("auto_refresh", "off")),
+                        "show_legend": bool(incoming_prefs.get("dashboard", {}).get("show_legend", True)),
+                        "show_grid": bool(incoming_prefs.get("dashboard", {}).get("show_grid", True)),
+                        "enable_animations": bool(incoming_prefs.get("dashboard", {}).get("enable_animations", True)),
+                        "show_charts": bool(incoming_prefs.get("dashboard", {}).get("show_charts", True)),
+                        "landing_page": str(incoming_prefs.get("dashboard", {}).get("landing_page", "/admin/dashboard")),
+                        "widgets": {
+                            "stats_grid": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("stats_grid", True)),
+                            "charts": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("charts", True)),
+                            "recent_users": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("recent_users", True)),
+                            "recent_activity": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("recent_activity", True)),
+                            "system_health": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("system_health", True)),
+                            "database_overview": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("database_overview", True)),
+                            "top_skills": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("top_skills", True)),
+                            "latest_feedback": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("latest_feedback", True)),
+                            "notifications": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("notifications", True)),
+                            "quick_actions": bool(incoming_prefs.get("dashboard", {}).get("widgets", {}).get("quick_actions", True))
+                        }
+                    },
+                    "reports": {
+                        "format": str(incoming_prefs.get("reports", {}).get("format", "csv")),
+                        "range": str(incoming_prefs.get("reports", {}).get("range", "all")),
+                        "include_charts": bool(incoming_prefs.get("reports", {}).get("include_charts", True)),
+                        "include_metadata": bool(incoming_prefs.get("reports", {}).get("include_metadata", True))
+                    },
+                    "application": {
+                        "log_retention": str(incoming_prefs.get("application", {}).get("log_retention", "30_days")),
+                        "session_timeout": str(incoming_prefs.get("application", {}).get("session_timeout", "60m"))
+                    }
+                }
+                profile.preferences = valid_prefs
+            else:
+                profile.preferences = {}
         profile.save()
 
         # Refresh instance from database to clear cached relations

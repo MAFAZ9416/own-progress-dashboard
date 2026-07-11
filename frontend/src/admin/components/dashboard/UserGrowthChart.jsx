@@ -1,9 +1,9 @@
 import React from 'react'
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 import { TrendingUp, Calendar } from 'lucide-react'
 import './UserGrowthChart.css'
 
-export default function UserGrowthChart({ data = [], totalValue, trend, isLoading, period = 'month', onPeriodChange }) {
+export default function UserGrowthChart({ data = [], totalValue, trend, isLoading, period = 'month', onPeriodChange, showLegend, showGrid, enableAnimations }) {
   
   // Format numeric ticks (e.g., 5000 -> "5K")
   const formatYAxis = (tick) => {
@@ -100,6 +100,8 @@ export default function UserGrowthChart({ data = [], totalValue, trend, isLoadin
                 labelStyle={{ fontWeight: '600', color: '#a78bfa' }}
                 cursor={{ stroke: 'rgba(124, 58, 237, 0.15)', strokeWidth: 1 }}
               />
+              {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />}
+              {showLegend && <Legend verticalAlign="top" height={36} />}
               <Area 
                 type="monotone" 
                 dataKey="value" 
@@ -107,7 +109,7 @@ export default function UserGrowthChart({ data = [], totalValue, trend, isLoadin
                 strokeWidth={2} 
                 fillOpacity={1} 
                 fill="url(#userGrowthGrad)" 
-                isAnimationActive={true}
+                isAnimationActive={enableAnimations}
                 animationDuration={1000}
               />
             </AreaChart>

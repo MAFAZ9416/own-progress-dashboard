@@ -1566,7 +1566,10 @@ class AdminSystemHealthView(APIView):
     def get(self, request):
         import time as _time
         import os as _os
+        import logging
+        from django.utils import timezone
 
+        logger = logging.getLogger(__name__)
         services = {}
 
         # 1. Backend (always operational if we get here)
@@ -1578,7 +1581,8 @@ class AdminSystemHealthView(APIView):
             connection.ensure_connection()
             db_latency = round((_time.time() - db_start) * 1000, 1)
             services['database'] = {'status': 'Operational', 'latency_ms': db_latency, 'label': 'Database'}
-        except Exception:
+        except Exception as e:
+            logger.error(f"System Health Database Check failed: {str(e)}")
             services['database'] = {'status': 'Offline', 'latency_ms': None, 'label': 'Database'}
 
         # 3. SMTP Email
@@ -1592,7 +1596,8 @@ class AdminSystemHealthView(APIView):
                     smtp.ehlo()
                 smtp_latency = round((_time.time() - smtp_start) * 1000, 1)
                 services['email'] = {'status': 'Operational', 'latency_ms': smtp_latency, 'label': 'SMTP Email'}
-            except Exception:
+            except Exception as e:
+                logger.error(f"System Health SMTP Email Check failed: {str(e)}")
                 services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
         else:
             services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
@@ -1606,7 +1611,8 @@ class AdminSystemHealthView(APIView):
                 urllib.request.urlopen('https://api.cloudinary.com', timeout=5)
                 cloud_latency = round((_time.time() - cloud_start) * 1000, 1)
                 services['cloudinary'] = {'status': 'Operational', 'latency_ms': cloud_latency, 'label': 'Cloudinary Storage'}
-            except Exception:
+            except Exception as e:
+                logger.error(f"System Health Cloudinary Check failed: {str(e)}")
                 services['cloudinary'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'Cloudinary Storage'}
         else:
             services['cloudinary'] = {'status': 'Not Configured', 'latency_ms': None, 'label': 'Cloudinary Storage'}
@@ -1635,26 +1641,109 @@ class AdminSystemHealthView(APIView):
         else:
             overall_status = 'Healthy'
 
-        import shutil
+        # Detailed Database Health Information (Safe & Sanitized)
+        db_health = {
+            'provider': 'Unavailable',
+            'status': 'Offline',
+            'connection': 'Disconnected',
+            'latency_ms': None,
+            'database': 'Unavailable',
+            'host': 'Unavailable',
+            'ssl': 'Unavailable',
+            'version': 'Unavailable',
+            'checked_at': timezone.now().isoformat(),
+            'last_successful_query': 'Unavailable'
+        }
+
         try:
-            total, used, free = shutil.disk_usage(settings.BASE_DIR)
-            total_gb = round(total / (1024**3), 1)
-            used_gb = round(used / (1024**3), 1)
-            free_gb = round(free / (1024**3), 1)
-            storage_pct = round((used / total) * 100, 1)
-            storage_data = {
-                'total_gb': total_gb,
-                'used_gb': used_gb,
-                'free_gb': free_gb,
-                'used_percent': storage_pct,
-            }
-        except Exception:
-            storage_data = {
-                'total_gb': 100.0,
-                'used_gb': 10.0,
-                'free_gb': 90.0,
-                'used_percent': 10.0,
-            }
+            db_latency_start = _time.time()
+            connection.ensure_connection()
+            db_latency = round((_time.time() - db_latency_start) * 1000, 1)
+            
+            db_health['latency_ms'] = db_latency
+            db_health['status'] = 'Operational'
+            db_health['connection'] = 'Connected'
+            
+            # Detect Provider dynamically without hardcoding
+            vendor = connection.vendor
+            if vendor == 'postgresql':
+                settings_dict = getattr(connection, 'settings_dict', {})
+                host = settings_dict.get('HOST', '') or ''
+                if 'neon.tech' in host or 'neon' in host:
+                    db_health['provider'] = 'Neon PostgreSQL'
+                else:
+                    db_health['provider'] = 'PostgreSQL'
+            elif vendor == 'sqlite':
+                db_health['provider'] = 'SQLite'
+            elif vendor == 'mysql':
+                db_health['provider'] = 'MySQL'
+            elif vendor == 'oracle':
+                db_health['provider'] = 'Oracle'
+            else:
+                db_health['provider'] = vendor.capitalize() if vendor else 'Unavailable'
+                
+            # Database Name & Host (Masking password/creds completely)
+            settings_dict = getattr(connection, 'settings_dict', {})
+            db_health['database'] = settings_dict.get('NAME') or 'Unavailable'
+            db_health['host'] = settings_dict.get('HOST') or 'localhost'
+            
+            # SSL Enabled?
+            options = settings_dict.get('OPTIONS', {})
+            sslmode = options.get('sslmode') if isinstance(options, dict) else None
+            ssl = options.get('ssl') if isinstance(options, dict) else None
+            if sslmode in ['require', 'verify-ca', 'verify-full'] or ssl:
+                db_health['ssl'] = 'Enabled'
+            elif 'sslmode=require' in _os.getenv('DATABASE_URL', ''):
+                db_health['ssl'] = 'Enabled'
+            else:
+                db_health['ssl'] = 'Disabled'
+                
+            # Dynamic Version and Last Successful Query
+            last_query_time = None
+            version_str = 'Unavailable'
+            if vendor == 'postgresql':
+                try:
+                    with connection.cursor() as cursor:
+                        # Version query
+                        cursor.execute("SHOW server_version;")
+                        row = cursor.fetchone()
+                        if row:
+                            version_str = row[0]
+                        else:
+                            cursor.execute("SELECT version();")
+                            row = cursor.fetchone()
+                            if row:
+                                version_str = row[0]
+                                
+                        # Last successful query
+                        cursor.execute("SELECT now();")
+                        row = cursor.fetchone()
+                        if row:
+                            last_query_time = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+                except Exception as db_err:
+                    logger.error(f"PG query diagnostics failed: {str(db_err)}")
+            elif vendor == 'sqlite':
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT sqlite_version();")
+                        row = cursor.fetchone()
+                        if row:
+                            version_str = f"SQLite {row[0]}"
+                        cursor.execute("SELECT datetime('now');")
+                        row = cursor.fetchone()
+                        if row:
+                            last_query_time = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+                except Exception:
+                    pass
+                    
+            db_health['version'] = version_str
+            if last_query_time:
+                db_health['last_successful_query'] = last_query_time
+                
+        except Exception as e:
+            logger.error(f"System Health database_health check failed: {str(e)}")
+            db_health['status'] = 'Offline'
+            db_health['connection'] = 'Disconnected'
 
         return Response({
             'services': services,
@@ -1665,7 +1754,7 @@ class AdminSystemHealthView(APIView):
             'api_version': '1.0.0-enterprise',
             'environment': 'Development' if settings.DEBUG else 'Production',
             'server_time': timezone.now().isoformat(),
-            'storage': storage_data,
+            'database_health': db_health,
         }, status=status.HTTP_200_OK)
 
 

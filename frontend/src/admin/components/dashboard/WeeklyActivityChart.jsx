@@ -1,9 +1,9 @@
 import React from 'react'
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 import { Calendar } from 'lucide-react'
 import './WeeklyActivityChart.css'
 
-export default function WeeklyActivityChart({ data = [], isLoading, period = 'month', onPeriodChange }) {
+export default function WeeklyActivityChart({ data = [], isLoading, period = 'month', onPeriodChange, showLegend, showGrid, enableAnimations }) {
   
   // Format numeric ticks (e.g., 1000 -> "1K")
   const formatYAxis = (tick) => {
@@ -104,12 +104,14 @@ export default function WeeklyActivityChart({ data = [], isLoading, period = 'mo
                 labelStyle={{ fontWeight: '600', color: '#a78bfa' }}
                 cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }}
               />
+              {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />}
+              {showLegend && <Legend verticalAlign="top" height={36} />}
               <Bar 
                 dataKey="value" 
                 fill="url(#weeklyActivityGrad)" 
                 radius={[4, 4, 0, 0]}
                 barSize={18}
-                isAnimationActive={true}
+                isAnimationActive={enableAnimations}
                 animationDuration={1000}
               />
             </BarChart>

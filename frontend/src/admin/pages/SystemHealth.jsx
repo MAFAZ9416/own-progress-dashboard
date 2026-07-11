@@ -141,30 +141,52 @@ export default function SystemHealth() {
             </div>
           </div>
 
-          {/* Storage Card */}
-          {health?.storage && (
-            <div className="health-card service-card service-card--operational admin-glow-card">
+          {/* Neon Database Card */}
+          {health?.database_health && (
+            <div className="health-card service-card service-card--operational admin-glow-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div className="service-card__header">
-                <div className="service-card__icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
-                  <HardDrive size={20} />
+                <div className="service-card__icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                  <Server size={20} />
                 </div>
                 <div className="service-card__title-group">
-                  <span className="service-card__label">Local Storage</span>
-                  <span className="service-card__key">disk: system</span>
+                  <span className="service-card__label">{health.database_health.provider}</span>
+                  <span className="service-card__key" style={{ wordBreak: 'break-all' }}>host: {health.database_health.host}</span>
                 </div>
-                <span className="service-status-pill status-operational" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
-                  {health.storage.used_percent}% Used
+                <span className={`service-status-pill ${health.database_health.status === 'Operational' ? 'status-operational' : 'status-offline'}`}>
+                  {health.database_health.status}
                 </span>
               </div>
-              <div className="service-card__body">
-                <div className="latency-info">
-                  <span className="latency-lbl">Disk Space (Used / Total)</span>
-                  <span className="latency-val" style={{ color: '#6366f1' }}>
-                    {health.storage.used_gb} GB / {health.storage.total_gb} GB
-                  </span>
+              <div className="service-card__body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px 15px', border: 'none', padding: '0', background: 'transparent' }}>
+                <div className="db-health-item" style={{ minWidth: '0' }}>
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Database</span>
+                  <span className="val" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={health.database_health.database}>{health.database_health.database}</span>
                 </div>
-                <div className="service-indicator-bar">
-                  <div className="service-indicator-fill" style={{ background: '#6366f1', width: `${health.storage.used_percent}%` }} />
+                <div className="db-health-item">
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Connection</span>
+                  <span className="val" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)' }}>{health.database_health.connection}</span>
+                </div>
+                <div className="db-health-item">
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SSL Status</span>
+                  <span className="val" style={{ 
+                    display: 'block', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 600, 
+                    color: health.database_health.ssl === 'Enabled' ? '#10b981' : health.database_health.ssl === 'Disabled' ? '#f59e0b' : 'var(--admin-text-muted)' 
+                  }}>{health.database_health.ssl}</span>
+                </div>
+                <div className="db-health-item">
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Latency</span>
+                  <span className="val" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)' }}>{formatLatency(health.database_health.latency_ms)}</span>
+                </div>
+                <div className="db-health-item" style={{ gridColumn: 'span 2', minWidth: '0' }}>
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engine Version</span>
+                  <span className="val" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={health.database_health.version}>{health.database_health.version}</span>
+                </div>
+                <div className="db-health-item" style={{ gridColumn: 'span 2', minWidth: '0' }}>
+                  <span className="lbl" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Successful Query</span>
+                  <span className="val" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--admin-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={health.database_health.last_successful_query}>
+                    {health.database_health.last_successful_query !== 'Unavailable' ? new Date(health.database_health.last_successful_query).toLocaleString() : 'Unavailable'}
+                  </span>
                 </div>
               </div>
             </div>
