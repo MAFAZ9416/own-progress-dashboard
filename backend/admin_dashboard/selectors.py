@@ -124,6 +124,7 @@ def get_statistics(period='month'):
     spark_limit = now - timedelta(days=7)
     spark_lifecycle = list(UserLifecycleEvent.objects.filter(timestamp__gte=spark_limit))
     spark_activity = list(AdminActivityLog.objects.filter(created_at__gte=spark_limit))
+    streak_updates = list(Streak.objects.filter(current_streak__gt=0).values_list('updated_at', flat=True))
 
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
@@ -157,8 +158,8 @@ def get_statistics(period='month'):
         rate = round((c_count / t_count * 100), 1) if t_count > 0 else 0.0
         completion_sparkline.append(rate)
         
-        # Streaks
-        s_count = Streak.objects.filter(current_streak__gt=0, updated_at__lte=end_of_day).count()
+        # Streaks (In-memory evaluation to avoid 7 database hits)
+        s_count = sum(1 for updated_at in streak_updates if updated_at <= end_of_day)
         streaks_sparkline.append(s_count)
 
     return {
@@ -371,7 +372,7 @@ def get_recent_users():
     """
     Returns the 5 most recently registered users.
     """
-    users = User.objects.all().order_by('-date_joined')[:5]
+    users = User.objects.all().select_related('profile').order_by('-date_joined')[:5]
     result = []
     for u in users:
         full_name = getattr(u, 'username', 'Unknown')
@@ -629,6 +630,30 @@ def get_top_skills():
         completed_tasks=Count('tasks', filter=Q(tasks__status='completed')),
     ).order_by('-learners')
     
+    now = timezone.now()
+    seven_days_ago = now - timedelta(days=7)
+    fourteen_days_ago = now - timedelta(days=14)
+    
+    # Fetch skill details in bulk
+    all_skills_data = list(Skill.objects.all().values('name', 'color', 'created_at'))
+    
+    # Pre-aggregate colors and counts by name in memory
+    colors_by_name = {}
+    recent_counts = {}
+    prev_counts = {}
+    
+    for s in all_skills_data:
+        name_key = s['name']
+        if name_key not in colors_by_name and s['color']:
+            colors_by_name[name_key] = s['color']
+            
+        created = s['created_at']
+        if created:
+            if created >= seven_days_ago:
+                recent_counts[name_key] = recent_counts.get(name_key, 0) + 1
+            elif fourteen_days_ago <= created < seven_days_ago:
+                prev_counts[name_key] = prev_counts.get(name_key, 0) + 1
+
     skills_progress = []
     for g in grouped:
         name = g['name']
@@ -637,12 +662,9 @@ def get_top_skills():
         learners = g['learners']
         progress = int((completed_t / total_t * 100)) if total_t > 0 else 0
         
-        first_skill = Skill.objects.filter(name=name).first()
-        color = first_skill.color if first_skill else '#3B82F6'
-        
-        now = timezone.now()
-        skills_count_recent = Skill.objects.filter(name=name, created_at__gte=now - timedelta(days=7)).count()
-        skills_count_prev = Skill.objects.filter(name=name, created_at__range=[now - timedelta(days=14), now - timedelta(days=7)]).count()
+        color = colors_by_name.get(name, '#3B82F6')
+        skills_count_recent = recent_counts.get(name, 0)
+        skills_count_prev = prev_counts.get(name, 0)
         
         if skills_count_prev == 0:
             trend = 10.0 if skills_count_recent > 0 else 0.0

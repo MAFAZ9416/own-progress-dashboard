@@ -66,7 +66,7 @@ export default function Topbar({ onToggleSidebar }) {
     // 3. Backups (recent 3)
     try {
       const res = await apiClient.get('/admin/backups/')
-      const list = res.data || []
+      const list = res.data?.backups || []
       setBackups(list.slice(0, 3))
     } catch (err) {
       console.error('Failed to load backups for topbar:', err)
