@@ -147,17 +147,45 @@ export default function Dashboard() {
   }, [activityPeriod])
 
   // Handles export CSV/JSON from the hero banner
-  const handleExportData = () => {
+  const handleExportData = (format = 'json') => {
     if (!data) return
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(data, null, 2)
-    )}`
+    const isCsv = format === 'csv'
+    const mimeType = isCsv ? 'text/csv' : 'application/json'
+    const fileExt = isCsv ? 'csv' : 'json'
+    
+    let content = ''
+    if (isCsv) {
+      content = 'Section,Metric,Value\n'
+      if (data.stats) {
+        Object.entries(data.stats).forEach(([key, stat]) => {
+          content += `Stats,${stat.label || key},"${stat.value}"\n`
+        })
+      }
+      if (data.top_skills) {
+        content += '\nSection,Skill Name,Total Tasks\n'
+        data.top_skills.forEach(skill => {
+          content += `Top Skills,"${skill.name}",${skill.tasks_count}\n`
+        })
+      }
+      if (data.database?.tables) {
+        content += '\nSection,Table Name,Rows\n'
+        data.database.tables.forEach(table => {
+          content += `Database,"${table.name}",${table.rows}\n`
+        })
+      }
+    } else {
+      content = JSON.stringify(data, null, 2)
+    }
+    
+    const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
+    const url = window.URL.createObjectURL(blob)
     const downloadAnchor = document.createElement('a')
-    downloadAnchor.setAttribute('href', jsonString)
-    downloadAnchor.setAttribute('download', `progressly_admin_report_${new Date().toISOString().slice(0, 10)}.json`)
+    downloadAnchor.setAttribute('href', url)
+    downloadAnchor.setAttribute('download', `progressly_admin_report_${new Date().toISOString().slice(0, 10)}.${fileExt}`)
     document.body.appendChild(downloadAnchor)
     downloadAnchor.click()
     downloadAnchor.remove()
+    window.URL.revokeObjectURL(url)
   }
 
   // Action Success callback to refresh dashboard metrics
@@ -202,7 +230,7 @@ export default function Dashboard() {
   return (
     <div className="admin-dashboard-content">
       {/* Row 1: Hero Banner */}
-      <HeroBanner onExport={handleExportData} />
+      <HeroBanner onExportReport={handleExportData} />
 
       {/* Row 2: Statistics Grid (6 cards) */}
       <StatsGrid stats={stats} isLoading={isLoading} />

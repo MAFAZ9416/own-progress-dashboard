@@ -385,6 +385,19 @@
   background: var(--admin-status-success);
 }
 
+.status-dot-label.reviewed {
+  color: var(--admin-accent-blue);
+}
+
+.status-dot-label.reviewed::before {
+  background: var(--admin-accent-blue);
+}
+
+.feedback-card.status-reviewed {
+  border-left-color: var(--admin-accent-blue);
+}
+
+
 .action-buttons-group {
   display: flex;
   align-items: center;

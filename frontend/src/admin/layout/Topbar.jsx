@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   Menu,
@@ -11,9 +11,15 @@ import {
   ChevronDown,
   User,
   Settings,
-  LogOut
+  LogOut,
+  CheckCircle2,
+  Info,
+  AlertTriangle,
+  Award
 } from 'lucide-react'
 import { getMediaUrl } from '../../api'
+import notificationService from '../../services/notificationService'
+import NotificationDetailModal from '../../components/notifications/NotificationDetailModal'
 import './Topbar.css'
 
 export default function Topbar({ onToggleSidebar }) {
@@ -22,6 +28,93 @@ export default function Topbar({ onToggleSidebar }) {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isThemeDark, setIsThemeDark] = useState(true)
   const dropdownRef = useRef(null)
+
+  const [notifications, setNotifications] = useState([])
+  const [isNotifOpen, setIsNotifOpen] = useState(false)
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState(null)
+  const panelRef = useRef(null)
+
+  const loadNotifications = useCallback(async () => {
+    setIsLoadingNotifications(true)
+    try {
+      const data = await notificationService.getNotifications()
+      setNotifications(data || [])
+    } catch (err) {
+      console.error('Failed to load notifications:', err)
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadNotifications()
+    window.addEventListener('notification-changed', loadNotifications)
+    return () => window.removeEventListener('notification-changed', loadNotifications)
+  }, [loadNotifications])
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        setIsNotifOpen(false)
+      }
+    }
+    if (isNotifOpen) {
+      document.addEventListener('mousedown', handleOutsideClick)
+      return () => document.removeEventListener('mousedown', handleOutsideClick)
+    }
+  }, [isNotifOpen])
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.is_read).length,
+    [notifications]
+  )
+
+  const visibleNotifications = useMemo(() => notifications.slice(0, 5), [notifications])
+
+  const handleBellClick = () => {
+    setIsNotifOpen((prev) => !prev)
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      window.dispatchEvent(new CustomEvent('notification-changed'))
+    } catch (err) {
+      console.error('Failed to mark all as read:', err)
+    }
+  }
+
+  const handleNotificationUpdated = useCallback((updatedNotif) => {
+    setNotifications(prev => prev.map(n => n.id === updatedNotif.id ? updatedNotif : n))
+    window.dispatchEvent(new CustomEvent('notification-changed'))
+  }, [])
+
+  const ICONS = {
+    success: CheckCircle2,
+    info: Info,
+    warning: AlertTriangle,
+    achievement: Award,
+    system: Settings
+  }
+
+  function getNotifIcon(type) {
+    return ICONS[type] ?? Bell
+  }
+
+  function formatRelativeTime(value) {
+    if (!value) return ''
+    const date = new Date(value)
+    const diffMs = Date.now() - date.getTime()
+    const diffMins = Math.max(1, Math.round(diffMs / 60000))
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.round(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.round(diffHours / 24)
+    return `${diffDays}d ago`
+  }
+
 
   // Handle Fullscreen Toggle
   const toggleFullscreen = () => {
@@ -88,14 +181,65 @@ export default function Topbar({ onToggleSidebar }) {
       {/* Right side: Global Actions & User Profile */}
       <div className="admin-topbar__right">
         {/* Notification icon */}
-        <button 
-          className="admin-topbar__action-btn admin-topbar__action-btn--notify" 
-          aria-label="View notifications"
-          id="admin-topbar-bell-btn"
-        >
-          <Bell size={18} strokeWidth={1.8} />
-          <span className="admin-topbar__bell-badge">8</span>
-        </button>
+        <div className="topbar__notif-wrap" ref={panelRef}>
+          <button 
+            className="admin-topbar__action-btn admin-topbar__action-btn--notify" 
+            aria-label="View notifications"
+            id="admin-topbar-bell-btn"
+            onClick={handleBellClick}
+          >
+            <Bell size={18} strokeWidth={1.8} />
+            {unreadCount > 0 && <span className="admin-topbar__bell-badge">{unreadCount}</span>}
+          </button>
+
+          {isNotifOpen && (
+            <div className="topbar__notif-panel" style={{ right: 0, top: '100%', marginTop: '10px' }}>
+              <div className="topbar__notif-panel-head">
+                <div>
+                  <p className="topbar__notif-panel-title">Notifications</p>
+                  <p className="topbar__notif-panel-sub">{unreadCount} unread</p>
+                </div>
+                <button className="topbar__notif-panel-link" onClick={handleMarkAllRead}>
+                  Mark all read
+                </button>
+              </div>
+
+              <div className="topbar__notif-list">
+                {isLoadingNotifications ? (
+                  <p className="topbar__notif-empty">Loading notifications...</p>
+                ) : visibleNotifications.length > 0 ? (
+                  visibleNotifications.map((notification) => {
+                    const type = notification.type ?? notification.notification_type
+                    const Icon = getNotifIcon(type)
+                    return (
+                      <button
+                        key={notification.id}
+                        className={`topbar__notif-item ${!notification.is_read ? 'topbar__notif-item--unread' : ''}`}
+                        onClick={() => {
+                          setSelectedNotification(notification)
+                          setIsNotifOpen(false)
+                        }}
+                      >
+                        <span className={`topbar__notif-icon topbar__notif-icon--${type}`}>
+                          <Icon size={14} strokeWidth={2} />
+                        </span>
+                        <span className="topbar__notif-copy">
+                          <span className="topbar__notif-toprow">
+                            <span className="topbar__notif-title">{notification.title}</span>
+                            <span className="topbar__notif-time">{formatRelativeTime(notification.created_at)}</span>
+                          </span>
+                          <span className="topbar__notif-message">{notification.message}</span>
+                        </span>
+                      </button>
+                    )
+                  })
+                ) : (
+                  <p className="topbar__notif-empty">No notifications</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Theme toggle (visual mock) */}
         <button 
@@ -179,6 +323,13 @@ export default function Topbar({ onToggleSidebar }) {
           )}
         </div>
       </div>
+
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={!!selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        onUpdated={handleNotificationUpdated}
+      />
     </header>
   )
 }

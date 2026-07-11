@@ -51,6 +51,9 @@ export default function Users() {
   const [role, setRole] = useState('all')
   const [statusParam, setStatusParam] = useState('all')
   const [sort, setSort] = useState('newest')
+  const [dateStart, setDateStart] = useState('')
+  const [dateEnd, setDateEnd] = useState('')
+
 
   // Selected User for detail panel
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -124,7 +127,9 @@ export default function Users() {
         search: search.trim(),
         role,
         status: statusParam,
-        sort
+        sort,
+        date_start: dateStart,
+        date_end: dateEnd
       }
       const data = await adminUsersService.getUsersList(params)
       
@@ -146,12 +151,13 @@ export default function Users() {
       setIsLoading(false)
       setIsAppending(false)
     }
-  }, [search, role, statusParam, sort])
+  }, [search, role, statusParam, sort, dateStart, dateEnd])
 
   // Fetch initial batch on filter change
   useEffect(() => {
     fetchUsers(1, true)
-  }, [role, statusParam, sort])
+  }, [role, statusParam, sort, dateStart, dateEnd])
+
 
   // Handle keypress/submit for search
   const handleSearchSubmit = (e) => {
@@ -547,6 +553,30 @@ export default function Users() {
                   className="admin-users-search-input"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>From:</span>
+                <input
+                  type="date"
+                  value={dateStart}
+                  onChange={(e) => setDateStart(e.target.value)}
+                  className="admin-users-select"
+                  style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+                  id="users-date-start"
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>To:</span>
+                <input
+                  type="date"
+                  value={dateEnd}
+                  onChange={(e) => setDateEnd(e.target.value)}
+                  className="admin-users-select"
+                  style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+                  id="users-date-end"
                 />
               </div>
 

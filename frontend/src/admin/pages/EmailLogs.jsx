@@ -42,7 +42,10 @@ export default function EmailLogs() {
   const [typeFilter, setTypeFilter] = useState('')
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [dateStart, setDateStart] = useState('')
+  const [dateEnd, setDateEnd] = useState('')
   const [selectedLog, setSelectedLog] = useState(null)
+
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -52,6 +55,8 @@ export default function EmailLogs() {
         status: statusFilter,
         type: typeFilter,
         search,
+        date_start: dateStart,
+        date_end: dateEnd
       })
       setData(result)
     } catch (err) {
@@ -59,9 +64,10 @@ export default function EmailLogs() {
     } finally {
       setIsLoading(false)
     }
-  }, [statusFilter, typeFilter, search])
+  }, [statusFilter, typeFilter, search, dateStart, dateEnd])
 
   useEffect(() => { fetchData() }, [fetchData])
+
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -124,14 +130,37 @@ export default function EmailLogs() {
           <button type="submit" className="emaillogs-search__btn">Search</button>
         </form>
         <div className="emaillogs-filter-row">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>From:</span>
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="emaillogs-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="emaillogs-date-start"
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>To:</span>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="emaillogs-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="emaillogs-date-end"
+            />
+          </div>
+
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="emaillogs-select" id="emaillogs-status-filter">
             {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="emaillogs-select" id="emaillogs-type-filter">
             {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          {(statusFilter || typeFilter || search) && (
-            <button className="emaillogs-clear-btn" onClick={() => { setStatusFilter(''); setTypeFilter(''); setSearch(''); setSearchInput('') }}>
+          {(statusFilter || typeFilter || search || dateStart || dateEnd) && (
+            <button className="emaillogs-clear-btn" onClick={() => { setStatusFilter(''); setTypeFilter(''); setSearch(''); setSearchInput(''); setDateStart(''); setDateEnd('') }}>
               <X size={13} /> Clear
             </button>
           )}

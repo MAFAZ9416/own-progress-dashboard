@@ -41,6 +41,9 @@ export default function Tasks() {
   const [statusParam, setStatusParam] = useState('all')
   const [priority, setPriority] = useState('all')
   const [sort, setSort] = useState('newest')
+  const [dateStart, setDateStart] = useState('')
+  const [dateEnd, setDateEnd] = useState('')
+
 
   // Edit Modal State
   const [editingTask, setEditingTask] = useState(null)
@@ -68,7 +71,9 @@ export default function Tasks() {
         search: search.trim(),
         status: statusParam !== 'all' ? statusParam : undefined,
         priority: priority !== 'all' ? priority : undefined,
-        sort
+        sort,
+        date_start: dateStart,
+        date_end: dateEnd
       }
       const data = await adminTasksService.getTasksList(params)
       setTasks(data.tasks || [])
@@ -84,12 +89,13 @@ export default function Tasks() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, statusParam, priority, sort])
+  }, [search, statusParam, priority, sort, dateStart, dateEnd])
 
   // Trigger fetch when search or filters change
   useEffect(() => {
     fetchTasksList(1, true)
-  }, [search, statusParam, priority, sort, fetchTasksList])
+  }, [search, statusParam, priority, sort, dateStart, dateEnd, fetchTasksList])
+
 
   // Pagination page change
   const handlePageChange = (newPage) => {
@@ -228,6 +234,29 @@ export default function Tasks() {
         </div>
 
         <div className="filters-group">
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>From:</span>
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="tasks-date-start"
+            />
+          </div>
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>To:</span>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="tasks-date-end"
+            />
+          </div>
+
           <div className="filter-item">
             <Filter className="filter-icon" />
             <select value={statusParam} onChange={(e) => setStatusParam(e.target.value)}>
@@ -236,6 +265,7 @@ export default function Tasks() {
               <option value="completed">Completed</option>
             </select>
           </div>
+
 
           <div className="filter-item">
             <AlertTriangle className="filter-icon" />

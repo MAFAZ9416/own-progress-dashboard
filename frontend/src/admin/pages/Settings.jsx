@@ -3,17 +3,17 @@ import {
   Settings as SettingsIcon, 
   User, 
   Lock, 
-  History, 
   AlertCircle, 
   CheckCircle, 
   Globe, 
-  Monitor, 
-  Compass, 
+  Bell,
+  Sliders,
+  Layout,
+  Sun,
   ShieldCheck 
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import authService from '../../services/authService'
-import { apiClient } from '../../api'
 import './Settings.css'
 
 export default function Settings() {
@@ -39,12 +39,32 @@ export default function Settings() {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState(null)
 
-  // Security Login History
-  const [loginHistory, setLoginHistory] = useState([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
-  const [historyError, setHistoryError] = useState(null)
+  // Notifications
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
 
-  // Load profile data & login history
+  // Preferences (System & Charts)
+  const [preferences, setPreferences] = useState({
+    dashboard_period: 'month',
+    chart_animation: true,
+    report_format: 'csv',
+    default_analytics_page: '/admin/dashboard',
+    widget_visibility: {
+      showHeatmap: true,
+      showRecentActivity: true,
+      showQuickTasks: true,
+      showTopSkills: true,
+    },
+    system: {
+      theme_fallback: 'dark',
+      log_retention: '30_days',
+    }
+  })
+  
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false)
+  const [prefsSuccess, setPrefsSuccess] = useState(false)
+  const [prefsError, setPrefsError] = useState(null)
+
+  // Load profile data & preferences
   useEffect(() => {
     let active = true
     
@@ -57,6 +77,21 @@ export default function Settings() {
             bio: latestProfile.bio || '',
             country: latestProfile.country || ''
           })
+          setNotificationsEnabled(latestProfile.notifications_enabled ?? true)
+          if (latestProfile.preferences) {
+            setPreferences(prev => ({
+              ...prev,
+              ...latestProfile.preferences,
+              widget_visibility: {
+                ...prev.widget_visibility,
+                ...(latestProfile.preferences.widget_visibility || {})
+              },
+              system: {
+                ...prev.system,
+                ...(latestProfile.preferences.system || {})
+              }
+            }))
+          }
         }
       } catch (err) {
         console.error('Failed to load latest profile info:', err)
@@ -66,32 +101,12 @@ export default function Settings() {
             bio: user?.bio || '',
             country: user?.country || ''
           })
-        }
-      }
-    }
-
-    const loadLoginHistory = async () => {
-      setIsLoadingHistory(true)
-      setHistoryError(null)
-      try {
-        const response = await apiClient.get('/users/login-history/')
-        if (active) {
-          setLoginHistory(response.data || [])
-        }
-      } catch (err) {
-        console.error('Failed to fetch login history:', err)
-        if (active) {
-          setHistoryError('Failed to retrieve security history logs.')
-        }
-      } finally {
-        if (active) {
-          setIsLoadingHistory(false)
+          setNotificationsEnabled(user?.notifications_enabled ?? true)
         }
       }
     }
 
     loadProfileData()
-    loadLoginHistory()
 
     return () => {
       active = false
@@ -161,6 +176,39 @@ export default function Settings() {
     }
   }
 
+  // Handle preferences update
+  const handlePrefsSubmit = async (e) => {
+    e.preventDefault()
+    setIsSavingPrefs(true)
+    setPrefsSuccess(false)
+    setPrefsError(null)
+
+    try {
+      const updated = await authService.updateProfile({
+        notifications_enabled: notificationsEnabled,
+        preferences: preferences
+      })
+      updateUser(updated)
+      setPrefsSuccess(true)
+      setTimeout(() => setPrefsSuccess(false), 5000)
+    } catch (err) {
+      console.error('Failed to update preferences:', err)
+      setPrefsError('Failed to save settings preferences.')
+    } finally {
+      setIsSavingPrefs(false)
+    }
+  }
+
+  const handleWidgetToggle = (key) => {
+    setPreferences(prev => ({
+      ...prev,
+      widget_visibility: {
+        ...prev.widget_visibility,
+        [key]: !prev.widget_visibility[key]
+      }
+    }))
+  }
+
   return (
     <div className="admin-settings-container">
       {/* Header section */}
@@ -171,7 +219,7 @@ export default function Settings() {
           </div>
           <div>
             <h1 className="admin-settings-title">Admin Configuration Settings</h1>
-            <p className="admin-settings-subtitle">Manage your account profile, change administrative credentials, and view system audits</p>
+            <p className="admin-settings-subtitle">Manage account details, security credentials, notification rules, and system dashboard layouts</p>
           </div>
         </div>
       </div>
@@ -192,7 +240,6 @@ export default function Settings() {
                 className="input-disabled"
                 value={user?.email || ''}
               />
-              <span className="help-text">Email address handles authentication log credentials.</span>
             </div>
 
             <div className="form-group">
@@ -301,73 +348,184 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Security Login History Log */}
-      <div className="settings-full-card admin-glow-card">
-        <div className="card-header">
-          <History className="card-header-icon" />
-          <h2>Security Panel — Login Session History</h2>
+      {/* Preferences Row */}
+      <div className="admin-settings-full-width-section">
+        <div className="settings-card admin-glow-card">
+          <div className="card-header">
+            <Sliders className="card-header-icon" />
+            <h2>Preferences & Dashboard Rules</h2>
+          </div>
+          <form onSubmit={handlePrefsSubmit} className="settings-form preferences-form-layout">
+            
+            <div className="preferences-grid">
+              {/* Notifications Preferences */}
+              <div className="pref-section">
+                <h3><Bell size={14} className="pref-icon" /> Email Notifications</h3>
+                <div className="form-group checkbox-container-settings">
+                  <label className="checkbox-label-settings">
+                    <input
+                      type="checkbox"
+                      checked={notificationsEnabled}
+                      onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                    />
+                    <span>Enable transactional email notifications</span>
+                  </label>
+                  <p className="pref-desc">Receive automated backups status and learner reports via email.</p>
+                </div>
+              </div>
+
+              {/* System Preferences */}
+              <div className="pref-section">
+                <h3><Sun size={14} className="pref-icon" /> System Preferences</h3>
+                <div className="form-group">
+                  <label>Fallback Interface Theme</label>
+                  <select
+                    value={preferences.system.theme_fallback}
+                    onChange={(e) => setPreferences({
+                      ...preferences,
+                      system: { ...preferences.system, theme_fallback: e.target.value }
+                    })}
+                  >
+                    <option value="dark">Dark Theme (Default)</option>
+                    <option value="light">Light Theme</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Database Log Retention</label>
+                  <select
+                    value={preferences.system.log_retention}
+                    onChange={(e) => setPreferences({
+                      ...preferences,
+                      system: { ...preferences.system, log_retention: e.target.value }
+                    })}
+                  >
+                    <option value="30_days">30 Days</option>
+                    <option value="60_days">60 Days</option>
+                    <option value="90_days">90 Days</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Charts Preferences */}
+              <div className="pref-section">
+                <h3><Layout size={14} className="pref-icon" /> Charts & Dashboard preferences</h3>
+                <div className="form-group">
+                  <label>Default dashboard period</label>
+                  <select
+                    value={preferences.dashboard_period}
+                    onChange={(e) => setPreferences({ ...preferences, dashboard_period: e.target.value })}
+                  >
+                    <option value="week">Weekly</option>
+                    <option value="month">Monthly</option>
+                    <option value="year">Yearly</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Chart animation</label>
+                  <select
+                    value={String(preferences.chart_animation)}
+                    onChange={(e) => setPreferences({ ...preferences, chart_animation: e.target.value === 'true' })}
+                  >
+                    <option value="true">Animation Enabled (On)</option>
+                    <option value="false">Animation Disabled (Off)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Default report format</label>
+                  <select
+                    value={preferences.report_format}
+                    onChange={(e) => setPreferences({ ...preferences, report_format: e.target.value })}
+                  >
+                    <option value="csv">CSV Spreadsheet</option>
+                    <option value="json">JSON File</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Default Analytics Landing Page</label>
+                  <input
+                    type="text"
+                    value={preferences.default_analytics_page}
+                    onChange={(e) => setPreferences({ ...preferences, default_analytics_page: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Widget Visibility Preferences */}
+              <div className="pref-section">
+                <h3><Layout size={14} className="pref-icon" /> Widget Visibility Options</h3>
+                
+                <div className="form-group checkbox-container-settings">
+                  <label className="checkbox-label-settings">
+                    <input
+                      type="checkbox"
+                      checked={preferences.widget_visibility.showHeatmap}
+                      onChange={() => handleWidgetToggle('showHeatmap')}
+                    />
+                    <span>Show Task Completion Heatmap</span>
+                  </label>
+                </div>
+
+                <div className="form-group checkbox-container-settings">
+                  <label className="checkbox-label-settings">
+                    <input
+                      type="checkbox"
+                      checked={preferences.widget_visibility.showRecentActivity}
+                      onChange={() => handleWidgetToggle('showRecentActivity')}
+                    />
+                    <span>Show Recent User Activity Stream</span>
+                  </label>
+                </div>
+
+                <div className="form-group checkbox-container-settings">
+                  <label className="checkbox-label-settings">
+                    <input
+                      type="checkbox"
+                      checked={preferences.widget_visibility.showQuickTasks}
+                      onChange={() => handleWidgetToggle('showQuickTasks')}
+                    />
+                    <span>Show Quick Tasks Action Hub</span>
+                  </label>
+                </div>
+
+                <div className="form-group checkbox-container-settings">
+                  <label className="checkbox-label-settings">
+                    <input
+                      type="checkbox"
+                      checked={preferences.widget_visibility.showTopSkills}
+                      onChange={() => handleWidgetToggle('showTopSkills')}
+                    />
+                    <span>Show Top Learning Skills Overview</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {prefsError && (
+              <div className="alert-banner error">
+                <AlertCircle className="banner-icon" />
+                <span>{prefsError}</span>
+              </div>
+            )}
+
+            {prefsSuccess && (
+              <div className="alert-banner success">
+                <CheckCircle className="banner-icon" />
+                <span>Preferences updated and saved to server.</span>
+              </div>
+            )}
+
+            <button type="submit" disabled={isSavingPrefs} className="settings-submit-btn select-all-action-btn">
+              {isSavingPrefs ? 'Saving Preferences...' : 'Save Configuration Preferences'}
+            </button>
+          </form>
         </div>
-
-        {historyError && (
-          <div className="alert-banner error margin-1">
-            <AlertCircle className="banner-icon" />
-            <span>{historyError}</span>
-          </div>
-        )}
-
-        {isLoadingHistory ? (
-          <div className="history-loading">
-            <div className="spinner"></div>
-            <p>Gathering authentication records...</p>
-          </div>
-        ) : loginHistory.length === 0 ? (
-          <div className="history-empty">
-            <ShieldCheck className="empty-icon" />
-            <p>No logged login history logs exist.</p>
-          </div>
-        ) : (
-          <div className="history-table-wrapper">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Login Timestamp</th>
-                  <th>IP Address</th>
-                  <th>Web Browser</th>
-                  <th>Platform/Device</th>
-                  <th>Session Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loginHistory.map((hist) => (
-                  <tr key={hist.id}>
-                    <td>{new Date(hist.created_at).toLocaleString()}</td>
-                    <td>
-                      <span className="ip-badge">{hist.ip_address || 'Localhost/Internal'}</span>
-                    </td>
-                    <td>
-                      <div className="device-info-cell">
-                        <Compass className="inline-icon" />
-                        <span>{hist.browser || 'Unknown Browser'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="device-info-cell">
-                        <Monitor className="inline-icon" />
-                        <span>{hist.device || 'Unknown Device'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`session-badge ${hist.is_active ? 'active' : 'inactive'}`}>
-                        {hist.is_active ? 'Active' : 'Closed'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
+  )
+}
   )
 }

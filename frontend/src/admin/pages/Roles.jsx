@@ -7,7 +7,8 @@ import './Roles.css'
 const ROLE_OPTIONS = [
   { value: 'owner', label: 'Owner (Super Admin)' },
   { value: 'admin', label: 'Admin (Staff)' },
-  { value: 'user', label: 'Moderator / User' },
+  { value: 'moderator', label: 'Moderator' },
+  { value: 'viewer', label: 'Viewer (Read-only)' },
 ]
 
 export default function Roles() {
@@ -147,6 +148,8 @@ export default function Roles() {
                     <th>User</th>
                     <th>Email</th>
                     <th>Role Level</th>
+                    <th>Groups</th>
+                    <th>Permissions</th>
                     <th>Status</th>
                     <th>Joined</th>
                     <th>Last Active</th>
@@ -155,10 +158,9 @@ export default function Roles() {
                 </thead>
                 <tbody>
                   {admins.map((admin) => {
-                    const isOwner = admin.is_superuser
-                    const isOtherOwner = isOwner && admin.id !== currentUser?.id
+                    const isOwner = admin.is_superuser || admin.role?.toLowerCase() === 'owner'
                     return (
-                      <tr key={admin.id} className={`roles-tr${isOtherOwner ? ' roles-tr--protected' : ''}`}>
+                      <tr key={admin.id} className={`roles-tr${isOwner ? ' roles-tr--protected' : ''}`}>
                         <td className="roles-td-user">
                           <div className="user-avatar-wrap">
                             {admin.avatar ? (
@@ -182,6 +184,14 @@ export default function Roles() {
                           </span>
                         </td>
                         <td>
+                          <div className="groups-list" style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            {admin.groups?.join(', ') || '—'}
+                          </div>
+                        </td>
+                        <td style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center' }}>
+                          {admin.permissions_count}
+                        </td>
+                        <td>
                           <span className={`status-pill status-${admin.is_active ? 'active' : 'inactive'}`}>
                             {admin.is_active ? 'Enabled' : 'Disabled'}
                           </span>
@@ -189,7 +199,7 @@ export default function Roles() {
                         <td className="roles-td-date">{admin.joined_date}</td>
                         <td className="roles-td-date">{admin.last_login}</td>
                         <td>
-                          {isOtherOwner ? (
+                          {isOwner ? (
                             <span className="protected-indicator" title="Protected Owner Account">
                               <Key size={12} />
                               Protected
@@ -214,10 +224,9 @@ export default function Roles() {
               {/* Mobile View - Cards */}
               <div className="roles-cards-mobile">
                 {admins.map((admin) => {
-                  const isOwner = admin.is_superuser
-                  const isOtherOwner = isOwner && admin.id !== currentUser?.id
+                  const isOwner = admin.is_superuser || admin.role?.toLowerCase() === 'owner'
                   return (
-                    <div key={admin.id} className={`roles-mobile-card${isOtherOwner ? ' roles-mobile-card--protected' : ''}`}>
+                    <div key={admin.id} className={`roles-mobile-card${isOwner ? ' roles-mobile-card--protected' : ''}`}>
                       <div className="mobile-card-row mobile-card-header">
                         <div className="user-profile-summary">
                           <div className="user-avatar-wrap">
@@ -237,6 +246,14 @@ export default function Roles() {
                         <span className="val">{admin.email}</span>
                       </div>
                       <div className="mobile-card-row">
+                        <span className="lbl">Groups</span>
+                        <span className="val">{admin.groups?.join(', ') || '—'}</span>
+                      </div>
+                      <div className="mobile-card-row">
+                        <span className="lbl">Permissions</span>
+                        <span className="val">{admin.permissions_count}</span>
+                      </div>
+                      <div className="mobile-card-row">
                         <span className="lbl">Account Status</span>
                         <span className={`status-pill status-${admin.is_active ? 'active' : 'inactive'}`}>
                           {admin.is_active ? 'Enabled' : 'Disabled'}
@@ -247,7 +264,7 @@ export default function Roles() {
                         <span className="val">{admin.last_login}</span>
                       </div>
                       <div className="mobile-card-actions">
-                        {isOtherOwner ? (
+                        {isOwner ? (
                           <span className="protected-indicator" style={{ width: '100%', justifyContent: 'center' }}>
                             <Key size={12} /> Protected Owner Account
                           </span>

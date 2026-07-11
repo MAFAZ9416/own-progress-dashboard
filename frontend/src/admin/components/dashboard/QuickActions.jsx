@@ -53,7 +53,7 @@ export default function QuickActions({ onActionSuccess }) {
           const downloadResponse = await apiClient.get(`/admin/reports/download/?filename=${response.file_name}`, {
             responseType: 'blob'
           })
-          const blob = new Blob([downloadResponse.data], { type: 'text/csv' })
+          const blob = downloadResponse.data
           const url = window.URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
@@ -69,7 +69,7 @@ export default function QuickActions({ onActionSuccess }) {
           const downloadResponse = await apiClient.get(`/admin/backups/${response.backup_id}/download/`, {
             responseType: 'blob'
           })
-          const blob = new Blob([downloadResponse.data], { type: 'application/json' })
+          const blob = downloadResponse.data
           const url = window.URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url

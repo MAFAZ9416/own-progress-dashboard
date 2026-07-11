@@ -109,6 +109,12 @@ export const NAVIGATION_ITEMS = [
     path: '/admin/activity-logs',
   },
   {
+    id: 'loginhistory',
+    label: 'Login History',
+    icon: History,
+    path: '/admin/login-history',
+  },
+  {
     id: 'settings',
     label: 'Settings',
     icon: Settings,

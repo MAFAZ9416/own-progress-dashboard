@@ -25,10 +25,12 @@ export default function Feedback() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Filters
   const [search, setSearch] = useState('')
   const [statusParam, setStatusParam] = useState('all')
   const [rating, setRating] = useState('all')
+  const [dateStart, setDateStart] = useState('')
+  const [dateEnd, setDateEnd] = useState('')
+
 
   // Modals state
   const [selectedFeedback, setSelectedFeedback] = useState(null) // for detail modal
@@ -47,7 +49,9 @@ export default function Feedback() {
       const params = {
         search: search.trim(),
         status: statusParam !== 'all' ? statusParam : undefined,
-        rating: rating !== 'all' ? rating : undefined
+        rating: rating !== 'all' ? rating : undefined,
+        date_start: dateStart,
+        date_end: dateEnd
       }
       const data = await adminFeedbackService.getFeedbackList(params)
       setFeedbacks(data.feedback || data || [])
@@ -57,11 +61,12 @@ export default function Feedback() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, statusParam, rating])
+  }, [search, statusParam, rating, dateStart, dateEnd])
 
   useEffect(() => {
     fetchFeedbackList(true)
-  }, [search, statusParam, rating, fetchFeedbackList])
+  }, [search, statusParam, rating, dateStart, dateEnd, fetchFeedbackList])
+
 
   // Fetch reply history for a feedback email
   const fetchReplyHistory = useCallback(async (email) => {
@@ -181,9 +186,33 @@ export default function Feedback() {
         </div>
 
         <div className="filters-group">
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>From:</span>
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="feedback-date-start"
+            />
+          </div>
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>To:</span>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="feedback-date-end"
+            />
+          </div>
+
           <div className="filter-item">
             <Filter className="filter-icon" />
             <select value={statusParam} onChange={(e) => setStatusParam(e.target.value)} id="feedback-status-select">
+
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="reviewed">Reviewed</option>
@@ -235,8 +264,8 @@ export default function Feedback() {
               <div className="feedback-card-top">
                 <div className="submitter-info">
                   <div className="submitter-avatar">
-                    {fb.avatar ? (
-                      <img src={fb.avatar} alt="avatar" />
+                    {fb.avatar_url ? (
+                      <img src={fb.avatar_url} alt="avatar" />
                     ) : (
                       <UserIcon className="avatar-placeholder" />
                     )}
@@ -247,7 +276,7 @@ export default function Feedback() {
                     </h4>
                     <span className="submitter-email-tag">
                       <Mail className="inline-icon" />
-                      {fb.email || 'No email registered'}
+                      {fb.user_username ? `@${fb.user_username} • ` : ''}{fb.email || 'No email registered'}
                     </span>
                   </div>
                 </div>
@@ -326,11 +355,11 @@ export default function Feedback() {
               <div className="feedback-detail-meta">
                 <div className="submitter-info">
                   <div className="submitter-avatar">
-                    {selectedFeedback.avatar ? <img src={selectedFeedback.avatar} alt="avatar" /> : <UserIcon className="avatar-placeholder" />}
+                    {selectedFeedback.avatar_url ? <img src={selectedFeedback.avatar_url} alt="avatar" /> : <UserIcon className="avatar-placeholder" />}
                   </div>
                   <div>
-                    <h4 className="submitter-name">{selectedFeedback.name}</h4>
-                    <span className="submitter-email-tag">@{selectedFeedback.user || 'guest'} • {selectedFeedback.email}</span>
+                    <h4 className="submitter-name">{selectedFeedback.name || 'Anonymous'}</h4>
+                    <span className="submitter-email-tag">@{selectedFeedback.user_username || 'guest'} • {selectedFeedback.email}</span>
                   </div>
                 </div>
                 <div className="meta-right">
@@ -351,6 +380,13 @@ export default function Feedback() {
                 <span className="status-label">Current Status: <strong className={`status-${selectedFeedback.status}`}>{selectedFeedback.status}</strong></span>
                 <div className="action-buttons-group">
                   <button
+                    onClick={() => handleUpdateStatus(selectedFeedback, 'pending')}
+                    className="backups-btn backups-btn--secondary"
+                    disabled={selectedFeedback.status === 'pending'}
+                  >
+                    Mark Pending
+                  </button>
+                  <button
                     onClick={() => handleUpdateStatus(selectedFeedback, 'reviewed')}
                     className="backups-btn backups-btn--secondary"
                     disabled={selectedFeedback.status === 'reviewed'}
@@ -358,10 +394,11 @@ export default function Feedback() {
                     Mark Reviewed
                   </button>
                   <button
-                    onClick={() => handleUpdateStatus(selectedFeedback, selectedFeedback.status === 'resolved' ? 'pending' : 'resolved')}
+                    onClick={() => handleUpdateStatus(selectedFeedback, 'resolved')}
                     className="backups-btn backups-btn--primary"
+                    disabled={selectedFeedback.status === 'resolved'}
                   >
-                    {selectedFeedback.status === 'resolved' ? 'Re-open Review' : 'Mark Resolved'}
+                    Mark Resolved
                   </button>
                   <button
                     onClick={() => {

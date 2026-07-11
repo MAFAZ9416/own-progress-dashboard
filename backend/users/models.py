@@ -11,6 +11,7 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True, max_length=150)
     country = models.CharField(max_length=100, blank=True, null=True)
     notifications_enabled = models.BooleanField(default=True)
+    preferences = models.JSONField(default=dict, blank=True)
     public_slug = models.SlugField(max_length=80, unique=True, blank=True, null=True)
 
     def __str__(self):

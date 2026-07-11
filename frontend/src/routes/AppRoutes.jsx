@@ -37,6 +37,7 @@ const AdminBackupsView = lazy(() => import('../admin/pages/Backups'))
 const AdminRolesView = lazy(() => import('../admin/pages/Roles'))
 const AdminActivityLogsView = lazy(() => import('../admin/pages/ActivityLogs'))
 const AdminSettingsView = lazy(() => import('../admin/pages/Settings'))
+const AdminLoginHistoryView = lazy(() => import('../admin/pages/LoginHistory'))
 
 function LazyPage({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
@@ -99,6 +100,8 @@ export default function AppRoutes() {
           <Route path="/admin/roles" element={<LazyPage><AdminRolesView /></LazyPage>} />
           <Route path="/admin/activity-logs" element={<LazyPage><AdminActivityLogsView /></LazyPage>} />
           <Route path="/admin/settings" element={<LazyPage><AdminSettingsView /></LazyPage>} />
+          <Route path="/admin/login-history" element={<LazyPage><AdminLoginHistoryView /></LazyPage>} />
+
           
           {/* Admin home path fallback */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

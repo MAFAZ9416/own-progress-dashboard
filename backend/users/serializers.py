@@ -77,6 +77,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(source='profile.bio', max_length=150, allow_blank=True, required=False)
     avatar = serializers.ImageField(source='profile.avatar', required=False, allow_null=True)
     notifications_enabled = serializers.BooleanField(source='profile.notifications_enabled', required=False)
+    preferences = serializers.JSONField(source='profile.preferences', required=False)
     public_slug = serializers.CharField(source='profile.public_slug', read_only=True)
     email = serializers.EmailField(required=True)
     date_joined = serializers.DateTimeField(read_only=True, format="%Y-%m-%d")
@@ -90,6 +91,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "bio",
             "avatar",
             "notifications_enabled",
+            "preferences",
             "date_joined",
             "public_slug",
             "is_staff",
@@ -158,6 +160,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             profile.avatar = profile_data['avatar']
         if 'notifications_enabled' in profile_data:
             profile.notifications_enabled = profile_data['notifications_enabled']
+        if 'preferences' in profile_data:
+            profile.preferences = profile_data['preferences']
         profile.save()
 
         # Refresh instance from database to clear cached relations
@@ -369,12 +373,27 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 class LoginHistorySerializer(serializers.ModelSerializer):
     """Serialize LoginHistory records for the security panel."""
+    os = serializers.SerializerMethodField()
 
     class Meta:
         from .models import LoginHistory
         model = LoginHistory
-        fields = ['id', 'device', 'browser', 'ip_address', 'created_at', 'is_active']
+        fields = ['id', 'device', 'browser', 'os', 'ip_address', 'created_at', 'is_active']
         read_only_fields = fields
+
+    def get_os(self, obj):
+        ua = (obj.user_agent or '').lower()
+        if 'windows' in ua:
+            return 'Windows'
+        elif 'macintosh' in ua or 'mac os' in ua:
+            return 'Mac OS'
+        elif 'linux' in ua:
+            return 'Linux'
+        elif 'android' in ua:
+            return 'Android'
+        elif 'iphone' in ua or 'ipad' in ua:
+            return 'iOS'
+        return 'Unknown OS'
 
 
 class ResetPasswordSerializer(serializers.Serializer):

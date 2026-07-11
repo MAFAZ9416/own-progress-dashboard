@@ -118,6 +118,35 @@ export default function SystemHealth() {
           </div>
         </div>
 
+        {/* Storage Card */}
+        {health?.storage && (
+          <div className="health-card service-card service-card--operational admin-glow-card">
+            <div className="service-card__header">
+              <div className="service-card__icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
+                <HardDrive size={20} />
+              </div>
+              <div className="service-card__title-group">
+                <span className="service-card__label">Local Storage</span>
+                <span className="service-card__key">disk: system</span>
+              </div>
+              <span className="service-status-pill status-operational" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
+                {health.storage.used_percent}% Used
+              </span>
+            </div>
+            <div className="service-card__body">
+              <div className="latency-info">
+                <span className="latency-lbl">Disk Space (Used / Total)</span>
+                <span className="latency-val" style={{ color: '#6366f1' }}>
+                  {health.storage.used_gb} GB / {health.storage.total_gb} GB
+                </span>
+              </div>
+              <div className="service-indicator-bar">
+                <div className="service-indicator-fill" style={{ background: '#6366f1', width: `${health.storage.used_percent}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Services Status Cards */}
         {Object.entries(services).map(([key, service]) => {
           const statusLower = service.status?.toLowerCase()

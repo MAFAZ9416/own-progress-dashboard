@@ -1,0 +1,250 @@
+@import '../../styles/admin-theme.css';
+
+.loginhistory-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.loginhistory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.loginhistory-header__left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loginhistory-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--admin-accent-purple);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.1);
+}
+
+.loginhistory-header__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.loginhistory-header__sub {
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}
+
+.loginhistory-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  transition: var(--admin-transition);
+}
+
+.loginhistory-refresh-btn:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: var(--admin-accent-purple);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.15);
+}
+
+.loginhistory-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loginhistory-spin {
+  animation: loginhistory-spin-anim 1s linear infinite;
+}
+
+@keyframes loginhistory-spin-anim {
+  to { transform: rotate(360deg); }
+}
+
+.loginhistory-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  color: var(--admin-status-danger);
+  font-size: 0.875rem;
+}
+
+.loginhistory-loading,
+.loginhistory-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-color);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.loginhistory-loading .spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(124, 58, 237, 0.15);
+  border-top-color: var(--admin-accent-purple);
+  border-radius: 50%;
+  animation: loginhistory-spin-anim 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loginhistory-loading p,
+.loginhistory-empty-state p {
+  color: var(--admin-text-secondary);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.loginhistory-empty-state .empty-icon {
+  color: var(--admin-text-muted);
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Table Card */
+.loginhistory-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.loginhistory-table-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--admin-border-color);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.loginhistory-table-header h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.loginhistory-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--admin-accent-purple);
+  background: rgba(124, 58, 237, 0.15);
+  padding: 0.25rem 0.625rem;
+  border-radius: 20px;
+}
+
+.loginhistory-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.loginhistory-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.loginhistory-table th {
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid var(--admin-border-color);
+}
+
+.loginhistory-table td {
+  padding: 1.15rem 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  border-bottom: 1px solid var(--admin-border-color);
+  vertical-align: middle;
+}
+
+.loginhistory-table tr:last-child td {
+  border-bottom: none;
+}
+
+.loginhistory-tr--current {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.loginhistory-tr--current td {
+  color: var(--admin-text-primary);
+}
+
+.loginhistory-table tr:hover:not(.loginhistory-tr--current) {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.cell-icon {
+  color: var(--admin-text-muted);
+  margin-right: 0.5rem;
+  opacity: 0.6;
+  vertical-align: middle;
+}
+
+.loginhistory-td-device {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.loginhistory-td-device .val-main {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin-bottom: 0.15rem;
+}
+
+.loginhistory-td-device .val-sub {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+.loginhistory-pill-current {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #818cf8 !important;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .loginhistory-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .loginhistory-refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

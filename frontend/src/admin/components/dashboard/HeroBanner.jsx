@@ -1,8 +1,11 @@
-import React from 'react'
-import { Calendar, Download } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Calendar, Download, FileJson, FileSpreadsheet } from 'lucide-react'
 import './HeroBanner.css'
 
 export default function HeroBanner({ adminName, onExportReport, isExporting }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
   // Format current date dynamically
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -10,6 +13,25 @@ export default function HeroBanner({ adminName, onExportReport, isExporting }) {
     day: 'numeric',
     year: 'numeric'
   })
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick)
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [isOpen])
+
+  const handleSelect = (format) => {
+    setIsOpen(false)
+    if (onExportReport) {
+      onExportReport(format)
+    }
+  }
 
   return (
     <div className="admin-hero">
@@ -50,25 +72,41 @@ export default function HeroBanner({ adminName, onExportReport, isExporting }) {
           </svg>
         </div>
 
-        <button 
-          onClick={onExportReport} 
-          disabled={isExporting}
-          className="admin-hero__export-btn"
-          id="admin-hero-export-btn"
-        >
-          {isExporting ? (
-            <>
-              <div className="admin-hero__spinner" />
-              <span>Exporting...</span>
-            </>
-          ) : (
-            <>
-              <Download size={15} />
-              <span>Export Report</span>
-            </>
+        <div className="admin-hero__export-wrap" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsOpen(!isOpen)} 
+            disabled={isExporting}
+            className="admin-hero__export-btn"
+            id="admin-hero-export-btn"
+          >
+            {isExporting ? (
+              <>
+                <div className="admin-hero__spinner" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <Download size={15} />
+                <span>Export Report</span>
+              </>
+            )}
+          </button>
+          
+          {isOpen && (
+            <div className="admin-hero__export-dropdown">
+              <button onClick={() => handleSelect('csv')} className="admin-hero__dropdown-item" id="export-csv-btn">
+                <FileSpreadsheet size={13} />
+                <span>Export CSV</span>
+              </button>
+              <button onClick={() => handleSelect('json')} className="admin-hero__dropdown-item" id="export-json-btn">
+                <FileJson size={13} />
+                <span>Export JSON</span>
+              </button>
+            </div>
           )}
-        </button>
+        </div>
       </div>
     </div>
   )
 }
+

@@ -1,8 +1,8 @@
 import { apiClient } from '../../api'
 
 export const adminBackupsService = {
-  getBackups: async () => {
-    const response = await apiClient.get('/admin/backups/')
+  getBackups: async (params) => {
+    const response = await apiClient.get('/admin/backups/', { params })
     return response.data
   },
   createBackup: async () => {

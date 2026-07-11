@@ -24,6 +24,8 @@ export default function ActivityLogs() {
   // Filters
   const [searchUser, setSearchUser] = useState('')
   const [logType, setLogType] = useState('all')
+  const [dateStart, setDateStart] = useState('')
+  const [dateEnd, setDateEnd] = useState('')
 
   // Selected Log for detail modal
   const [selectedLog, setSelectedLog] = useState(null)
@@ -35,7 +37,9 @@ export default function ActivityLogs() {
     try {
       const params = {
         user: searchUser.trim(),
-        type: logType
+        type: logType,
+        date_start: dateStart,
+        date_end: dateEnd
       }
       const data = await adminActivityService.getActivityLogs(params)
       setLogs(data.logs || [])
@@ -45,11 +49,11 @@ export default function ActivityLogs() {
     } finally {
       setIsLoading(false)
     }
-  }, [searchUser, logType])
+  }, [searchUser, logType, dateStart, dateEnd])
 
   useEffect(() => {
     fetchLogs(true)
-  }, [searchUser, logType, fetchLogs])
+  }, [searchUser, logType, dateStart, dateEnd, fetchLogs])
 
   // Badge helper
   const getLogBadge = (type) => {
@@ -98,6 +102,29 @@ export default function ActivityLogs() {
         </div>
 
         <div className="filters-group">
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>From:</span>
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="activity-date-start"
+            />
+          </div>
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>To:</span>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="admin-users-select"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--admin-border-color)', borderRadius: '6px', color: '#94a3b8' }}
+              id="activity-date-end"
+            />
+          </div>
+
           <div className="filter-item">
             <Filter className="filter-icon" />
             <select value={logType} onChange={(e) => setLogType(e.target.value)} id="activity-type-select">
@@ -221,8 +248,8 @@ export default function ActivityLogs() {
                   <span className="val">{selectedLog.type === 'admin' ? 'Administrative Action' : 'User Lifecycle/Learning Event'}</span>
                 </div>
                 <div className="activity-detail-field">
-                  <span className="lbl">Record ID</span>
-                  <span className="val">{selectedLog.id}</span>
+                  <span className="lbl">Event Target</span>
+                  <span className="val">{selectedLog.target || 'System'}</span>
                 </div>
                 <div className="activity-detail-field">
                   <span className="lbl">Log Timestamp</span>
@@ -234,8 +261,25 @@ export default function ActivityLogs() {
                     {selectedLog.action || selectedLog.message}
                   </div>
                 </div>
+
+                {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                  <div className="activity-detail-field activity-detail-field--full">
+                    <span className="lbl">Structured Metadata</span>
+                    <div className="metadata-structured-box" style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid var(--admin-border-color)' }}>
+                      {Object.entries(selectedLog.metadata).map(([key, val]) => (
+                        <div key={key} className="metadata-kv-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8125rem' }}>
+                          <strong style={{ color: 'var(--admin-text-secondary)', textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}:</strong>
+                          <span style={{ color: 'var(--admin-text-primary)' }}>
+                            {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+
           </div>
         </div>
       )}
