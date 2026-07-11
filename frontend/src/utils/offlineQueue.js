@@ -10,6 +10,9 @@ const RETRY_DELAYS = [0, 2000, 5000, 15000, 30000]
 export let isSyncing = false
 export let lastSyncTime = localStorage.getItem('pwa_last_sync_time') || null
 
+// Unique tab ID to identify the current tab context for multi-tab synchronization lock
+const tabId = Math.random().toString(36).substring(2)
+
 // Custom event to trigger immediate UI reactivity across layout components
 export function notifySyncStatusChange() {
   window.dispatchEvent(new CustomEvent('progressly-pwa-sync-status'))
@@ -95,6 +98,29 @@ export async function processOfflineQueue() {
   if (!navigator.onLine) return
 
   const db = await dbPromise
+  
+  // Acquire multi-tab sync lock
+  try {
+    const tx = db.transaction('metadata', 'readwrite')
+    const existingLock = await tx.store.get('sync_lock')
+    const nowMs = Date.now()
+    if (existingLock) {
+      const acquiredTime = new Date(existingLock.acquired_at).getTime()
+      if (existingLock.tab_id !== tabId && (nowMs - acquiredTime) < 30000) {
+        console.log('PWA: Sync lock held by another tab, skipping sync in this tab.')
+        return
+      }
+    }
+    await tx.store.put({
+      id: 'sync_lock',
+      acquired_at: new Date().toISOString(),
+      tab_id: tabId
+    })
+    await tx.done
+  } catch (e) {
+    console.error('PWA: Failed to acquire sync lock:', e)
+  }
+
   const mutations = await db.getAll('mutations')
   
   // Filter pending or previously failed attempts
@@ -103,6 +129,12 @@ export async function processOfflineQueue() {
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
   if (activeQueue.length === 0) {
+    // Release lock since nothing to process
+    try {
+      const tx = db.transaction('metadata', 'readwrite')
+      await tx.store.delete('sync_lock')
+      await tx.done
+    } catch (e) {}
     return
   }
 
@@ -112,82 +144,88 @@ export async function processOfflineQueue() {
   const apiBase = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api'
   const cleanApiBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase
 
-  for (const request of activeQueue) {
-    // Stop processing if connection dropped during run
-    if (!navigator.onLine) {
-      break
-    }
-
-    let success = false
-    let currentRetries = request.retry_count
-
-    while (currentRetries < 5 && !success) {
-      if (!navigator.onLine) break
-
-      const waitMs = RETRY_DELAYS[currentRetries] || 0
-      if (waitMs > 0) {
-        await delay(waitMs)
+  try {
+    for (const request of activeQueue) {
+      if (!navigator.onLine) {
+        break
       }
 
-      try {
-        const fullUrl = request.url.startsWith('http') 
-          ? request.url 
-          : `${cleanApiBase}${request.url.startsWith('/') ? '' : '/'}${request.url}`
+      let success = false
+      let currentRetries = request.retry_count
 
-        const accessToken = localStorage.getItem('accessToken')
-        const headers = { 'Content-Type': 'application/json' }
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`
+      while (currentRetries < 5 && !success) {
+        if (!navigator.onLine) break
+
+        const waitMs = RETRY_DELAYS[currentRetries] || 0
+        if (waitMs > 0) {
+          await delay(waitMs)
         }
 
-        // Generate custom request UUID header to prevent duplicates on the backend
-        headers['X-Request-UUID'] = request.uuid
+        try {
+          const fullUrl = request.url.startsWith('http') 
+            ? request.url 
+            : `${cleanApiBase}${request.url.startsWith('/') ? '' : '/'}${request.url}`
 
-        const response = await axios({
-          url: fullUrl,
-          method: request.method,
-          data: request.payload,
-          headers
-        })
+          const accessToken = localStorage.getItem('accessToken')
+          const headers = { 'Content-Type': 'application/json' }
+          if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`
+          }
 
-        if (response.status >= 200 && response.status < 300) {
-          success = true
-          // Delete request upon successful completion
-          await db.delete('mutations', request.uuid)
-          console.log(`Replayed offline request successfully: ${request.uuid} (${request.url})`)
+          headers['X-Request-UUID'] = request.uuid
+
+          const response = await axios({
+            url: fullUrl,
+            method: request.method,
+            data: request.payload,
+            headers
+          })
+
+          if (response.status >= 200 && response.status < 300) {
+            success = true
+            await db.delete('mutations', request.uuid)
+            console.log(`Replayed offline request successfully: ${request.uuid} (${request.url})`)
+          }
+        } catch (error) {
+          console.error(`Offline request replay failed (Attempt ${currentRetries + 1}):`, error)
+          if (error.response?.status >= 400 && error.response?.status < 500) {
+            currentRetries = 5
+            break
+          }
+          currentRetries++
         }
-      } catch (error) {
-        console.error(`Offline request replay failed (Attempt ${currentRetries + 1}):`, error)
-        
-        // If error response status is a client error (e.g. 400 Bad Request, 403 Forbidden), 
-        // retrying will not help. Mark as FAILED immediately and proceed to avoid blocking.
-        if (error.response?.status >= 400 && error.response?.status < 500) {
-          currentRetries = 5
-          break
-        }
+      }
 
-        currentRetries++
+      if (!success) {
+        const updatedRequest = {
+          ...request,
+          retry_count: currentRetries,
+          status: 'FAILED'
+        }
+        await db.put('mutations', updatedRequest)
+        console.warn(`Request failed permanently after maximum retries: ${request.uuid}`)
       }
     }
-
-    if (!success) {
-      // Mark as FAILED if max retries exceeded
-      const updatedRequest = {
-        ...request,
-        retry_count: currentRetries,
-        status: 'FAILED'
+  } finally {
+    // Release multi-tab sync lock and update states
+    isSyncing = false
+    lastSyncTime = new Date().toISOString()
+    localStorage.setItem('pwa_last_sync_time', lastSyncTime)
+    localStorage.setItem('last_api_sync_time', lastSyncTime)
+    
+    try {
+      const txRelease = db.transaction('metadata', 'readwrite')
+      const currentLock = await txRelease.store.get('sync_lock')
+      if (currentLock && currentLock.tab_id === tabId) {
+        await txRelease.store.delete('sync_lock')
       }
-      await db.put('mutations', updatedRequest)
-      console.warn(`Request failed permanently after maximum retries: ${request.uuid}`)
+      await txRelease.done
+    } catch (e) {
+      console.error('PWA: Failed to release sync lock:', e)
     }
+
+    notifySyncStatusChange()
   }
-
-  // Update sync metrics
-  isSyncing = false
-  lastSyncTime = new Date().toISOString()
-  localStorage.setItem('pwa_last_sync_time', lastSyncTime)
-  localStorage.setItem('last_api_sync_time', lastSyncTime)
-  notifySyncStatusChange()
 }
 
 // Retry all failed requests manually
