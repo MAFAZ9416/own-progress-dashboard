@@ -172,23 +172,14 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,https://own-progress-dashboard.vercel.app"
-    ).split(",")
-    if origin.strip()
+    "http://localhost:5173",
+    "https://progressly-taupe.vercel.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CSRF_TRUSTED_ORIGINS",
-        "http://localhost:5173,https://own-progress-dashboard.vercel.app,https://progressly.onrender.com"
-    ).split(",")
-    if origin.strip()
+    "http://localhost:5173",
+    "https://progressly-taupe.vercel.app",
 ]
-
 
 AUTH_USER_MODEL = 'users.User'
 
