@@ -5187,3 +5187,80 @@ a { color: inherit; text-decoration: none; }
   }
 }
 
+/* PWA Update Toast Alert */
+.pwa-update-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(30, 27, 75, 0.95);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(124, 58, 237, 0.2);
+  z-index: 10000000;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(8px);
+  animation: slide-in-toast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pwa-update-toast p {
+  margin: 0;
+  color: #f1f5f9;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.pwa-update-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pwa-update-btn-primary {
+  padding: 6px 12px;
+  background: #7c3aed;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pwa-update-btn-primary:hover {
+  background: #6d28d9;
+}
+
+.pwa-update-btn-secondary {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pwa-update-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
+}
+
+@keyframes slide-in-toast {
+  from {
+    transform: translateY(100%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+

@@ -13,3 +13,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </GoogleOAuthProvider>
   </React.StrictMode>,
 )
+
+// Smoothly remove PWA splash screen after React mounts
+const splash = document.getElementById('pwa-splash')
+if (splash) {
+  splash.style.opacity = '0'
+  splash.style.visibility = 'hidden'
+  setTimeout(() => {
+    splash.remove()
+  }, 500)
+}

@@ -6,7 +6,9 @@ import { LogOut } from 'lucide-react'
 import { getMediaUrl } from '../../api'
 import './Sidebar.css'
 
-export default function Sidebar({ isOpen, onClose }) {
+import pkg from '../../../package.json'
+
+export default function Sidebar({ isOpen, onClose, canInstall, installApp }) {
   const { user, logout } = useAuth()
   
   const handleLogout = () => {
@@ -111,6 +113,36 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
+        {/* Install Trigger in Admin Sidebar */}
+        {canInstall && (
+          <button
+            onClick={installApp}
+            className="admin-sidebar__install"
+            id="admin-sidebar-pwa-install-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: 'calc(100% - 20px)',
+              margin: '5px 10px 10px 10px',
+              padding: '8px 12px',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%)',
+              border: '1px dashed rgba(124, 58, 237, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '0.78rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span style={{ display: 'inline-flex', background: 'rgba(124, 58, 237, 0.15)', padding: '4px', borderRadius: '4px', color: '#a78bfa' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12l4 4 4-4"/></svg>
+            </span>
+            <span>Install Desktop App</span>
+          </button>
+        )}
+
         {/* Online Status and Logout Row */}
         <div className="admin-sidebar__status-row">
           <div className="admin-sidebar__status">
@@ -127,6 +159,10 @@ export default function Sidebar({ isOpen, onClose }) {
             <span>Sign Out</span>
           </button>
         </div>
+
+        <p className="admin-sidebar__version" style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.25)', textAlign: 'center', margin: '8px 0 0 0', fontFamily: 'monospace' }}>
+          Progressly Admin v{pkg.version || '1.1.0'}
+        </p>
       </div>
     </aside>
   )

@@ -38,7 +38,9 @@ const NAV_ITEMS = [
 ]
 
 
-const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
+import pkg from '../../../package.json'
+
+const Sidebar = memo(function Sidebar({ isOpen, onClose, canInstall, installApp }) {
   const { user, logout } = useAuth()
   const navigate         = useNavigate()
 
@@ -105,6 +107,36 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
+        {canInstall && (
+          <button
+            onClick={installApp}
+            className="sidebar__install"
+            id="sidebar-pwa-install-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '10px 14px',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%)',
+              border: '1px dashed rgba(124, 58, 237, 0.4)',
+              borderRadius: '10px',
+              color: '#ffffff',
+              fontSize: '0.82rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginBottom: '10px',
+              transition: 'all 0.2s ease',
+              marginTop: '5px'
+            }}
+          >
+            <span style={{ display: 'inline-flex', background: 'rgba(124, 58, 237, 0.15)', padding: '5px', borderRadius: '6px', color: '#a78bfa' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12l4 4 4-4"/></svg>
+            </span>
+            <span>Install App</span>
+          </button>
+        )}
+
         <button
           id="sidebar-logout-btn"
           onClick={handleLogout}
@@ -113,6 +145,10 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }) {
           <LogOut size={16} strokeWidth={1.8} />
           Sign out
         </button>
+
+        <p className="sidebar__version" style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.3)', textAlign: 'center', margin: '10px 0 0 0', fontFamily: 'monospace' }}>
+          Progressly v{pkg.version || '1.1.0'}
+        </p>
       </div>
     </aside>
   )
