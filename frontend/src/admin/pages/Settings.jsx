@@ -27,11 +27,24 @@ import {
   retryFailedRequests, 
   deleteQueuedRequest 
 } from '../../utils/offlineQueue'
+import { usePWA } from '../../hooks/usePWA'
 import './Settings.css'
 
 export default function Settings() {
   const { user, updateUser } = useAuth()
   const [activeTab, setActiveTab] = useState('profile') // 'profile', 'notifications', 'dashboard', 'reports', 'application', 'offline'
+
+  const {
+    canInstall,
+    installApp,
+    pushEnabled,
+    enablePush,
+    disablePush,
+    updateAvailable,
+    updateApp,
+    clearCaches,
+    versionInfo
+  } = usePWA()
 
   // Profile forms
   const [profileForm, setProfileForm] = useState({
@@ -101,12 +114,35 @@ export default function Settings() {
   const [queuedRequests, setQueuedRequests] = useState([])
   const [lastSyncStr, setLastSyncStr] = useState('')
   const [isProcessingSync, setIsProcessingSync] = useState(false)
+  const [offlineStats, setOfflineStats] = useState({
+    sessions: 0,
+    queued: 0,
+    failed: 0,
+    syncs: 0,
+    avgSyncTime: 0
+  })
 
   const loadOfflineStats = async () => {
     const metrics = await getDatabaseMetrics()
     setOfflineMetrics(metrics)
     const queue = await getQueuedRequests()
     setQueuedRequests(queue)
+    
+    // Load local storage counters
+    const sessions = parseInt(localStorage.getItem('pwa_offline_sessions') || '0', 10)
+    const queued = parseInt(localStorage.getItem('pwa_queued_requests') || '0', 10)
+    const failed = parseInt(localStorage.getItem('pwa_failed_requests') || '0', 10)
+    const syncs = parseInt(localStorage.getItem('pwa_successful_syncs') || '0', 10)
+    const syncTime = parseInt(localStorage.getItem('pwa_total_sync_time_ms') || '0', 10)
+    const avgSyncTime = syncs > 0 ? Math.round(syncTime / syncs) : 0
+
+    setOfflineStats({
+      sessions,
+      queued,
+      failed,
+      syncs,
+      avgSyncTime
+    })
     
     const time = localStorage.getItem('pwa_last_sync_time')
     if (time) {
@@ -988,19 +1024,125 @@ export default function Settings() {
           <div className="settings-card admin-glow-card">
             <div className="card-header">
               <Globe className="card-header-icon" />
-              <h2>Offline Storage &amp; Sync Management</h2>
+              <h2>Enterprise PWA &amp; Sync Dashboard</h2>
             </div>
             
             <div className="settings-form">
-              {/* Sync Metadata Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Last Sync Timestamp</p>
-                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9' }}>{lastSyncStr}</p>
+              {/* Dynamic Version Info Bar */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1.5rem' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>App Version</p>
+                  <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>{versionInfo.appVersion}</p>
                 </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>Build Date</p>
+                  <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9' }}>{versionInfo.buildDate}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>Environment</p>
+                  <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa', textTransform: 'capitalize' }}>{versionInfo.environment}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>SW Version</p>
+                  <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.85rem', fontWeight: 700, color: '#34d399' }}>{versionInfo.serviceWorkerVersion}</p>
+                </div>
+              </div>
+
+              {/* Status Section Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                 <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Total Offline Records</p>
-                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '1.05rem', fontWeight: 700, color: '#a78bfa' }}>{offlineMetrics.totalRecords} entries</p>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Installation Status</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: canInstall ? '#eab308' : '#22c55e'
+                    }}></span>
+                    <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 600 }}>
+                      {canInstall ? 'Ready to Install' : 'Standalone Installed'}
+                    </span>
+                  </div>
+                  {canInstall && (
+                    <button 
+                      type="button"
+                      onClick={installApp}
+                      style={{ marginTop: '0.75rem', padding: '6px 12px', fontSize: '0.75rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Install App
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Push Notifications</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 600 }}>
+                      {pushEnabled ? 'Subscribed' : 'Disabled'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={pushEnabled ? disablePush : enablePush}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.72rem',
+                        background: pushEnabled ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)',
+                        color: pushEnabled ? '#ef4444' : '#3b82f6',
+                        border: '1px solid currentColor',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {pushEnabled ? 'Opt Out' : 'Opt In'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Service Worker</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 600 }}>
+                      {updateAvailable ? 'Update Available' : 'Running Latest'}
+                    </span>
+                    {updateAvailable && (
+                      <button
+                        type="button"
+                        onClick={updateApp}
+                        style={{ padding: '4px 10px', fontSize: '0.72rem', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        Update SW
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sync Statistics Grid */}
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.75rem' }}>Offline Engagement Statistics</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Offline Sessions</span>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '1rem', fontWeight: 700, color: '#f1f5f9' }}>{offlineStats.sessions}</p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Queued Actions</span>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '1rem', fontWeight: 700, color: '#38bdf8' }}>{offlineStats.queued}</p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Failed Requests</span>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '1rem', fontWeight: 700, color: '#ef4444' }}>{offlineStats.failed}</p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Successful Syncs</span>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>{offlineStats.syncs}</p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Avg Sync Duration</span>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '1rem', fontWeight: 700, color: '#fb923c' }}>{offlineStats.avgSyncTime} ms</p>
+                  </div>
                 </div>
               </div>
 
@@ -1099,19 +1241,27 @@ export default function Settings() {
                 </button>
                 <button 
                   type="button" 
-                  onClick={handleClearCache} 
+                  onClick={() => clearCaches('images')} 
                   className="settings-submit-btn"
                   style={{ flex: 1, minWidth: '140px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', margin: 0 }}
                 >
-                  Clear Local Cache
+                  Clear Images Cache
                 </button>
                 <button 
                   type="button" 
-                  onClick={handleClearQueue} 
+                  onClick={() => clearCaches('api')} 
+                  className="settings-submit-btn"
+                  style={{ flex: 1, minWidth: '140px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', margin: 0 }}
+                >
+                  Clear API Cache
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => clearCaches('all')} 
                   className="settings-submit-btn"
                   style={{ flex: 1, minWidth: '140px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', margin: 0 }}
                 >
-                  Clear Queue
+                  Clear Everything
                 </button>
               </div>
             </div>

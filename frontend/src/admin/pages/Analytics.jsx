@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
-import { TrendingUp, Users, CheckSquare, Brain, Trophy, Mail, AlertCircle, RefreshCw, Medal, Loader2 } from 'lucide-react'
+import { TrendingUp, Users, CheckSquare, Brain, Trophy, Mail, AlertCircle, RefreshCw, Medal, Loader2, Globe } from 'lucide-react'
 import { adminAnalyticsService } from '../services/analyticsService'
 import './Analytics.css'
 
@@ -66,6 +66,7 @@ export default function Analytics() {
   const growthChart = data?.growth_chart || []
   const skillDist = data?.skill_distribution || []
   const topLearners = data?.top_learners || []
+  const offlineAnalytics = data?.offline_analytics || {}
 
   return (
     <div className="analytics-page">
@@ -115,6 +116,21 @@ export default function Analytics() {
         <StatCard icon={Brain} label="Total Skills" value={stats.total_skills?.toLocaleString()} color="indigo" />
         <StatCard icon={Trophy} label="Achievements Unlocked" value={stats.total_unlocked?.toLocaleString()} sub={`of ${stats.total_achievements ?? 0} total`} color="yellow" />
         <StatCard icon={Mail} label="Emails Sent" value={stats.emails_sent?.toLocaleString()} sub={`${stats.emails_failed ?? 0} failed`} color="teal" />
+      </div>
+
+      {/* PWA Offline Analytics */}
+      <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Globe size={18} style={{ color: '#a78bfa' }} />
+          <span>PWA Offline Operations Analytics</span>
+        </h3>
+        <div className="analytics-stats-grid">
+          <StatCard icon={Globe} label="Offline Sessions" value={offlineAnalytics.offline_sessions?.toLocaleString()} color="purple" />
+          <StatCard icon={RefreshCw} label="Queued Actions" value={offlineAnalytics.queued_requests?.toLocaleString()} color="blue" />
+          <StatCard icon={AlertCircle} label="Failed Requests" value={offlineAnalytics.failed_requests?.toLocaleString()} color="red" />
+          <StatCard icon={Medal} label="Successful Syncs" value={offlineAnalytics.successful_syncs?.toLocaleString()} color="green" />
+          <StatCard icon={TrendingUp} label="Avg Sync Duration" value={`${offlineAnalytics.avg_sync_time_ms || 0} ms`} color="yellow" />
+        </div>
       </div>
 
       {/* Charts Row */}

@@ -63,6 +63,11 @@ export async function enqueueMutation(url, method, payload) {
   }
 
   await db.put('mutations', queuedRequest)
+  
+  // Track offline queued analytics
+  const qVal = parseInt(localStorage.getItem('pwa_queued_requests') || '0', 10) + 1
+  localStorage.setItem('pwa_queued_requests', qVal.toString())
+
   notifySyncStatusChange()
   return uuid
 }
@@ -92,12 +97,56 @@ export async function deleteQueuedRequest(uuid) {
   notifySyncStatusChange()
 }
 
+export async function uploadOfflineAnalytics() {
+  try {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return
+
+    const sessions = parseInt(localStorage.getItem('pwa_offline_sessions') || '0', 10)
+    const queued = parseInt(localStorage.getItem('pwa_queued_requests') || '0', 10)
+    const failed = parseInt(localStorage.getItem('pwa_failed_requests') || '0', 10)
+    const syncs = parseInt(localStorage.getItem('pwa_successful_syncs') || '0', 10)
+    const syncTime = parseInt(localStorage.getItem('pwa_total_sync_time_ms') || '0', 10)
+
+    const payload = {
+      offline_sessions: sessions,
+      queued_requests: queued,
+      failed_requests: failed,
+      successful_syncs: syncs,
+      total_sync_time_ms: syncTime
+    }
+
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const userData = JSON.parse(userStr)
+      if (userData) {
+        userData.preferences = userData.preferences || {}
+        userData.preferences.offline_analytics = payload
+
+        const apiBase = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api'
+        const cleanApiBase = apiBase.endsWith('/') ? apiBase : `${apiBase}/`
+        
+        await axios.put(`${cleanApiBase}users/profile/`, {
+          preferences: userData.preferences
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        localStorage.setItem('user', JSON.stringify(userData))
+        console.log('PWA: Uploaded offline usage statistics successfully.')
+      }
+    }
+  } catch (e) {
+    console.error('PWA: Failed to upload offline analytics:', e)
+  }
+}
+
 // Process the offline queue (FIFO)
 export async function processOfflineQueue() {
   if (isSyncing) return
   if (!navigator.onLine) return
 
   const db = await dbPromise
+  const syncStart = Date.now()
   
   // Acquire multi-tab sync lock
   try {
@@ -144,6 +193,9 @@ export async function processOfflineQueue() {
   const apiBase = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api'
   const cleanApiBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase
 
+  let queueSuccessCount = 0
+  let queueFailCount = 0
+
   try {
     for (const request of activeQueue) {
       if (!navigator.onLine) {
@@ -184,6 +236,7 @@ export async function processOfflineQueue() {
           if (response.status >= 200 && response.status < 300) {
             success = true
             await db.delete('mutations', request.uuid)
+            queueSuccessCount++
             console.log(`Replayed offline request successfully: ${request.uuid} (${request.url})`)
           }
         } catch (error) {
@@ -197,6 +250,7 @@ export async function processOfflineQueue() {
       }
 
       if (!success) {
+        queueFailCount++
         const updatedRequest = {
           ...request,
           retry_count: currentRetries,
@@ -212,6 +266,42 @@ export async function processOfflineQueue() {
     lastSyncTime = new Date().toISOString()
     localStorage.setItem('pwa_last_sync_time', lastSyncTime)
     localStorage.setItem('last_api_sync_time', lastSyncTime)
+    
+    // Save success syncs and durations in localStorage
+    if (queueSuccessCount > 0) {
+      const sVal = parseInt(localStorage.getItem('pwa_successful_syncs') || '0', 10) + queueSuccessCount
+      localStorage.setItem('pwa_successful_syncs', sVal.toString())
+      
+      const duration = Date.now() - syncStart
+      const tVal = parseInt(localStorage.getItem('pwa_total_sync_time_ms') || '0', 10) + duration
+      localStorage.setItem('pwa_total_sync_time_ms', tVal.toString())
+    }
+
+    if (queueFailCount > 0) {
+      const fVal = parseInt(localStorage.getItem('pwa_failed_requests') || '0', 10) + queueFailCount
+      localStorage.setItem('pwa_failed_requests', fVal.toString())
+    }
+
+    // Save logs to IndexedDB metadata for persistence
+    try {
+      const analyticsPayload = {
+        offline_sessions: parseInt(localStorage.getItem('pwa_offline_sessions') || '0', 10),
+        queued_requests: parseInt(localStorage.getItem('pwa_queued_requests') || '0', 10),
+        failed_requests: parseInt(localStorage.getItem('pwa_failed_requests') || '0', 10),
+        successful_syncs: parseInt(localStorage.getItem('pwa_successful_syncs') || '0', 10),
+        total_sync_time_ms: parseInt(localStorage.getItem('pwa_total_sync_time_ms') || '0', 10)
+      }
+      await db.put('metadata', {
+        id: 'offline_analytics',
+        cached_at: new Date().toISOString(),
+        data: analyticsPayload
+      })
+    } catch (e) {}
+
+    // Upload analytics to server
+    if (queueSuccessCount > 0 || queueFailCount > 0) {
+      await uploadOfflineAnalytics()
+    }
     
     try {
       const txRelease = db.transaction('metadata', 'readwrite')
