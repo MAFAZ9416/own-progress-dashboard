@@ -3,9 +3,15 @@ import logging
 import time
 from django.conf import settings
 from django.db import transaction
-from pywebpush import webpush, WebPushException
 
 logger = logging.getLogger(__name__)
+
+try:
+    from pywebpush import webpush, WebPushException
+    PYWEBPUSH_AVAILABLE = True
+except ImportError:
+    PYWEBPUSH_AVAILABLE = False
+    logger.warning("pywebpush is not installed in this environment. Push notifications will be logged and skipped.")
 
 # VAPID setup: read from settings, or fall back to safe default mock keys for local development
 VAPID_PUBLIC_KEY = getattr(
@@ -29,6 +35,10 @@ def send_push_notification(subscription, payload):
     Delivers a Web Push notification to a specific subscriber,
     retrying up to 5 times with backoff delays.
     """
+    if not PYWEBPUSH_AVAILABLE:
+        logger.error(f"Cannot deliver Push: pywebpush is not installed in the active python context.")
+        return False
+
     subscription_info = {
         "endpoint": subscription.endpoint,
         "keys": {
