@@ -16,13 +16,82 @@ const apiClient = axios.create({
   },
 })
 
-/* ── Request interceptor: inject access token from localStorage ── */
+import { getCachedData, setCachedData } from '../utils/offlineDatabase'
+import { enqueueMutation } from '../utils/offlineQueue'
+
+// Map cache stores to corresponding endpoints
+function getCacheStoreForUrl(url) {
+  if (!url) return null
+  const lowercaseUrl = url.toLowerCase()
+  if (lowercaseUrl.includes('/admin/statistics') || lowercaseUrl.includes('/analytics/')) return 'dashboard'
+  if (lowercaseUrl.includes('/users/profile')) return 'profile'
+  if (lowercaseUrl.includes('/skills')) return 'skills'
+  if (lowercaseUrl.includes('/tasks')) return 'tasks'
+  if (lowercaseUrl.includes('/notifications')) return 'notifications'
+  if (lowercaseUrl.includes('/achievements')) return 'achievements'
+  if (lowercaseUrl.includes('/users/preferences') || lowercaseUrl.includes('/admin/preferences')) return 'settings'
+  return null
+}
+
+/* ── Request interceptor: inject token & handle offline fallbacks ── */
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // Intercept requests when browser is offline
+    if (!navigator.onLine) {
+      if (config.method === 'get') {
+        const storeName = getCacheStoreForUrl(config.url)
+        if (storeName) {
+          const cached = await getCachedData(storeName, config.url)
+          if (cached) {
+            console.log(`PWA: Serving cached fallback for ${config.url}`)
+            return Promise.reject({
+              config,
+              response: {
+                data: cached,
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config
+              },
+              isCachedFallback: true
+            })
+          }
+        }
+      } else {
+        // Enqueue mutation requests offline
+        const url = config.url || ''
+        const lowercaseUrl = url.toLowerCase()
+        const isSensitive =
+          lowercaseUrl.includes('/token') ||
+          lowercaseUrl.includes('/users/login') ||
+          lowercaseUrl.includes('/users/register') ||
+          lowercaseUrl.includes('/users/logout') ||
+          lowercaseUrl.includes('/users/change-password') ||
+          lowercaseUrl.includes('/users/forgot-password') ||
+          lowercaseUrl.includes('/users/reset-password')
+
+        if (!isSensitive) {
+          await enqueueMutation(config.url, config.method, config.data)
+          return Promise.reject({
+            config,
+            response: {
+              data: { message: 'Action queued offline successfully', offline: true },
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config
+            },
+            isCachedFallback: true
+          })
+        }
+      }
+    }
+
     return config
   },
   (error) => Promise.reject(error),
@@ -44,8 +113,23 @@ const processQueue = (error, token = null) => {
 
 /* ── Response interceptor: handle expired/invalid tokens globally ── */
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Cache successful GET API responses in IndexedDB
+    if (response.config?.method === 'get') {
+      const storeName = getCacheStoreForUrl(response.config.url)
+      if (storeName) {
+        setCachedData(storeName, response.config.url, response.data)
+        localStorage.setItem('last_api_sync_time', new Date().toISOString())
+      }
+    }
+    return response
+  },
   async (error) => {
+    // Resolve mocked offline/cached fallback payloads transparently
+    if (error && error.isCachedFallback) {
+      return Promise.resolve(error.response)
+    }
+
     const originalRequest = error.config
 
     // If it's a 401 response and we haven't retried yet

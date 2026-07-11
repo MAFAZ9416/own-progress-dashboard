@@ -12,15 +12,26 @@ import {
   FileSpreadsheet,
   Settings2,
   Globe,
-  HelpCircle
+  HelpCircle,
+  Database,
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import authService from '../../services/authService'
+import { getDatabaseMetrics, clearAllCaches } from '../../utils/offlineDatabase'
+import { 
+  getQueuedRequests, 
+  processOfflineQueue, 
+  clearQueuedRequests, 
+  retryFailedRequests, 
+  deleteQueuedRequest 
+} from '../../utils/offlineQueue'
 import './Settings.css'
 
 export default function Settings() {
   const { user, updateUser } = useAuth()
-  const [activeTab, setActiveTab] = useState('profile') // 'profile', 'notifications', 'dashboard', 'reports', 'application'
+  const [activeTab, setActiveTab] = useState('profile') // 'profile', 'notifications', 'dashboard', 'reports', 'application', 'offline'
 
   // Profile forms
   const [profileForm, setProfileForm] = useState({
@@ -84,6 +95,73 @@ export default function Settings() {
   const [isSavingPrefs, setIsSavingPrefs] = useState(false)
   const [prefsSuccess, setPrefsSuccess] = useState(false)
   const [prefsError, setPrefsError] = useState(null)
+
+  // Offline stats states
+  const [offlineMetrics, setOfflineMetrics] = useState({ stores: {}, totalRecords: 0 })
+  const [queuedRequests, setQueuedRequests] = useState([])
+  const [lastSyncStr, setLastSyncStr] = useState('')
+  const [isProcessingSync, setIsProcessingSync] = useState(false)
+
+  const loadOfflineStats = async () => {
+    const metrics = await getDatabaseMetrics()
+    setOfflineMetrics(metrics)
+    const queue = await getQueuedRequests()
+    setQueuedRequests(queue)
+    
+    const time = localStorage.getItem('pwa_last_sync_time')
+    if (time) {
+      try {
+        const d = new Date(time)
+        setLastSyncStr(d.toLocaleString())
+      } catch (e) {
+        setLastSyncStr('Never')
+      }
+    } else {
+      setLastSyncStr('Never')
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'offline') {
+      loadOfflineStats()
+      window.addEventListener('progressly-pwa-sync-status', loadOfflineStats)
+    }
+    return () => {
+      window.removeEventListener('progressly-pwa-sync-status', loadOfflineStats)
+    }
+  }, [activeTab])
+
+  const handleSyncNow = async () => {
+    setIsProcessingSync(true)
+    await processOfflineQueue()
+    await loadOfflineStats()
+    setIsProcessingSync(false)
+  }
+
+  const handleClearQueue = async () => {
+    if (window.confirm('Are you sure you want to clear all queued and failed requests?')) {
+      await clearQueuedRequests()
+      await loadOfflineStats()
+    }
+  }
+
+  const handleClearCache = async () => {
+    if (window.confirm('Are you sure you want to clear local cache stores? You will need internet to reload cached records.')) {
+      await clearAllCaches()
+      await loadOfflineStats()
+      alert('Cache cleared successfully.')
+    }
+  }
+
+  const handleRetryFailed = async () => {
+    await retryFailedRequests()
+    await loadOfflineStats()
+  }
+
+  const handleDeleteRequest = async (uuid) => {
+    await deleteQueuedRequest(uuid)
+    await loadOfflineStats()
+  }
 
   // Load profile data & preferences
   useEffect(() => {
@@ -316,6 +394,14 @@ export default function Settings() {
         >
           <Settings2 size={14} />
           <span>Application</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('offline')} 
+          className={`tab-btn ${activeTab === 'offline' ? 'active' : ''}`}
+          id="settings-offline-tab-btn"
+        >
+          <Globe size={14} />
+          <span>Offline Operations</span>
         </button>
       </div>
 
@@ -894,6 +980,141 @@ export default function Settings() {
                 {isSavingPrefs ? 'Saving Rules...' : 'Save Application Preferences'}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* OFFLINE TAB */}
+        {activeTab === 'offline' && (
+          <div className="settings-card admin-glow-card">
+            <div className="card-header">
+              <Globe className="card-header-icon" />
+              <h2>Offline Storage &amp; Sync Management</h2>
+            </div>
+            
+            <div className="settings-form">
+              {/* Sync Metadata Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Last Sync Timestamp</p>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9' }}>{lastSyncStr}</p>
+                </div>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Total Offline Records</p>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '1.05rem', fontWeight: 700, color: '#a78bfa' }}>{offlineMetrics.totalRecords} entries</p>
+                </div>
+              </div>
+
+              {/* Cached Datasets Grid */}
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.75rem' }}>Cached Datasets Size</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                  {Object.entries(offlineMetrics.stores).map(([storeName, count]) => (
+                    <div key={storeName} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'capitalize' }}>{storeName}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f1f5f9' }}>{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Queued Requests */}
+              <div style={{ marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Offline Mutation Queue</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>({queuedRequests.length} actions)</span>
+                </h3>
+                
+                {queuedRequests.length > 0 ? (
+                  <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(0,0,0,0.1)' }}>
+                    <table style={{ width: '100%', fontSize: '0.8rem', textAlign: 'left', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <th style={{ padding: '0.75rem 1rem', color: '#64748b' }}>Action Details</th>
+                          <th style={{ padding: '0.75rem 1rem', color: '#64748b' }}>Retries</th>
+                          <th style={{ padding: '0.75rem 1rem', color: '#64748b' }}>Status</th>
+                          <th style={{ padding: '0.75rem 1rem', color: '#64748b', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {queuedRequests.map((req) => (
+                          <tr key={req.uuid} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <div style={{ fontWeight: 600, color: '#f1f5f9', fontFamily: 'monospace', textTransform: 'uppercase', fontSize: '0.75rem' }}>{req.method}</div>
+                              <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.1rem' }}>{req.url}</div>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', color: '#f1f5f9' }}>{req.retry_count} / 5</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                background: req.status === 'FAILED' ? 'rgba(239,68,68,0.15)' : 'rgba(124,58,237,0.15)',
+                                color: req.status === 'FAILED' ? '#ef4444' : '#a78bfa'
+                              }}>
+                                {req.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteRequest(req.uuid)} 
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="Remove Action"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '10px', color: '#64748b', fontSize: '0.8rem' }}>
+                    All offline changes have been synchronized successfully.
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
+                <button 
+                  type="button" 
+                  disabled={isProcessingSync || !navigator.onLine} 
+                  onClick={handleSyncNow} 
+                  className="settings-submit-btn"
+                  style={{ flex: 1, minWidth: '140px', background: 'linear-gradient(135deg, #7c3aed, #6366f1)', margin: 0 }}
+                >
+                  <RefreshCw size={14} className={isProcessingSync ? 'spin-anim' : ''} style={{ marginRight: '6px', display: 'inline' }} />
+                  {isProcessingSync ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleRetryFailed} 
+                  className="settings-submit-btn"
+                  style={{ flex: 1, minWidth: '140px', background: 'rgba(124, 58, 237, 0.1)', border: '1px solid rgba(124, 58, 237, 0.3)', color: '#a78bfa', margin: 0 }}
+                >
+                  Retry Failed Actions
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleClearCache} 
+                  className="settings-submit-btn"
+                  style={{ flex: 1, minWidth: '140px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', margin: 0 }}
+                >
+                  Clear Local Cache
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleClearQueue} 
+                  className="settings-submit-btn"
+                  style={{ flex: 1, minWidth: '140px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', margin: 0 }}
+                >
+                  Clear Queue
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

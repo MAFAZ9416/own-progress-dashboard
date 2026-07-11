@@ -1,8 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Menu, Bell, CheckCircle2, Info, AlertTriangle, Award, Settings2, Search, X } from 'lucide-react'
+import { Menu, Bell, CheckCircle2, Info, AlertTriangle, Award, Settings2, Search, X, Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { getMediaUrl } from '../../api'
+import { getQueuedRequests, isSyncing } from '../../utils/offlineQueue'
 import notificationService from '../../services/notificationService'
 import dashboardService from '../../services/dashboardService'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
@@ -57,6 +58,42 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
 
   const displayName = user?.full_name ?? user?.first_name ?? ''
   const initials = displayName?.[0]?.toUpperCase() ?? '?'
+
+  const [offline, setOffline] = useState(!navigator.onLine)
+  const [syncingState, setSyncingState] = useState(isSyncing)
+  const [queuedCount, setQueuedCount] = useState(0)
+  const [lastSyncStr, setLastSyncStr] = useState('')
+
+  const updateStatus = useCallback(async () => {
+    setOffline(!navigator.onLine)
+    setSyncingState(isSyncing)
+    const queue = await getQueuedRequests()
+    setQueuedCount(queue.length)
+    
+    const time = localStorage.getItem('pwa_last_sync_time')
+    if (time) {
+      try {
+        const d = new Date(time)
+        setLastSyncStr(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+      } catch (e) {
+        setLastSyncStr('')
+      }
+    } else {
+      setLastSyncStr('')
+    }
+  }, [])
+
+  useEffect(() => {
+    updateStatus()
+    window.addEventListener('online', updateStatus)
+    window.addEventListener('offline', updateStatus)
+    window.addEventListener('progressly-pwa-sync-status', updateStatus)
+    return () => {
+      window.removeEventListener('online', updateStatus)
+      window.removeEventListener('offline', updateStatus)
+      window.removeEventListener('progressly-pwa-sync-status', updateStatus)
+    }
+  }, [updateStatus])
 
   const loadNotifications = useCallback(async () => {
     setIsLoadingNotifications(true)
@@ -233,10 +270,40 @@ const Topbar = memo(function Topbar({ onToggleSidebar }) {
       <div className="topbar__right">
         <div className="topbar__notif-wrap" ref={panelRef}>
           {/* Notification bell */}
+          {/* PWA Connection / Sync Status Indicator */}
+          <div className="flex items-center gap-2 mr-3 px-3 py-1.5 rounded-full bg-slate-900/60 border border-slate-800 text-[11px] font-semibold">
+            {offline ? (
+              <span className="flex items-center gap-1.5 text-red-400">
+                <WifiOff size={12} strokeWidth={2.5} />
+                <span>Offline</span>
+              </span>
+            ) : syncingState ? (
+              <span className="flex items-center gap-1.5 text-yellow-400">
+                <RefreshCw size={12} className="animate-spin" />
+                <span>Syncing...</span>
+              </span>
+            ) : queuedCount > 0 ? (
+              <span className="flex items-center gap-1.5 text-violet-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                <span>Queued ({queuedCount})</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Online</span>
+              </span>
+            )}
+            
+            {lastSyncStr && (
+              <span className="text-slate-500 font-normal border-l border-slate-800 pl-2">
+                Sync {lastSyncStr}
+              </span>
+            )}
+          </div>
+
           <button
-            id="topbar-notifications"
-            className="topbar__icon-btn"
-            aria-label="Notifications"
+            id="topbar-bell-btn"
+            className={`topbar__btn-action ${isNotifOpen ? 'topbar__btn-action--active' : ''}`}
             onClick={handleBellClick}
           >
             <Bell size={18} strokeWidth={1.8} />
