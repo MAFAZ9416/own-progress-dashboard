@@ -14,6 +14,7 @@ export default defineConfig({
       strategies: 'generateSW',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        importScripts: ['/sw-push-listener.js'],
         // Exclude authentication and mutate endpoints from caching
         navigateFallbackDenylist: [
           /^\/api\/users\/login/,

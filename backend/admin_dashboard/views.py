@@ -1457,6 +1457,25 @@ class AdminAnalyticsView(APIView):
             .order_by('-count')[:8]
         )
 
+        # Compile PWA Offline Analytics from all user profiles' preferences
+        offline_sessions = 0
+        queued_requests = 0
+        failed_requests = 0
+        successful_syncs = 0
+        total_sync_time = 0
+
+        from users.models import Profile
+        for profile in Profile.objects.all():
+            prefs = profile.preferences or {}
+            offline_analytics = prefs.get('offline_analytics', {})
+            offline_sessions += offline_analytics.get('offline_sessions', 0)
+            queued_requests += offline_analytics.get('queued_requests', 0)
+            failed_requests += offline_analytics.get('failed_requests', 0)
+            successful_syncs += offline_analytics.get('successful_syncs', 0)
+            total_sync_time += offline_analytics.get('total_sync_time_ms', 0)
+            
+        avg_sync_time = round(total_sync_time / successful_syncs, 1) if successful_syncs > 0 else 0.0
+
         return Response({
             'stats': {
                 'total_users': total_users,
@@ -1475,6 +1494,13 @@ class AdminAnalyticsView(APIView):
             'growth_chart': growth_chart,
             'skill_distribution': list(skill_dist),
             'timeframe_days': days,
+            'offline_analytics': {
+                'offline_sessions': offline_sessions,
+                'queued_requests': queued_requests,
+                'failed_requests': failed_requests,
+                'successful_syncs': successful_syncs,
+                'avg_sync_time_ms': avg_sync_time,
+            },
         }, status=status.HTTP_200_OK)
 
 

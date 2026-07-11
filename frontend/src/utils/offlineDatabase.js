@@ -127,3 +127,33 @@ export async function getDatabaseMetrics() {
     return { stores: {}, totalRecords: 0 }
   }
 }
+
+export async function clearCacheCategory(category) {
+  try {
+    if (typeof caches === 'undefined') return
+    const keys = await caches.keys()
+    
+    for (const key of keys) {
+      if (category === 'images' && (key.includes('image') || key.includes('assets') || key.includes('static'))) {
+        await caches.delete(key)
+        console.log(`PWA Cache: Deleted image cache key: ${key}`)
+      } else if (category === 'api' && (key.includes('api') || key.includes('data'))) {
+        await caches.delete(key)
+        console.log(`PWA Cache: Deleted api cache key: ${key}`)
+      } else if (category === 'all') {
+        // Delete all workbox/assets caches except the active precache assets required to run the PWA offline
+        if (!key.includes('precache')) {
+          await caches.delete(key)
+          console.log(`PWA Cache: Deleted obsolete cache key: ${key}`)
+        }
+      }
+    }
+
+    // Also clear custom IndexedDB cache tables if API/Everything is cleared
+    if (category === 'api' || category === 'all') {
+      await clearAllCaches()
+    }
+  } catch (error) {
+    console.error('Error executing category cache clear:', error)
+  }
+}
