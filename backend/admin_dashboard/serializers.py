@@ -29,12 +29,15 @@ class AdminUserProfileSerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
         if not obj.avatar:
             return None
+        url = obj.avatar.url
+        if url.startswith('http://') or url.startswith('https://'):
+            return url
         request = self.context.get('request')
         if request is not None:
-            return request.build_absolute_uri(obj.avatar.url)
+            return request.build_absolute_uri(url)
         from django.conf import settings
         site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
-        return f"{site_url.rstrip('/')}{obj.avatar.url}"
+        return f"{site_url.rstrip('/')}{url}"
 
 
 class AdminUserSerializer(serializers.ModelSerializer):

@@ -222,6 +222,45 @@ if not DEBUG:
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', 'mock-google-client-id.apps.googleusercontent.com')
 
+# Logging — emit INFO level logs to console so upload traces are visible
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'users': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'admin_dashboard': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+
 # Email Configurations
 # ==========================
 # Email Configuration
@@ -245,13 +284,24 @@ EMAIL_PORT = int(
     )
 )
 
-EMAIL_USE_TLS = (
-    os.getenv(
-        "EMAIL_USE_TLS",
-        "True"
-    )
-    == "True"
-)
+# Use dynamic determination for TLS vs SSL
+# If EMAIL_USE_SSL is explicitly set in env, use it. Otherwise default to True for port 465.
+env_use_ssl = os.getenv("EMAIL_USE_SSL")
+if env_use_ssl is not None:
+    EMAIL_USE_SSL = env_use_ssl == "True"
+else:
+    EMAIL_USE_SSL = (EMAIL_PORT == 465)
+
+# If EMAIL_USE_TLS is explicitly set in env, use it. Otherwise default to True for port 587.
+env_use_tls = os.getenv("EMAIL_USE_TLS")
+if env_use_tls is not None:
+    EMAIL_USE_TLS = env_use_tls == "True"
+else:
+    EMAIL_USE_TLS = (EMAIL_PORT == 587)
+
+# Enforce mutual exclusivity (Django raises an error if both are True)
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
 
 EMAIL_HOST_USER = os.getenv(
     "EMAIL_HOST_USER"
@@ -263,6 +313,11 @@ EMAIL_HOST_PASSWORD = os.getenv(
 
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER
+)
+
+SERVER_EMAIL = os.getenv(
+    "SERVER_EMAIL",
     EMAIL_HOST_USER
 )
 
@@ -286,18 +341,48 @@ if DEBUG:
     print("EMAIL CONFIG:")
     print("SMTP USER loaded:", bool(EMAIL_HOST_USER))
     print("SMTP PASSWORD loaded:", bool(EMAIL_HOST_PASSWORD))
+    print("EMAIL_USE_TLS:", EMAIL_USE_TLS)
+    print("EMAIL_USE_SSL:", EMAIL_USE_SSL)
     print("=" * 50)
 
 
 # Cloudinary Configuration
-if os.getenv("CLOUDINARY_URL"):
+# We use individual keys (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET) as the primary config.
+# CLOUDINARY_URL is NOT required and NOT used.
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUDINARY_NAME")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+
+# Automatic environment detection:
+# - On Render: RENDER env var is always "true" → use Cloudinary
+# - Locally:   RENDER is not set → use local FileSystemStorage
+# - Override:  Set USE_CLOUDINARY=True to force Cloudinary in any environment
+USE_CLOUDINARY = (
+    os.getenv("RENDER") == "true" or
+    os.getenv("USE_CLOUDINARY") == "True"
+)
+
+import sys
+_has_cloudinary_creds = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
+
+if 'test' not in sys.argv and USE_CLOUDINARY and _has_cloudinary_creds:
     import cloudinary
+
     cloudinary.config(
-        cloud_name=os.getenv("CLOUDINARY_NAME") or os.getenv("CLOUDINARY_CLOUD_NAME"),
-        api_key=os.getenv("CLOUDINARY_API_KEY"),
-        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
         secure=True,
     )
+
+    # django-cloudinary-storage requires CLOUDINARY_STORAGE dict with uppercase keys
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,
+        "API_KEY": CLOUDINARY_API_KEY,
+        "API_SECRET": CLOUDINARY_API_SECRET,
+        "SECURE": True,
+    }
+
     STORAGES = {
         "default": {
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
@@ -315,3 +400,13 @@ else:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
+
+# Print configuration diagnostics on startup
+print("=" * 50)
+print(f"ENVIRONMENT: {'RENDER (Production)' if os.getenv('RENDER') == 'true' else 'LOCAL (Development)'}")
+print(f"ACTIVE STORAGE: {STORAGES['default']['BACKEND']}")
+print(f"CLOUDINARY CLOUD NAME: {'SET' if CLOUDINARY_CLOUD_NAME else 'MISSING'}")
+print(f"CLOUDINARY API KEY: {'SET' if CLOUDINARY_API_KEY else 'MISSING'}")
+print(f"CLOUDINARY API SECRET: {'SET' if CLOUDINARY_API_SECRET else 'MISSING'}")
+print(f"EMAIL HOST: {EMAIL_HOST}:{EMAIL_PORT}  TLS={EMAIL_USE_TLS}  SSL={EMAIL_USE_SSL}")
+print("=" * 50)

@@ -74,10 +74,35 @@ class ProfileView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
+        from django.core.files.storage import default_storage
+
+        # ── Upload diagnostic logging ──────────────────────────────────────
+        logger.info("[ProfileView.PUT] User: %s", request.user.email)
+        logger.info("[ProfileView.PUT] Content-Type: %s", request.content_type)
+        logger.info("[ProfileView.PUT] request.FILES keys: %s", list(request.FILES.keys()))
+        logger.info("[ProfileView.PUT] Storage backend: %s", default_storage.__class__.__name__)
+
+        if 'avatar' in request.FILES:
+            avatar_file = request.FILES['avatar']
+            logger.info("[ProfileView.PUT] Avatar received: name=%s  size=%s  type=%s",
+                        avatar_file.name, avatar_file.size, avatar_file.content_type)
+        else:
+            logger.info("[ProfileView.PUT] No avatar file in this request.")
+        # ───────────────────────────────────────────────────────────────────
+
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
+                logger.info("[ProfileView.PUT] Save successful. avatar value in DB: %s",
+                            request.user.profile.avatar.name if hasattr(request.user, 'profile') and request.user.profile.avatar else 'None')
+                logger.info("[ProfileView.PUT] avatar URL returned: %s",
+                            serializer.data.get('avatar'))
+            except Exception as exc:
+                logger.exception("[ProfileView.PUT] UPLOAD FAILED: %s", exc)
+                return Response({'detail': 'Image upload failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        logger.warning("[ProfileView.PUT] Serializer errors: %s", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

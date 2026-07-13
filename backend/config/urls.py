@@ -31,5 +31,13 @@ urlpatterns = [
     path("api/admin/", include("admin_dashboard.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files in local development using Django's serve view.
+# We check RENDER is not set (i.e. not on Render production) to serve locally.
+# We do NOT use Django's static() helper because it requires DEBUG=True.
+import os as _os
+if not _os.getenv("RENDER"):
+    from django.urls import re_path
+    from django.views.static import serve
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
