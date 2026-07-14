@@ -23,6 +23,7 @@ class EmailLog(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='sent')
     sent_at = models.DateTimeField(default=timezone.now)
     error_message = models.TextField(blank=True, null=True)
+    message_id = models.CharField(max_length=255, blank=True, null=True)
     # Optional FK to user if known
     related_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

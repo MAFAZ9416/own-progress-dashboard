@@ -1559,6 +1559,7 @@ class AdminEmailLogsView(APIView):
                 'status': log.status,
                 'sent_at': log.sent_at.isoformat(),
                 'error_message': log.error_message,
+                'message_id': log.message_id,
                 'related_user': log.related_user.username if log.related_user else None,
                 'created_by': log.created_by,
             })
@@ -1611,22 +1612,15 @@ class AdminSystemHealthView(APIView):
             logger.error(f"System Health Database Check failed: {str(e)}")
             services['database'] = {'status': 'Offline', 'latency_ms': None, 'label': 'Database'}
 
-        # 3. SMTP Email
-        smtp_host = _os.getenv('EMAIL_HOST', '')
-        smtp_user = _os.getenv('EMAIL_HOST_USER', '')
-        if smtp_host and smtp_user:
-            try:
-                import smtplib
-                smtp_start = _time.time()
-                with smtplib.SMTP(smtp_host, int(_os.getenv('EMAIL_PORT', 587)), timeout=5) as smtp:
-                    smtp.ehlo()
-                smtp_latency = round((_time.time() - smtp_start) * 1000, 1)
-                services['email'] = {'status': 'Operational', 'latency_ms': smtp_latency, 'label': 'SMTP Email'}
-            except Exception as e:
-                logger.error(f"System Health SMTP Email Check failed: {str(e)}")
-                services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
-        else:
-            services['email'] = {'status': 'Degraded', 'latency_ms': None, 'label': 'SMTP Email'}
+        # 3. Brevo Email API Health Check
+        from users.email.client import BrevoEmailClient
+        client = BrevoEmailClient()
+        conn_check = client.test_connectivity()
+        services['email'] = {
+            'status': conn_check['status'],
+            'latency_ms': conn_check.get('latency_ms'),
+            'label': 'Brevo Email API'
+        }
 
         # 4. Cloudinary
         cloudinary_url = _os.getenv('CLOUDINARY_URL', '') or _os.getenv('CLOUDINARY_CLOUD_NAME', '')

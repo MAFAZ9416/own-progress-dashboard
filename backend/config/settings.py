@@ -261,69 +261,18 @@ LOGGING = {
     },
 }
 
-# Email Configurations
-# ==========================
 # Email Configuration
 # ==========================
 import os
 
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+BREVO_API_URL = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Progressly <progressly.offical@gmail.com>")
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", "progressly.offical@gmail.com")
+APP_NAME = os.getenv("APP_NAME", "Progressly")
+EMAIL_LOGO_URL = os.getenv("EMAIL_LOGO_URL", "https://progressly-backend-dlbb.onrender.com/static/email/logo.png")
 
-EMAIL_BACKEND = (
-    "django.core.mail.backends.smtp.EmailBackend"
-)
-
-EMAIL_HOST = os.getenv(
-    "EMAIL_HOST",
-    "smtp.gmail.com"
-)
-
-EMAIL_PORT = int(
-    os.getenv(
-        "EMAIL_PORT",
-        587
-    )
-)
-
-# Use dynamic determination for TLS vs SSL
-# If EMAIL_USE_SSL is explicitly set in env, use it. Otherwise default to True for port 465.
-env_use_ssl = os.getenv("EMAIL_USE_SSL")
-if env_use_ssl is not None:
-    EMAIL_USE_SSL = env_use_ssl == "True"
-else:
-    EMAIL_USE_SSL = (EMAIL_PORT == 465)
-
-# If EMAIL_USE_TLS is explicitly set in env, use it. Otherwise default to True for port 587.
-env_use_tls = os.getenv("EMAIL_USE_TLS")
-if env_use_tls is not None:
-    EMAIL_USE_TLS = env_use_tls == "True"
-else:
-    EMAIL_USE_TLS = (EMAIL_PORT == 587)
-
-# Enforce mutual exclusivity (Django raises an error if both are True)
-if EMAIL_USE_SSL:
-    EMAIL_USE_TLS = False
-
-EMAIL_HOST_USER = os.getenv(
-    "EMAIL_HOST_USER"
-)
-
-EMAIL_HOST_PASSWORD = os.getenv(
-    "EMAIL_HOST_PASSWORD"
-)
-
-DEFAULT_FROM_EMAIL = os.getenv(
-    "DEFAULT_FROM_EMAIL",
-    EMAIL_HOST_USER
-)
-
-SERVER_EMAIL = os.getenv(
-    "SERVER_EMAIL",
-    EMAIL_HOST_USER
-)
-
-ADMIN_EMAIL = os.getenv(
-    "ADMIN_EMAIL"
-)
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 
 FRONTEND_URL = os.getenv(
@@ -338,11 +287,6 @@ if DEBUG:
     print("=" * 50)
     print("FRONTEND_URL:", FRONTEND_URL)
     print("BACKEND_URL:", BACKEND_URL)
-    print("EMAIL CONFIG:")
-    print("SMTP USER loaded:", bool(EMAIL_HOST_USER))
-    print("SMTP PASSWORD loaded:", bool(EMAIL_HOST_PASSWORD))
-    print("EMAIL_USE_TLS:", EMAIL_USE_TLS)
-    print("EMAIL_USE_SSL:", EMAIL_USE_SSL)
     print("=" * 50)
 
 
@@ -408,5 +352,5 @@ print(f"ACTIVE STORAGE: {STORAGES['default']['BACKEND']}")
 print(f"CLOUDINARY CLOUD NAME: {'SET' if CLOUDINARY_CLOUD_NAME else 'MISSING'}")
 print(f"CLOUDINARY API KEY: {'SET' if CLOUDINARY_API_KEY else 'MISSING'}")
 print(f"CLOUDINARY API SECRET: {'SET' if CLOUDINARY_API_SECRET else 'MISSING'}")
-print(f"EMAIL HOST: {EMAIL_HOST}:{EMAIL_PORT}  TLS={EMAIL_USE_TLS}  SSL={EMAIL_USE_SSL}")
+print(f"DEFAULT FROM EMAIL: {DEFAULT_FROM_EMAIL}")
 print("=" * 50)

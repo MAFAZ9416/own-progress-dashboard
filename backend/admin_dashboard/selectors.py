@@ -432,7 +432,7 @@ def get_system_health():
     except Exception:
         health['database'] = 'Offline'
         
-    if os.getenv("EMAIL_HOST_USER"):
+    if os.getenv("BREVO_API_KEY"):
         health['email'] = 'Operational'
     else:
         health['email'] = 'Degraded'

@@ -17,11 +17,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
 # ─── Neon PostgreSQL credentials ───
 DATABASE_URL=postgresql://<user>:<password>@<neon-endpoint>.neon.tech/<db-name>?sslmode=require
 
-# ─── SMTP Server settings ───
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=mafaz9416@gmail.com
-EMAIL_HOST_PASSWORD=your-google-app-password
+# ─── Email settings ───
 DEFAULT_FROM_EMAIL=mafaz9416@gmail.com
 
 # ─── JWT Authentication configs ───
@@ -40,8 +36,5 @@ postgresql://mafaz_owner:***@ep-***.us-east-2.aws.neon.tech/progressly?sslmode=r
 
 ---
 
-## 📧 SMTP Client Credentials
-
-If using Gmail:
-1. Enable **Two-Factor Authentication (2FA)** on your Google account.
-2. Navigate to security, create an **App Password**, and use that string as `EMAIL_HOST_PASSWORD` (do not use your raw login credentials).
+## 📧 Email Client Credentials
+Email delivery is currently processed via a local placeholder service. Live SMTP or third-party client integrations are disabled during this reset phase.

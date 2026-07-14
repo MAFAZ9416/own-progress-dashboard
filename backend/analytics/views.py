@@ -84,8 +84,9 @@ class DashboardSummaryView(APIView):
     # ── GET ────────────────────────────────────────────────────────
     def get(self, request):
         user = request.user
-        today = timezone.now().date()
-        thirty_days_ago = today - timedelta(days=30)
+        now = timezone.now()
+        today = now.date()
+        thirty_days_ago = now - timedelta(days=30)
 
         # Consolidated counts — one query per model instead of separate count() calls
         from django.db.models import Q

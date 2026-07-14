@@ -1,5 +1,4 @@
-# Backward compatibility wrapper for backend/users/email_service.py
-from .email import (
+from .service import (
     send_email,
     send_progressly_email,
     send_admin_notification_email,
@@ -12,7 +11,12 @@ from .email import (
     send_account_deleted_email,
     send_admin_reset_password_email,
     log_email_to_db,
-    BrevoEmailClient,
-    EmailError,
 )
-
+from .client import BrevoEmailClient
+from .exceptions import (
+    EmailError,
+    EmailConnectionError,
+    EmailSendError,
+    EmailRateLimitError,
+    EmailAuthenticationError,
+)

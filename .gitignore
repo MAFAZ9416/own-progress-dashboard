@@ -1,26 +1,135 @@
+# =========================================================
+# Progressly - .gitignore
+# Django + React (Vite)
+# =========================================================
+
+############################
 # Python
+############################
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 
-# Virtual Environment
+############################
+# Virtual Environments
+############################
 venv/
+.venv/
 env/
+ENV/
 
+############################
 # Django
+############################
 db.sqlite3
+db.sqlite3-journal
 media/
 staticfiles/
 
+############################
 # Environment Variables
+############################
 .env
-.env.local
-.env.producation
+.env.*
+!.env.example
 
+############################
+# Logs
+############################
+*.log
+logs/
+*.pid
+
+############################
+# Node / React / Vite
+############################
+node_modules/
+dist/
+build/
+.vite/
+
+############################
+# Package Manager
+############################
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
 # VS Code
+############################
 .vscode/
 
+############################
+# JetBrains
+############################
+.idea/
+
+############################
 # OS Files
+############################
 .DS_Store
 Thumbs.db
+desktop.ini
+
+############################
+# Pytest
+############################
+.pytest_cache/
+
+############################
+# Coverage
+############################
+.coverage
+coverage.xml
+htmlcov/
+
+############################
+# Type Checking
+############################
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+############################
+# Jupyter
+############################
+.ipynb_checkpoints/
+
+############################
+# Temporary Files
+############################
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+############################
+# Build Artifacts
+############################
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+############################
+# Cloudinary
+############################
+cloudinary_cache/
+
+############################
+# Local Uploads
+############################
+uploads/
+
+############################
+# Secrets / Credentials
+############################
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
