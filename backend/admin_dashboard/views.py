@@ -1087,14 +1087,16 @@ class AdminNotificationsListView(APIView):
             from threading import Thread
 
             def _send_emails(users, _title, _message, _admin_username):
-                from users.email_service import send_progressly_email, log_email_to_db
+                from users.email_service import send_progressly_email, log_email_to_db, frontend_url
                 for u in users:
                     try:
                         send_progressly_email(
                             to_email=u.email,
                             subject=f"[Progressly] {_title}",
                             title=_title,
-                            message_html=f"<p>{_message}</p>"
+                            message_html=f"<p>{_message}</p>",
+                            button_text="Go to Dashboard",
+                            button_url=frontend_url('/dashboard')
                         )
                         log_email_to_db(
                             recipient_email=u.email,
@@ -1219,13 +1221,15 @@ class AdminFeedbackReplyView(APIView):
         from threading import Thread
 
         def _send_reply(_to, _subject, _body, _admin, _related_user):
-            from users.email_service import send_progressly_email, log_email_to_db
+            from users.email_service import send_progressly_email, log_email_to_db, frontend_url
             try:
                 send_progressly_email(
                     to_email=_to,
                     subject=_subject,
                     title="Support Center Reply",
-                    message_html=f"<p>{_body}</p>"
+                    message_html=f"<p>{_body}</p>",
+                    button_text="Go to Progressly",
+                    button_url=frontend_url('/')
                 )
                 log_email_to_db(
                     recipient_email=_to,

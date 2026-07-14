@@ -270,15 +270,18 @@ BREVO_API_URL = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Progressly <progressly.offical@gmail.com>")
 SERVER_EMAIL = os.getenv("SERVER_EMAIL", "progressly.offical@gmail.com")
 APP_NAME = os.getenv("APP_NAME", "Progressly")
-EMAIL_LOGO_URL = os.getenv("EMAIL_LOGO_URL", "https://progressly-backend-dlbb.onrender.com/static/email/logo.png")
+from django.core.exceptions import ImproperlyConfigured
+
+EMAIL_LOGO_URL = os.getenv("EMAIL_LOGO_URL")
+if not EMAIL_LOGO_URL:
+    raise ImproperlyConfigured("EMAIL_LOGO_URL environment variable is missing.")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+if not FRONTEND_URL:
+    raise ImproperlyConfigured("FRONTEND_URL environment variable is missing.")
 
-FRONTEND_URL = os.getenv(
-    "FRONTEND_URL",
-    "http://localhost:5173"
-)
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 SITE_URL = os.getenv("SITE_URL", BACKEND_URL)
 

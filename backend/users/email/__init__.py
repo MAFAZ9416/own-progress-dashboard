@@ -11,6 +11,7 @@ from .service import (
     send_account_deleted_email,
     send_admin_reset_password_email,
     log_email_to_db,
+    frontend_url,
 )
 from .client import BrevoEmailClient
 from .exceptions import (

@@ -38,6 +38,16 @@ def log_email_to_db(
         logger.warning(f"[log_email_to_db] Could not write EmailLog: {exc}")
 
 
+def frontend_url(path: str = "") -> str:
+    """
+    Safely joins the path with settings.FRONTEND_URL, preventing duplicate slashes.
+    """
+    base = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
+    if not path:
+        return base
+    return f"{base}/{path.lstrip('/')}"
+
+
 def send_email(to_email: str, subject: str, html_content: str, text_content: str = None, from_email: str = None, attachments=None, reply_to: str = None) -> str:
     """
     Sends email via Brevo REST API. Diverts to Django test outbox in test mode.
@@ -137,7 +147,7 @@ def send_progressly_email(to_email, subject, title, message_html=None, button_te
                 'message_html': message_html,
                 'button_text': button_text,
                 'button_url': button_url,
-                'frontend_url': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+                'frontend_url': frontend_url(),
                 'support_email': getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
                 'year': timezone.now().year
             }
@@ -184,7 +194,7 @@ def send_welcome_email(email_or_user, full_name=None) -> bool:
 
     context = {
         "user_name": full_name,
-        "frontend_url": getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+        "frontend_url": frontend_url(),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "🚀 Welcome to Progressly"
@@ -224,7 +234,7 @@ def send_feedback_confirmation(email_or_user, name=None, message="") -> bool:
     context = {
         "user_name": name or 'User',
         "message": message,
-        "frontend_url": getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+        "frontend_url": frontend_url(),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "💜 Thanks for your feedback - Progressly"
@@ -271,7 +281,9 @@ def send_admin_feedback(name, email, feedback_type, date, message) -> bool:
         result = send_admin_notification_email(
             subject=subject_str,
             title="New System Feedback Received",
-            message_html=message_html
+            message_html=message_html,
+            button_text="View Feedback",
+            button_url=frontend_url('/admin/feedback')
         )
         msg_id = result if isinstance(result, str) else None
         admin_email = getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com') or 'mafaz9416@gmail.com'
@@ -284,12 +296,11 @@ def send_admin_feedback(name, email, feedback_type, date, message) -> bool:
 
 
 def send_password_reset_email(email, full_name, token) -> bool:
-    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
-    reset_url = f"{frontend_url.rstrip('/')}/reset-password/{token}"
+    reset_url = frontend_url(f"reset-password/{token}")
     context = {
         "user_name": full_name,
         "reset_url": reset_url,
-        "frontend_url": frontend_url,
+        "frontend_url": frontend_url(),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "Reset Your Password - Progressly"
@@ -320,7 +331,8 @@ def send_password_reset_email(email, full_name, token) -> bool:
 def send_password_changed_email(email, full_name) -> bool:
     context = {
         "user_name": full_name,
-        "frontend_url": getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+        "frontend_url": frontend_url(),
+        "login_url": frontend_url('/login'),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "Password Changed Successfully - Progressly"
@@ -351,7 +363,8 @@ def send_password_changed_email(email, full_name) -> bool:
 def send_account_deleted_email(email, full_name) -> bool:
     context = {
         "user_name": full_name or 'User',
-        "frontend_url": getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+        "frontend_url": frontend_url(),
+        "register_url": frontend_url('/register'),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "Account Deleted - Progressly"
@@ -382,7 +395,7 @@ def send_account_deleted_email(email, full_name) -> bool:
 def send_admin_reset_password_email(email, full_name) -> bool:
     context = {
         "user_name": full_name,
-        "frontend_url": getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+        "frontend_url": frontend_url(),
         "support_email": getattr(settings, 'ADMIN_EMAIL', 'mafaz9416@gmail.com'),
         "year": timezone.now().year,
         "subject": "Password Reset - Progressly Admin"

@@ -3,5 +3,11 @@
 {% block content %}
 <p style="margin: 0 0 16px 0; font-size: 17px; font-weight: 600; color: #ffffff;">Hi {{ user_name }},</p>
 <p style="margin: 0 0 16px 0;">As requested, your Progressly account has been deleted, and all your records have been permanently removed from our system.</p>
-<p style="margin: 0 0 16px 0;">We're sorry to see you go! If you ever decide to return, you are welcome to register a new account anytime.</p>
+<p style="margin: 0 0 16px 0; margin-bottom: 24px;">We're sorry to see you go! If you ever decide to return, you are welcome to register a new account anytime.</p>
+
+<div style="text-align: center; margin: 28px 0;">
+  <a href="{{ register_url }}" style="display: inline-block; padding: 12px 28px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 10px; color: #ffffff !important; font-weight: 600; text-decoration: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+    Register Again
+  </a>
+</div>
 {% endblock %}

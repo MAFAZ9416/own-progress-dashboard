@@ -14,5 +14,6 @@ from .email import (
     log_email_to_db,
     BrevoEmailClient,
     EmailError,
+    frontend_url,
 )
 

@@ -19,8 +19,11 @@
           <!-- Header -->
           <tr>
             <td align="center" style="padding: 32px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);">
+              {% if email_logo_url %}
+                <img src="{{ email_logo_url }}" alt="Progressly Logo" width="64" style="margin-bottom: 12px; display: inline-block; border: none; outline: none; text-decoration: none;" />
+              {% endif %}
               <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; display: block; margin-bottom: 4px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                Progressly 🚀
+                Progressly
               </span>
               <span style="font-size: 13px; color: #a78bfa; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; display: block; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                 Track. Learn. Improve.
